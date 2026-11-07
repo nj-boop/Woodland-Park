@@ -13,6 +13,7 @@ function rotateBuild() {
 }
 function setTool(t, s) {
   tool = t;
+  pendingBuild = null;
   sub = s || (sub && validSub(t, sub) ? sub : DEF[t] || null);
   document
     .querySelectorAll('.tool[data-tool]')

@@ -197,7 +197,7 @@ input:focus-visible {
   gap: 6px;
   align-items: stretch;
   overflow-y: auto;
-  max-height: 38vh;
+  max-height: min(30vh, 250px); /* leave most of the screen for the zoo */
   padding-block: 8px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -873,4 +873,8 @@ td.pos {
 .nm.on {
   background: var(--brass);
   color: var(--brass-ink);
+}
+
+#dragInfo.bad {
+  color: #ffb4a6;
 }

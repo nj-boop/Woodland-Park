@@ -41,17 +41,60 @@ function frontOK(kind, p) {
   return frontOnPath(p.x0, p.y0, p.fw, p.fh, p.r);
 }
 
-// candidate placements for a building at the cursor: just the player's rotation if they set one,
-// otherwise every facing (checkBuilding picks the first that fits)
+// candidate placements for a building at the cursor, best first:
+//  - facings: the player's choice if they turned it, otherwise facing the nearest path first
+//  - positions: centred on the cursor, then nudged up to 3 tiles so the door side sits flush on a path
+let lastPlan = null; // keeps the facing steady while the cursor moves a little
+function nearestPathDir(x, y) {
+  let best = null;
+  for (let d = 1; d <= 6 && !best; d++)
+    for (let r = 0; r < 4 && !best; r++) {
+      const [dx, dy] = [
+        [0, 1],
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+      ][r];
+      if (inB(x + dx * d, y + dy * d) && S.tiles[idx(x + dx * d, y + dy * d)].t === 'p') best = r;
+    }
+  return best;
+}
 function fpPlans(kind, x, y) {
-  return (buildRot != null ? [buildRot] : [0, 1, 2, 3]).map((r) => {
-    const [x0, y0] = fpOrigin(kind, x, y, r),
-      [fw, fh] = fpDims(kind, r);
-    return { r, x0, y0, fw, fh, tiles: fpTiles(x0, y0, fw, fh) };
-  });
+  let order;
+  if (buildRot != null) order = [buildRot];
+  else {
+    const near = kind === 'stage' ? null : nearestPathDir(x, y);
+    order = [0, 1, 2, 3];
+    if (near != null) order = [near, ...order.filter((r) => r !== near)];
+    if (lastPlan && lastPlan.kind === kind) order = [lastPlan.r, ...order.filter((r) => r !== lastPlan.r)];
+  }
+  const shifts = [[0, 0]];
+  for (let d = 1; d <= 3; d++)
+    for (const [sx, sy] of [
+      [0, d],
+      [d, 0],
+      [0, -d],
+      [-d, 0],
+      [d, d],
+      [-d, d],
+      [d, -d],
+      [-d, -d],
+    ])
+      shifts.push([sx, sy]);
+  const out = [];
+  for (const r of order)
+    for (const [sx, sy] of shifts) {
+      const [ox, oy] = fpOrigin(kind, x, y, r),
+        [fw, fh] = fpDims(kind, r),
+        x0 = ox + sx,
+        y0 = oy + sy;
+      out.push({ r, x0, y0, fw, fh, tiles: fpTiles(x0, y0, fw, fh), shifted: sx || sy });
+    }
+  return out;
 }
 function stampBuilding(kind, p) {
   const a = idx(p.x0, p.y0);
+  for (const i of p.tiles) if (S.tiles[i].o && clearable(S.tiles[i].o)) S.tiles[i].o = null;
   for (const i of p.tiles) {
     S.tiles[i].o = kind;
     S.tiles[i].a = a;
@@ -87,9 +130,12 @@ function checkBuilding(kind, x, y) {
   let firstFail = null;
   for (const p of fpPlans(kind, x, y)) {
     const c = checkPlan(kind, p);
-    if (c.ok) return c;
-    // report the most useful problem: one from a facing that would have opened the right way
-    if (!firstFail || (firstFail.facing === false && c.facing !== false)) firstFail = c;
+    if (c.ok) {
+      lastPlan = { kind, r: p.r };
+      return c;
+    }
+    // report the most useful problem: from the unshifted plan, preferring one that faced the right way
+    if (!p.shifted && (!firstFail || (firstFail.facing === false && c.facing !== false))) firstFail = c;
   }
   return firstFail;
 }
@@ -107,7 +153,7 @@ function checkPlan(kind, p) {
       return fail(
         kind === 'stage' ? 'Build the stadium beside the tank, not in it.' : `The ${nm} has to go outside habitats.`
       );
-    if (t.o) return fail(`Something is in the way. The ${nm} needs ${p.fw}×${p.fh} clear tiles.`);
+    if (t.o && !clearable(t.o)) return fail(`Something is in the way. The ${nm} needs ${p.fw}×${p.fh} clear tiles.`);
   }
   if (!facing)
     return fail(
@@ -115,9 +161,12 @@ function checkPlan(kind, p) {
         ? 'The stadium seats have to face an aquatic habitat.'
         : buildRot != null
           ? `The ${nm}'s door has to open onto a path. Press R (or ⟳ in the menu) to turn it.`
-          : `The ${nm} has to sit with one side along a path.`
+          : `Move closer to a path: the ${nm}'s door side has to open onto one.`
     );
   if (kind === 'stage' && !p.tiles.some((i) => nbr4(i).some((n) => S.tiles[n].t === 'p')))
     return fail('Guests need a path to reach the stadium.');
-  return { ok: true, cost: it.cost, plan: p };
+  const clears = p.tiles.filter((i) => S.tiles[i].o).length;
+  return { ok: true, cost: it.cost, plan: p, clears };
 }
+// trees, shrubs and rocks outside habitats are cleared to make room for a building
+const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';

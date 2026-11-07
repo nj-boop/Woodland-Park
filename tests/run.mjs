@@ -110,6 +110,30 @@ const tests = {
       return g.S.tiles.every((t) => t.o !== 'vetclinic') || 'bulldozing left pieces behind';
     }),
 
+  'buildings snap flush to a nearby path and clear plants in the way': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.setTool('shop');
+      g.set('sub', 'lodge');
+      // aim two tiles away from the path: the lodge should slide over to sit against it
+      const c0 = g.check(23, 17);
+      if (!c0.ok) return 'no placement found: ' + c0.msg;
+      const front = c0.plan.tiles.some((i) =>
+        [i + 36, i - 36, i + 1, i - 1].some((n) => g.S.tiles[n] && g.S.tiles[n].t === 'p')
+      );
+      if (!front) return 'lodge did not end up beside a path';
+      // put a tree inside that footprint: still allowed, and the tree goes
+      const ti = c0.plan.tiles[0];
+      g.S.tiles[ti].o = 'oak';
+      const c = g.check(23, 17);
+      if (!c.ok || !c.clears) return 'tree blocked the lodge: ' + (c.msg || '');
+      g.act(23, 17);
+      g.refresh();
+      return (
+        (g.S.tiles.filter((t) => t.o === 'lodge').length === 6 && g.S.tiles[ti].o === 'lodge') || 'lodge not placed'
+      );
+    }),
+
   'old saves get full-size buildings or a refund': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

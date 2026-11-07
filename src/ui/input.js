@@ -180,8 +180,23 @@ function endPtr(e) {
     dirty = true;
     return;
   }
+  if (['plant', 'shop'].includes(tool) && ITEMS[sub] && ITEMS[sub].size && e.pointerType !== 'mouse') {
+    // touch: the first tap (or a drag) shows where the building would go; tapping inside it builds
+    const at = d.moved ? hover : d.start;
+    if (!d.moved && pendingBuild && pendingBuild.tiles.includes(idx(d.start.x, d.start.y))) {
+      if (act(pendingBuild.x, pendingBuild.y)) pendingBuild = null;
+      return;
+    }
+    if (at && inB(at.x, at.y)) {
+      hover = at;
+      const c = check(at.x, at.y);
+      pendingBuild = c.plan ? { x: at.x, y: at.y, tiles: c.plan.tiles } : null;
+    }
+    return;
+  }
   if (['animal', 'plant', 'shop', 'bulldoze'].includes(tool) && !d.moved) act(d.start.x, d.start.y);
 }
+let pendingBuild = null; // touch placement waiting for its confirming tap
 cv.addEventListener('pointerup', endPtr);
 cv.addEventListener('pointercancel', endPtr);
 cv.addEventListener('pointerleave', () => {

@@ -98,6 +98,7 @@ function overlays(alpha) {
     }
   }
   const info = $('#dragInfo');
+  info.classList.remove('bad');
   if (drag && drag.rect) {
     const r = drag.rect,
       c = rectCheck(r);
@@ -128,6 +129,15 @@ function overlays(alpha) {
         sizeOf(tileAt(hover.x, hover.y).o)[0] * sizeOf(tileAt(hover.x, hover.y).o)[1] > 1
       )
         plan = planOf(anchorOf(idx(hover.x, hover.y)));
+      // say what's being built, what it costs, and why not if it can't go here
+      if (plan && tool !== 'bulldoze' && ITEMS[sub]) {
+        const it = ITEMS[sub];
+        info.textContent = c.ok
+          ? `${it.name} · ${money(it.cost)}${c.clears ? ` · clears ${c.clears} plant${c.clears > 1 ? 's' : ''}` : ''}${pendingBuild ? ' · tap it again to build' : ''}`
+          : c.msg;
+        info.classList.toggle('bad', !c.ok);
+        info.hidden = false;
+      }
       if (plan) {
         const cx = plan.x0 + plan.fw / 2,
           cz = plan.y0 + plan.fh / 2;
@@ -150,7 +160,7 @@ function overlays(alpha) {
         prev.scale.set(r * 2, 0.08, r * 2);
         prev.position.set(hover.wx / T, 0.06 + heightAt(hover.wx / T, hover.wy / T), hover.wy / T);
       }
-      if (c.ok && c.cost) {
+      if (c.ok && c.cost && !c.plan) {
         info.textContent = `(${money(c.cost)})`;
         info.hidden = false;
       }
