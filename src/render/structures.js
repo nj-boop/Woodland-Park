@@ -639,40 +639,141 @@ function buildEdge() {
     t.position.set(x, hillH(x, z) - 0.05, z);
   }
 }
-function rebuildStatic() {
-  staticRoot.clear();
-  applyHeights();
-  buildWater();
+/* The static scene is split into chunks of CHUNK × CHUNK tiles plus one group per habitat fence.
+   After a change, each chunk and fence is fingerprinted and only the ones whose fingerprint changed
+   are rebuilt, so placing one bench no longer rebuilds every tree in the zoo. */
+const CHUNK = 16;
+const chunkRoots = new Map(), // chunk key -> { grp, sig }
+  fenceRoots = new Map(); // habitat id -> { grp, sig }
+const gateRoot = new THREE.Group();
+staticRoot.add(gateRoot);
+// FNV-1a style hash over numbers
+function hashMix(h, v) {
+  h ^= v & 0xffff;
+  h = Math.imul(h, 16777619);
+  h ^= v >>> 16;
+  return Math.imul(h, 16777619);
+}
+const strCode = (str) => {
+  let h = 7;
+  for (let k = 0; k < str.length; k++) h = (Math.imul(h, 31) + str.charCodeAt(k)) | 0;
+  return h;
+};
+const BIOME_CODE = {};
+function chunkSig(cx, cy) {
+  let h = 2166136261;
+  for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)
+    for (let x = cx * CHUNK; x < Math.min(W, (cx + 1) * CHUNK); x++) {
+      const t = S.tiles[idx(x, y)];
+      h = hashMix(h, t.o ? strCode(t.o) : 0);
+      h = hashMix(h, (t.a ?? -1) + 1);
+      h = hashMix(h, t.r || 0);
+      // trees pick their kind from the habitat's biome
+      const b = t.e && F.emap[t.e] ? F.emap[t.e].biome : '';
+      h = hashMix(h, b ? (BIOME_CODE[b] ??= strCode(b)) : 0);
+      h = hashMix(h, (t.w ? 2 : 0) + (t.t === 'p' ? 1 : 0));
+      h = hashMix(h, Math.round(hC(x, y) * 100) + 1000);
+    }
+  return h;
+}
+function fenceSig(e) {
+  let h = 2166136261;
+  h = hashMix(
+    h,
+    strCode(e.biome + '|' + (e.fence || '') + '|' + (e.barrier ? 1 : 0) + '|' + JSON.stringify(e.gates || []))
+  );
+  for (const i of F.etiles[e.id] || []) {
+    h = hashMix(h, i);
+    h = hashMix(h, Math.round(hC(i % W, (i / W) | 0) * 100) + 1000);
+    h = hashMix(h, S.tiles[i].t === 'p' ? 1 : 0);
+  }
+  return h;
+}
+function buildChunk(grp, cx, cy) {
   seeded(() => {
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
+    for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)
+      for (let x = cx * CHUNK; x < Math.min(W, (cx + 1) * CHUNK); x++) {
         const o = tileAt(x, y).o;
         if (o && isAnchor(idx(x, y))) {
           seedRand(idx(x, y) * 7 + 3);
-          makeItem(staticRoot, o, x, y);
+          makeItem(grp, o, x, y);
         }
       }
-    for (const e of S.encl) {
-      seedRand(e.id * 7919);
-      makeFence(staticRoot, e);
-    }
   });
-  // gate
+}
+let staticStats = { chunks: 0, fences: 0 };
+function rebuildStatic() {
+  applyHeights();
+  buildWater();
+  staticStats = { chunks: 0, fences: 0 };
+  // scenery and buildings, chunk by chunk
+  const live = new Set();
+  for (let cy = 0; cy * CHUNK < H; cy++)
+    for (let cx = 0; cx * CHUNK < W; cx++) {
+      const key = cx + ',' + cy,
+        sig = chunkSig(cx, cy);
+      live.add(key);
+      let c = chunkRoots.get(key);
+      if (c && c.sig === sig) continue;
+      if (!c) {
+        c = { grp: new THREE.Group() };
+        chunkRoots.set(key, c);
+        staticRoot.add(c.grp);
+      }
+      c.grp.clear();
+      buildChunk(c.grp, cx, cy);
+      c.sig = sig;
+      staticStats.chunks++;
+    }
+  for (const [key, c] of chunkRoots)
+    if (!live.has(key)) {
+      staticRoot.remove(c.grp);
+      chunkRoots.delete(key);
+    }
+  // fences and tanks, one group per habitat
+  const alive = new Set();
+  for (const e of S.encl) {
+    alive.add(e.id);
+    const sig = fenceSig(e);
+    let f = fenceRoots.get(e.id);
+    if (f && f.sig === sig) continue;
+    if (!f) {
+      f = { grp: new THREE.Group() };
+      fenceRoots.set(e.id, f);
+      staticRoot.add(f.grp);
+    }
+    f.grp.clear();
+    seeded(() => {
+      seedRand(e.id * 7919);
+      makeFence(f.grp, e);
+    });
+    f.sig = sig;
+    staticStats.fences++;
+  }
+  for (const [id, f] of fenceRoots)
+    if (!alive.has(id)) {
+      staticRoot.remove(f.grp);
+      fenceRoots.delete(id);
+    }
+  if (!gateRoot.children.length || !signTex) buildGate();
+  seeded(buildTufts);
+  staticDirty = false;
+}
+function buildGate() {
+  gateRoot.clear();
   const gx = GATE.x,
     gz = GATE.y;
-  P(staticRoot, 'box', '#6b4527', gx - 0.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
-  P(staticRoot, 'box', '#6b4527', gx + 1.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
-  P(staticRoot, 'box', '#7a5230', gx + 0.5, 1.38, gz + 0.75, 1.6, 0.16, 0.22);
+  P(gateRoot, 'box', '#6b4527', gx - 0.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
+  P(gateRoot, 'box', '#6b4527', gx + 1.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
+  P(gateRoot, 'box', '#7a5230', gx + 0.5, 1.38, gz + 0.75, 1.6, 0.16, 0.22);
   if (!signTex) makeSign();
   const sm = new THREE.MeshBasicMaterial({ map: signTex });
   const s1 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.375), sm);
   s1.position.set(gx + 0.5, 1.66, gz + 0.76);
-  staticRoot.add(s1);
+  gateRoot.add(s1);
   const s2 = s1.clone();
   s2.rotation.y = Math.PI;
   s2.position.z = gz + 0.74;
-  staticRoot.add(s2);
-  P(staticRoot, 'box', '#5b3c22', gx + 0.5, 1.66, gz + 0.75, 1.56, 0.42, 0.012);
-  seeded(buildTufts);
-  staticDirty = false;
+  gateRoot.add(s2);
+  P(gateRoot, 'box', '#5b3c22', gx + 0.5, 1.66, gz + 0.75, 1.56, 0.42, 0.012);
 }

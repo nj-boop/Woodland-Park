@@ -99,6 +99,11 @@ window.__wg = {
       maxTex: renderer.capabilities.maxTextureSize,
     };
   },
+  get staticStats() {
+    return staticStats;
+  },
+  save,
+  readSave,
   get renderer() {
     return renderer;
   },

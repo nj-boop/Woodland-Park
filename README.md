@@ -67,8 +67,9 @@ Order matters: a file can use anything defined in an earlier file, and functions
   `ui/staff-panel.js`; staff are drawn with the guest meshes, in uniform.
 - **Guests** walk path tiles using the distance maps, buy from shops they pass, react to what they
   see, and leave when tired or unhappy. Their final happiness feeds the zoo rating.
-- **Rendering** keeps static things (items, fences, tanks) in a scene graph rebuilt only when the
-  world changes, while animals and guests are updated every frame. Guests are instanced meshes.
+- **Rendering** keeps static things (items, fences, tanks) in a scene graph split into 16 × 16-tile
+  chunks plus one group per habitat fence (`rebuildStatic()` in `render/structures.js`). Each is
+  fingerprinted, and only the ones whose fingerprint changed are rebuilt, while animals and guests are updated every frame. Guests are instanced meshes.
   Scenery uses seeded randomness so it looks the same every rebuild.
 
 ### Adding things
@@ -84,6 +85,7 @@ Order matters: a file can use anything defined in an earlier file, and functions
 
 ## Saves
 
-Saves go to the browser's local storage under `wildgrove-zoo-v1`. `load()` understands older save
+Saves go to the browser's IndexedDB (database `wildgrove`, key `wildgrove-zoo-v1`), with a copy in
+local storage while the save is under 2 MB. `load()` understands older save
 formats (rectangular habitats, item numbers instead of names, staff head counts instead of named
 staff, habitats without gates) so updates don't wipe zoos.

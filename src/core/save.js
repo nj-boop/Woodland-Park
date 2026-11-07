@@ -245,10 +245,68 @@ function load(str) {
   if (!S.cands || !S.cands.length) refreshCandidates();
   dirty = true;
 }
+/* Saves live in the browser's IndexedDB (no practical size limit, unlike localStorage's ~5 MB).
+   A copy also goes to localStorage while it is small, as a fallback for browsers that block IndexedDB. */
+const IDB_NAME = 'wildgrove',
+  IDB_STORE = 'saves';
+let idbP = null;
+function idb() {
+  if (idbP) return idbP;
+  idbP = new Promise((res, rej) => {
+    try {
+      const rq = indexedDB.open(IDB_NAME, 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore(IDB_STORE);
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    } catch (e) {
+      rej(e);
+    }
+  });
+  return idbP;
+}
+async function idbGet(key) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const rq = db.transaction(IDB_STORE).objectStore(IDB_STORE).get(key);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbPut(key, val) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+const LS_MAX = 2e6; // characters; bigger zoos are saved to IndexedDB only
 function save() {
+  let str;
   try {
-    localStorage.setItem(SAVE_KEY, serialize());
+    str = serialize();
+  } catch (e) {
+    return;
+  }
+  idbPut(SAVE_KEY, { t: Date.now(), data: str }).catch(() => {});
+  try {
+    if (str.length < LS_MAX) localStorage.setItem(SAVE_KEY, str);
+    else localStorage.removeItem(SAVE_KEY);
   } catch (e) {}
+}
+// the newest save from either store (IndexedDB normally; localStorage for zoos saved before it existed)
+async function readSave() {
+  let rec = null;
+  try {
+    rec = await idbGet(SAVE_KEY);
+  } catch (e) {}
+  let ls = null;
+  try {
+    ls = localStorage.getItem(SAVE_KEY);
+  } catch (e) {}
+  if (rec && rec.data) return rec.data;
+  return ls;
 }
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => {

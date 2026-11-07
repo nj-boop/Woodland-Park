@@ -26,10 +26,10 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
-function start(data) {
+async function start(data) {
   let loaded = false;
   try {
-    const s = (data && data.save) || localStorage.getItem(SAVE_KEY);
+    const s = (data && data.save) || (await readSave());
     if (s) {
       load(s);
       loaded = true;

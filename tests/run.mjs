@@ -381,6 +381,37 @@ const tests = {
       );
     }),
 
+  'placing one thing rebuilds only its chunk': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.refresh();
+      g.renderScenery();
+      g.refresh();
+      g.renderScenery();
+      const idle = { ...g.staticStats };
+      g.setTool('plant');
+      g.set('sub', 'oak');
+      if (!g.act(3, 3)) return 'could not plant';
+      g.refresh();
+      g.renderScenery();
+      const one = { ...g.staticStats };
+      return (
+        (idle.chunks === 0 && idle.fences === 0 && one.chunks === 1 && one.fences === 0) ||
+        JSON.stringify({ idle, one })
+      );
+    }),
+
+  'saves go to IndexedDB and come back': async ({ page }) =>
+    page.evaluate(async () => {
+      const g = window.__wg;
+      g.S.money = 123457;
+      g.save();
+      await new Promise((r) => setTimeout(r, 400));
+      localStorage.clear();
+      const back = await g.readSave();
+      return (back && JSON.parse(back).money === 123457) || 'save not found in IndexedDB';
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;
