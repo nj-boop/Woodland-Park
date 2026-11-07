@@ -44,8 +44,6 @@ async function start(data) {
   if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function')
     window.claude.hot.snapshot(() => ({ save: serialize() }));
   setInterval(save, 15000);
-  buildEdge();
-  batchEdge();
   loadModels();
   if (document.fonts && document.fonts.ready)
     document.fonts.ready.then(() => {

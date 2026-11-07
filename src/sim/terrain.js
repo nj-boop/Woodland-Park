@@ -2,7 +2,7 @@
 /* ---------- building ---------- */
 const adjPath = (x, y) => nbr4(idx(x, y)).some(isPath);
 /* ---------- terrain heights (tile corners) ---------- */
-const HW = W + 1;
+let HW = W + 1; // corners per row of the height grid
 const cIdx = (i, j) => j * HW + i;
 function hC(i, j) {
   return S.hgt ? S.hgt[cIdx(clamp(i, 0, W), clamp(j, 0, H))] : 0;

@@ -44,7 +44,60 @@ function addAnimal(sp, e, x, y) {
   S.animals.push(a);
   return a;
 }
-function newZoo() {
+function setMapSize(w, h) {
+  W = w;
+  H = h;
+  HW = w + 1;
+}
+// move the whole zoo into a w × h map, shifted by (ox, oy) tiles
+function resizeMap(w, h, ox, oy) {
+  const oldW = W,
+    oldH = H,
+    oldT = S.tiles,
+    oldH8 = S.hgt;
+  setMapSize(w, h);
+  const ni = (x, y) => (y + oy) * w + (x + ox);
+  S.tiles = blankTiles();
+  for (let y = 0; y < oldH; y++)
+    for (let x = 0; x < oldW; x++) {
+      const t = oldT[y * oldW + x];
+      if (t.a != null) t.a = ni(t.a % oldW, (t.a / oldW) | 0);
+      S.tiles[ni(x, y)] = t;
+    }
+  S.hgt = new Float32Array((w + 1) * (h + 1));
+  for (let j = 0; j <= oldH; j++)
+    for (let i = 0; i <= oldW; i++) S.hgt[(j + oy) * (w + 1) + i + ox] = oldH8[j * (oldW + 1) + i];
+  for (const e of S.encl) {
+    e.gates = (e.gates || []).map(([gi, gd]) => [ni(gi % oldW, (gi / oldW) | 0), gd]);
+    e.x += ox;
+    e.y += oy;
+  }
+  for (const a of S.animals) for (const k of ['x', 'tx', 'ox']) a[k] += ox;
+  for (const a of S.animals) for (const k of ['y', 'ty', 'oy']) a[k] += oy;
+  for (const s of S.staff) {
+    s.x += ox;
+    s.ox += ox;
+    s.y += oy;
+    s.oy += oy;
+    s.path = [];
+    s.job = null;
+    s.st = 'idle';
+  }
+  S.guests = [];
+  GATE.x += ox;
+  GATE.y += oy;
+  S.mapW = w;
+  S.mapH = h;
+  S.gate = { ...GATE };
+  dirty = true;
+  mapResized = true;
+}
+let mapResized = true; // tells the renderer to rebuild everything sized to the map
+// a new zoo; on a bigger map the starting layout sits at the bottom middle, by the entrance
+function newZoo(w, h) {
+  setMapSize(36, 26);
+  GATE.x = 18;
+  GATE.y = 25;
   S = {
     v: 1,
     hgt: new Float32Array((W + 1) * (H + 1)),
@@ -113,7 +166,12 @@ function newZoo() {
     if (t.t === 'g' && !t.e) t.o = o;
   });
   refreshCandidates();
+  S.mapW = 36;
+  S.mapH = 26;
+  S.gate = { ...GATE };
+  if ((w && w !== 36) || (h && h !== 26)) resizeMap(w || 36, h || 26, Math.floor(((w || 36) - 36) / 2), (h || 26) - 26);
   dirty = true;
+  mapResized = true;
 }
 
 /* ---------- derived fields ---------- */
@@ -236,30 +294,39 @@ function rebuild() {
   F.shops = new Array(N);
   F.bin = new Uint8Array(N);
   F.scen = new Uint8Array(N);
-  const bins = [],
-    plants = [];
-  const decos = [],
-    atms = [];
-  for (let i = 0; i < N; i++) {
-    const o = S.tiles[i].o;
-    if (o && !isAnchor(i)) continue; // count each building once, at its anchor tile
-    if (o && ITEMS[o].kind === 'decor') decos.push([i, ITEMS[o].scen]);
-    if (o === 'playground') decos.push([i, 3]);
-    if (o === 'atm') atms.push(i);
-  }
+  // things that affect nearby path tiles are "stamped" onto a grid around themselves, which costs
+  // (number of things × area) instead of (path tiles × things)
+  const scen = new Float32Array(N);
   F.atm = new Uint8Array(N);
+  F.bin = new Uint8Array(N);
+  const stamp = (i, r, diamond, fn) => {
+    const cx = i % W,
+      cy = (i / W) | 0;
+    for (let y = Math.max(0, cy - r); y <= Math.min(H - 1, cy + r); y++)
+      for (let x = Math.max(0, cx - r); x <= Math.min(W - 1, cx + r); x++)
+        if (!diamond || Math.abs(x - cx) + Math.abs(y - cy) <= r) fn(y * W + x);
+  };
+  F.paths = [];
+  F.litter = new Set();
+  F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set() };
   for (let i = 0; i < N; i++) {
-    const x = i % W,
-      y = (i / W) | 0;
-    if (atms.some((b) => Math.abs((b % W) - x) + Math.abs(((b / W) | 0) - y) <= 6)) F.atm[i] = 1;
+    const t = S.tiles[i],
+      o = t.o;
+    if (t.t === 'p') {
+      F.paths.push(i);
+      if (t.l > 0) F.litter.add(i);
+    }
+    if (t.w) stamp(i, 2, false, (k) => (scen[k] += 0.3));
+    if (!o) continue;
+    if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
+    if (ITEMS[o].kind === 'plant') stamp(i, 2, false, (k) => scen[k]++);
+    if (!isAnchor(i)) continue; // count each building once, at its anchor tile
+    if (ITEMS[o].kind === 'decor') stamp(i, 2, false, (k) => (scen[k] += ITEMS[o].scen));
+    if (o === 'playground') stamp(i, 2, false, (k) => (scen[k] += 3));
+    if (o === 'atm') stamp(i, 6, true, (k) => (F.atm[k] = 1));
+    if (o === 'bin') stamp(i, 3, true, (k) => (F.bin[k] = 1));
   }
-  for (let i = 0; i < N; i++) {
-    const o = S.tiles[i].o;
-    if (o === 'bin') bins.push(i);
-    if (o && ITEMS[o].kind === 'plant') plants.push(i);
-  }
-  for (let i = 0; i < N; i++) {
-    if (!isPath(i)) continue;
+  for (const i of F.paths) {
     const x = i % W,
       y = (i / W) | 0,
       v = new Set(),
@@ -277,13 +344,7 @@ function rebuild() {
     }
     F.view[i] = [...v];
     F.shops[i] = sh;
-    F.bin[i] = bins.some((b) => Math.abs((b % W) - x) + Math.abs(((b / W) | 0) - y) <= 3) ? 1 : 0;
-    let c = 0;
-    for (let dy = -2; dy <= 2; dy++)
-      for (let dx = -2; dx <= 2; dx++) if (inB(x + dx, y + dy) && tileAt(x + dx, y + dy).w) c += 0.3;
-    for (const dco of decos) if (Math.abs((dco[0] % W) - x) <= 2 && Math.abs(((dco[0] / W) | 0) - y) <= 2) c += dco[1];
-    for (const p of plants) if (Math.abs((p % W) - x) <= 2 && Math.abs(((p / W) | 0) - y) <= 2) c++;
-    F.scen[i] = Math.min(8, c);
+    F.scen[i] = Math.min(8, scen[i]);
   }
   const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0 };
   for (let i = 0; i < N; i++) {

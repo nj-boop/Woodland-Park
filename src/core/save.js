@@ -3,6 +3,9 @@
 function serialize() {
   return JSON.stringify({
     v: 1,
+    mapW: W,
+    mapH: H,
+    gate: { x: GATE.x, y: GATE.y },
     hg: Array.from(S.hgt || [], (v) => Math.round(v * 100)).join(','),
     wt: S.tiles.map((t) => (t.w ? 1 : 0)).join(''),
     ee: S.tiles.map((t) => t.e || 0),
@@ -167,6 +170,10 @@ function load(str) {
   const d = JSON.parse(str);
   if (!d || d.v !== 1) throw 0;
   const keys = Object.keys(ITEMS);
+  setMapSize(d.mapW || 36, d.mapH || 26);
+  GATE.x = d.gate ? d.gate.x : 18;
+  GATE.y = d.gate ? d.gate.y : 25;
+  mapResized = true;
   S = { ...d, tiles: blankTiles(), guests: [] };
   S.prices = S.prices || { ...BASE_PRICE };
   S.ledger = S.ledger || [];

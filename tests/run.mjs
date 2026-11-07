@@ -357,6 +357,7 @@ const tests = {
       g.hireRole('janitor');
       const lit = g.S.tiles.findIndex((t, i) => t.t === 'p' && i > 20 * 36);
       g.S.tiles[lit].l = 2;
+      g.refresh(); // litter normally comes from guests, which also log it for janitors
       e.cond = 40;
       for (let i = 0; i < 4000 && (g.S.tiles[lit].l > 0 || e.cond < 100); i++) g.tick();
       return (g.S.tiles[lit].l === 0 && e.cond === 100) || `litter ${g.S.tiles[lit].l}, fence ${e.cond}`;
@@ -434,6 +435,41 @@ const tests = {
       localStorage.clear();
       const back = await g.readSave();
       return (back && JSON.parse(back).money === 123457) || 'save not found in IndexedDB';
+    }),
+
+  'the map can grow, keeping the zoo intact': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const zebra = g.S.animals[0],
+        zx = zebra.x,
+        gate0 = { ...g.S.gate };
+      g.build('lodge');
+      const a0 = g.S.tiles.find((t) => t.o === 'lodge').a,
+        lodge = [a0 % 36, Math.floor(a0 / 36)];
+      g.resizeMap(100, 80, 30, 40);
+      g.refresh();
+      const ok =
+        g.W === 100 &&
+        g.H === 80 &&
+        zebra.x === zx + 30 &&
+        g.S.tiles.filter((t) => t.o === 'lodge').length === 6 &&
+        g.S.tiles[(lodge[1] + 40) * 100 + lodge[0] + 30].a === (lodge[1] + 40) * 100 + lodge[0] + 30 &&
+        g.S.gate.x === gate0.x + 30 &&
+        g.S.encl[0].gates.length === 1;
+      if (!ok)
+        return JSON.stringify({
+          W: g.W,
+          H: g.H,
+          dz: zebra.x - zx,
+          lodges: g.S.tiles.filter((t) => t.o === 'lodge').length,
+          at: g.S.tiles[(lodge[1] + 40) * 100 + lodge[0] + 30].o,
+          lodge,
+          gate: [g.S.gate.x - gate0.x],
+          gates: g.S.encl[0].gates,
+        });
+      g.load(g.serialize());
+      g.refresh();
+      return (g.W === 100 && g.S.tiles.filter((t) => t.o === 'lodge').length === 6) || 'size lost on save';
     }),
 
   'reaching the goals unlocks the next tier': async ({ page }) =>

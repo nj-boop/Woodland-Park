@@ -147,6 +147,7 @@ function act(x, y) {
     if (t.t === 'p') {
       t.t = 'g';
       t.l = 0;
+      F.litter.delete(idx(x, y));
       S.money += 5;
       dirty = true;
       return true;

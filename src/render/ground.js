@@ -21,13 +21,14 @@ function seeded(fn) {
     Math.random = _origRand;
   }
 }
-function buildTufts() {
+// grass tufts and wild flowers. Inside the map they belong to each scenery chunk (rebuilt with it);
+// outside the map there is one set, built when the map size changes.
+function tuftWriter(tm, fm) {
   const o = new THREE.Object3D(),
     c = new THREE.Color();
-  let n = 0,
-    f = 0;
-  const put = (x, z, y, sc, col) => {
-    if (n >= TUFT_MAX) return;
+  const w = { n: 0, f: 0 };
+  w.put = (x, z, y, sc, col) => {
+    if (w.n >= tm.instanceMatrix.count) return;
     if (x >= 0 && x <= W && z >= 0 && z <= H) {
       if (tileAt(Math.floor(clamp(x, 0, W - 0.01)), Math.floor(clamp(z, 0, H - 0.01))).w) return;
       y = heightAt(x, z);
@@ -36,63 +37,86 @@ function buildTufts() {
     o.rotation.set(rnd(-0.25, 0.25), rnd(0, 6.28), rnd(-0.25, 0.25));
     o.scale.set(sc, sc * rnd(0.8, 1.4), sc);
     o.updateMatrix();
-    tufts.setMatrixAt(n, o.matrix);
-    tufts.setColorAt(n, c.set(col).convertSRGBToLinear());
-    n++;
+    tm.setMatrixAt(w.n, o.matrix);
+    tm.setColorAt(w.n, c.set(col).convertSRGBToLinear());
+    w.n++;
   };
-  const flower = (x, z, y) => {
-    if (f >= FL_MAX) return;
+  w.flower = (x, z, y) => {
+    if (w.f >= fm.instanceMatrix.count) return;
     if (x >= 0 && x <= W && z >= 0 && z <= H) y = heightAt(x, z);
     o.position.set(x, y, z);
     o.rotation.set(0, 0, 0);
     o.scale.setScalar(1);
     o.updateMatrix();
-    flowers.setMatrixAt(f, o.matrix);
-    flowers.setColorAt(f, c.set(pick(FLC)).convertSRGBToLinear());
-    f++;
+    fm.setMatrixAt(w.f, o.matrix);
+    fm.setColorAt(w.f, c.set(pick(FLC)).convertSRGBToLinear());
+    w.f++;
   };
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      seedRand(idx(x, y) * 31 + 7);
-      const t = tileAt(x, y);
-      if (t.t === 'p' || t.o) continue;
-      if (t.e) {
-        const b = F.emap[t.e].biome;
-        if (b === 'savanna' || b === 'prairie')
-          for (let k = 0; k < 4; k++)
-            put(
-              x + rnd(0.15, 0.85),
-              y + rnd(0.15, 0.85),
-              0,
-              rnd(1.2, 1.8),
-              b === 'savanna' ? pick(['#e8c878', '#d8b464', '#f0d488']) : pick(['#c8d890', '#d8e0a0'])
-            );
-        else if (b === 'jungle')
-          for (let k = 0; k < 3; k++)
-            put(x + rnd(0.15, 0.85), y + rnd(0.15, 0.85), 0, rnd(1.4, 2.2), pick(['#8fb080', '#a0c090']));
-        continue;
-      }
-      for (let k = 0; k < 2; k++)
-        put(x + rnd(0.05, 0.95), y + rnd(0.05, 0.95), 0, rnd(0.55, 0.9), pick(['#d8e6c8', '#c8dcb4', '#e6eed6']));
-      if (Math.random() < 0.08) flower(x + rnd(0.1, 0.9), y + rnd(0.1, 0.9), 0);
+  w.done = () => {
+    tm.count = w.n;
+    fm.count = w.f;
+    for (const m of [tm, fm]) {
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
     }
+  };
+  return w;
+}
+function tuftsForTile(w, x, y) {
+  seedRand(idx(x, y) * 31 + 7);
+  const t = tileAt(x, y);
+  if (t.t === 'p' || t.o) return;
+  if (t.e) {
+    const b = F.emap[t.e].biome;
+    if (b === 'savanna' || b === 'prairie')
+      for (let k = 0; k < 4; k++)
+        w.put(
+          x + rnd(0.15, 0.85),
+          y + rnd(0.15, 0.85),
+          0,
+          rnd(1.2, 1.8),
+          b === 'savanna' ? pick(['#e8c878', '#d8b464', '#f0d488']) : pick(['#c8d890', '#d8e0a0'])
+        );
+    else if (b === 'jungle')
+      for (let k = 0; k < 3; k++)
+        w.put(x + rnd(0.15, 0.85), y + rnd(0.15, 0.85), 0, rnd(1.4, 2.2), pick(['#8fb080', '#a0c090']));
+    return;
+  }
+  for (let k = 0; k < 2; k++)
+    w.put(x + rnd(0.05, 0.95), y + rnd(0.05, 0.95), 0, rnd(0.55, 0.9), pick(['#d8e6c8', '#c8dcb4', '#e6eed6']));
+  if (Math.random() < 0.08) w.flower(x + rnd(0.1, 0.9), y + rnd(0.1, 0.9), 0);
+}
+function buildChunkTufts(grp, cx, cy) {
+  const tm = new THREE.InstancedMesh(tuftGeo, tufts.material, CHUNK * CHUNK * 4),
+    fm = new THREE.InstancedMesh(flGeo, flowers.material, CHUNK * CHUNK);
+  const w = tuftWriter(tm, fm);
+  seeded(() => {
+    for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)
+      for (let x = cx * CHUNK; x < Math.min(W, (cx + 1) * CHUNK); x++) tuftsForTile(w, x, y);
+  });
+  w.done();
+  for (const m of [tm, fm]) {
+    m.receiveShadow = true;
+    m.frustumCulled = false;
+    grp.add(m);
+  }
+}
+// the countryside outside the fence
+function buildTufts() {
+  const w = tuftWriter(tufts, flowers);
   seedRand(424242);
-  for (let k = 0; k < 2600 && n < TUFT_MAX; k++) {
+  const n = Math.round((2600 * (W + H)) / 62);
+  for (let k = 0; k < n; k++) {
     let x, z;
     do {
       x = rnd(-22, W + 22);
       z = rnd(-22, H + 22);
     } while ((x > -1 && x < W + 1 && z > -1 && z < H + 1) || Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2);
     const y = hillH(x, z);
-    put(x, z, y, rnd(1, 1.7), pick(['#c8d8b0', '#b8cca0', '#d0dcbc']));
-    if (Math.random() < 0.12) flower(x, z, y);
+    w.put(x, z, y, rnd(1, 1.7), pick(['#c8d8b0', '#b8cca0', '#d0dcbc']));
+    if (Math.random() < 0.12) w.flower(x, z, y);
   }
-  tufts.count = n;
-  flowers.count = f;
-  tufts.instanceMatrix.needsUpdate = true;
-  flowers.instanceMatrix.needsUpdate = true;
-  if (tufts.instanceColor) tufts.instanceColor.needsUpdate = true;
-  if (flowers.instanceColor) flowers.instanceColor.needsUpdate = true;
+  w.done();
 }
 let groundDirty = true,
   staticDirty = true;

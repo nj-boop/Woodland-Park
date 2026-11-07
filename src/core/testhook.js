@@ -44,9 +44,38 @@ window.__wg = {
     staticDirty = true;
     groundDirty = true;
   },
-  newZoo() {
-    newZoo();
+  newZoo(w, h) {
+    newZoo(w, h);
     rebuild();
+  },
+  resizeMap,
+  profileTick(n) {
+    const parts = {
+      animals: tickAnimals,
+      staff: tickStaff,
+      guests: tickGuests,
+      watchers: countWatchers,
+      tier: checkTier,
+    };
+    const out = {};
+    for (const [k, f] of Object.entries(parts)) {
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) f();
+      out[k] = ((performance.now() - t0) / n).toFixed(3);
+    }
+    return out;
+  },
+  paintGround,
+  timeRoute(from, to) {
+    const t0 = performance.now();
+    const r = staffRoute(from, new Set([to]));
+    return [performance.now() - t0, r ? r.length : null];
+  },
+  get W() {
+    return W;
+  },
+  get H() {
+    return H;
   },
   hire,
   fire,

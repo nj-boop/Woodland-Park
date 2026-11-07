@@ -45,7 +45,9 @@ Order matters: a file can use anything defined in an earlier file, and functions
 - **Fixed-step simulation, smooth rendering.** `tick()` (`sim/events.js`) advances the world 20
   times per in-game second. `frame()` (`core/boot.js`) runs as many ticks as real time and game
   speed require, then renders with interpolation between ticks.
-- **The grid.** The map is 36 × 26 tiles. Each tile has a type (`t`: grass or path), an item (`o`),
+- **The grid.** The map starts at 36 × 26 tiles and can grow: `resizeMap(w, h, ox, oy)`
+  (`sim/world.js`) moves the whole zoo into a bigger map, shifted by (ox, oy), and the renderer
+  rebuilds everything sized to the map (`onMapResized()`). `W` and `H` are the current size. Each tile has a type (`t`: grass or path), an item (`o`),
   a habitat id (`e`), litter (`l`), a water flag (`w`) and a path material (`pm`). Terrain heights
   live on tile corners (`S.hgt`). Habitats are sets of tiles, not rectangles.
 - **Buildings bigger than a tile** (`sim/footprints.js`). One tile is about 3 m. A building's size
@@ -79,6 +81,17 @@ Order matters: a file can use anything defined in an earlier file, and functions
   chunks plus one group per habitat fence (`rebuildStatic()` in `render/structures.js`). Each is
   fingerprinted, and only the ones whose fingerprint changed are rebuilt, while animals and guests are updated every frame. Guests are instanced meshes.
   Scenery uses seeded randomness so it looks the same every rebuild.
+
+### Keeping big maps fast
+
+Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes
+about 0.7 ms, placing something about 80 ms in total. Rules that keep it that way:
+
+- Don't loop over every tile, or every animal for every animal, inside per-tick code. Use the
+  lists `rebuild()` keeps: `F.paths`, `F.litter`, `F.homes`, `animalsIn(habitatId)`.
+- Area effects (scenery, bins, ATMs) are stamped onto a grid around each item in `rebuild()`.
+- Staff routes use A* with reused buffers (`staffRoute()`); give it small goal sets.
+- Scenery, grass tufts and ground heights rebuild per chunk, only where something changed.
 
 ### Adding things
 

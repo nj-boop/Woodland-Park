@@ -625,7 +625,8 @@ function buildEdge() {
   road.receiveShadow = true;
   const lot = P(worldEdge, 'box', '#8b8f8c', GATE.x + 0.5, 0, H + 12, 14, 0.02, 6, false);
   lot.receiveShadow = true;
-  for (let k = 0; k < 300; k++) {
+  const trees = Math.round((300 * (W + H)) / 62);
+  for (let k = 0; k < trees; k++) {
     let x, z;
     do {
       x = rnd(-26, W + 26);
@@ -702,6 +703,27 @@ function buildChunk(grp, cx, cy) {
   });
 }
 let staticStats = { chunks: 0, fences: 0 };
+// everything sized to the map: ground mesh, hills, outer forest; all chunks rebuilt
+function onMapResized() {
+  LAKE.x = W + 10;
+  makeGroundMeshes();
+  buildHills();
+  const ms = Math.max(1, (Math.max(W, H) + 300) / 336);
+  mountains.position.set(W / 2, 0, H / 2);
+  mountains.scale.set(ms, 1, ms);
+  for (const o of worldEdge.children) o.clear();
+  worldEdge.clear();
+  buildEdge();
+  batchEdge();
+  for (const c of chunkRoots.values()) staticRoot.remove(c.grp);
+  chunkRoots.clear();
+  for (const f of fenceRoots.values()) staticRoot.remove(f.grp);
+  fenceRoots.clear();
+  gateRoot.clear();
+  seeded(buildTufts);
+  staticDirty = groundDirty = true;
+  mapResized = false;
+}
 function rebuildStatic() {
   applyHeights();
   buildWater();
@@ -723,6 +745,7 @@ function rebuildStatic() {
       c.grp.clear();
       buildChunk(c.grp, cx, cy);
       batchGroup(c.grp);
+      buildChunkTufts(c.grp, cx, cy);
       c.box = new THREE.Box3(
         new THREE.Vector3(cx * CHUNK - 2, -3, cy * CHUNK - 2),
         new THREE.Vector3((cx + 1) * CHUNK + 2, 9, (cy + 1) * CHUNK + 2)
@@ -765,7 +788,6 @@ function rebuildStatic() {
       fenceRoots.delete(id);
     }
   if (!gateRoot.children.length || !signTex) buildGate();
-  seeded(buildTufts);
   staticDirty = false;
 }
 function buildGate() {

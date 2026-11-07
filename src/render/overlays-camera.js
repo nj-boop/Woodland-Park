@@ -212,6 +212,7 @@ function resize() {
 }
 let groundT = 0;
 function render3D(alpha, dt) {
+  if (mapResized) onMapResized();
   if (groundDirty) {
     paintGround();
     groundSig = groundSignature();

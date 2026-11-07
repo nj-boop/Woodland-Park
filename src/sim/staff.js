@@ -240,67 +240,105 @@ const stepCost = (b) => (S.tiles[b].t === 'p' ? 1 : S.tiles[b].e ? 1.6 : 2.4);
 // cheapest route from tile `from` to the nearest tile in `goals` (a Set of tile indices); null if none can be reached
 function staffRoute(from, goals) {
   if (goals.has(from)) return [];
-  const N = W * H,
-    dist = new Float64Array(N).fill(Infinity), // 64-bit: rounding to 32 bits would make the pop check skip nodes
-    prev = new Int32Array(N).fill(-1),
-    heap = [];
-  const push = (i, d) => {
-    heap.push([d, i]);
-    let k = heap.length - 1;
+  // A*: the heuristic is the distance to the box around all goal tiles, so the search heads
+  // toward the goals instead of flooding the whole map
+  let gx0 = W,
+    gy0 = H,
+    gx1 = 0,
+    gy1 = 0;
+  for (const g of goals) {
+    const x = g % W,
+      y = (g / W) | 0;
+    if (x < gx0) gx0 = x;
+    if (x > gx1) gx1 = x;
+    if (y < gy0) gy0 = y;
+    if (y > gy1) gy1 = y;
+  }
+  const hOf = (i) => {
+    const x = i % W,
+      y = (i / W) | 0;
+    // weighted ×1.5: routes may come out slightly longer than the very best, but the search
+    // explores far fewer tiles on a big map
+    return (Math.max(0, gx0 - x, x - gx1) + Math.max(0, gy0 - y, y - gy1)) * 1.5;
+  };
+  const N = W * H;
+  if (!routeBuf || routeBuf.n !== N)
+    routeBuf = { n: N, dist: new Float64Array(N), prev: new Int32Array(N), seen: new Uint32Array(N), stamp: 0 };
+  const R = routeBuf,
+    dist = R.dist,
+    prev = R.prev,
+    seen = R.seen,
+    st = ++R.stamp;
+  // binary heap of [f, node] kept in two parallel arrays
+  const hf = [],
+    hn = [];
+  const push = (n, f) => {
+    let k = hf.length;
+    hf.push(f);
+    hn.push(n);
     while (k > 0) {
       const p = (k - 1) >> 1;
-      if (heap[p][0] <= heap[k][0]) break;
-      [heap[p], heap[k]] = [heap[k], heap[p]];
+      if (hf[p] <= f) break;
+      hf[k] = hf[p];
+      hn[k] = hn[p];
       k = p;
     }
+    hf[k] = f;
+    hn[k] = n;
   };
   const pop = () => {
-    const top = heap[0],
-      last = heap.pop();
-    if (heap.length) {
-      heap[0] = last;
+    const top = hn[0],
+      lf = hf.pop(),
+      ln = hn.pop();
+    if (hf.length) {
       let k = 0;
       for (;;) {
         const l = k * 2 + 1,
           r = l + 1;
-        let m = k;
-        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
-        if (m === k) break;
-        [heap[m], heap[k]] = [heap[k], heap[m]];
+        let m = -1;
+        if (l < hf.length) m = l;
+        if (r < hf.length && hf[r] < hf[l]) m = r;
+        if (m < 0 || hf[m] >= lf) break;
+        hf[k] = hf[m];
+        hn[k] = hn[m];
         k = m;
       }
+      hf[k] = lf;
+      hn[k] = ln;
     }
     return top;
   };
+  seen[from] = st;
   dist[from] = 0;
-  push(from, 0);
-  while (heap.length) {
-    const [d, c] = pop();
-    if (d > dist[c]) continue;
+  push(from, hOf(from));
+  while (hf.length) {
+    const c = pop();
     if (goals.has(c)) {
       const out = [];
       for (let k = c; k !== from; k = prev[k]) out.push(k);
       return out.reverse();
     }
-    const x = c % W,
+    const d = dist[c],
+      x = c % W,
       y = (c / W) | 0;
     for (let dr = 0; dr < 4; dr++) {
       const nx = x + DIRS[dr][0],
         ny = y + DIRS[dr][1];
       if (!inB(nx, ny)) continue;
-      const n = idx(nx, ny);
+      const n = ny * W + nx;
       if (!staffStep(c, n, dr)) continue;
       const nd = d + stepCost(n);
-      if (nd < dist[n]) {
+      if (seen[n] !== st || nd < dist[n]) {
+        seen[n] = st;
         dist[n] = nd;
         prev[n] = c;
-        push(n, nd);
+        push(n, nd + hOf(n));
       }
     }
   }
   return null;
 }
+let routeBuf = null; // reused between searches so a big map doesn't allocate per route
 
 /* ---------- where each job is done ---------- */
 // tiles from which a habitat can be serviced: inside it (through a gate) for land habitats, beside it for tanks
@@ -327,10 +365,7 @@ function fenceSideTiles(e) {
   return out;
 }
 function homeTiles(role) {
-  const out = new Set(),
-    home = STAFF_ROLES[role].home;
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === home) for (const n of nbr4(i)) if (!S.tiles[n].e) out.add(n);
-  return out;
+  return new Set(F.homes ? F.homes[STAFF_ROLES[role].home] : []);
 }
 // an animal's tile and the tiles around it (it may be standing by a pond or a rock that people cannot stand on)
 // (only tiles on the same side of the fence as the animal count)
@@ -390,8 +425,17 @@ function pickJob(s) {
       .filter((e) => e.biome !== 'pool' && (e.cond ?? 100) < FENCE_AT && !taken('fence', e.id))
       .sort((a, b) => (a.cond ?? 100) - (b.cond ?? 100))[0];
     if (worn) return { kind: 'fence', id: worn.id, goals: fenceSideTiles(worn) };
+    // the dozen closest pieces of litter (aiming at all of them would search the whole map)
+    const sx = Math.floor(s.x),
+      sy = Math.floor(s.y),
+      near = [];
+    for (const i of F.litter) near.push([Math.abs((i % W) - sx) + Math.abs(((i / W) | 0) - sy), i]);
+    near.sort((a, b) => a[0] - b[0]);
     const litter = new Set();
-    for (let i = 0; i < W * H; i++) if (S.tiles[i].l > 0 && !taken('sweep', i)) litter.add(i);
+    for (const [, i] of near) {
+      if (litter.size >= 12) break;
+      if (!taken('sweep', i)) litter.add(i);
+    }
     if (litter.size) return { kind: 'sweep', id: -1, goals: litter };
   }
   return null;
@@ -466,7 +510,7 @@ function finishJob(s) {
   } else if (j.kind === 'sweep') {
     const t = S.tiles[sTile(s)];
     if (t.l > 0) {
-      t.l--;
+      if (--t.l === 0) F.litter.delete(sTile(s));
       ok = true;
     }
   }
@@ -620,7 +664,7 @@ function pickJobFor(s) {
   if (t >= 0) return around((t % W) + 0.5, ((t / W) | 0) + 0.5);
   if (j.kind === 'sweep') {
     const g = new Set();
-    for (let i = 0; i < W * H; i++) if (S.tiles[i].l > 0) g.add(i);
+    for (const i of F.litter) g.add(i);
     return g.size ? g : null;
   }
   return null;

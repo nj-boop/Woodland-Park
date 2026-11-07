@@ -46,7 +46,7 @@ function careList(e) {
   return items;
 }
 function evalEncl(e) {
-  const list = S.animals.filter((a) => a.e === e.id);
+  const list = animalsByE.size ? animalsIn(e.id) : S.animals.filter((a) => a.e === e.id);
   if (!list.length) return;
   const st = enclStats(e),
     { area, dens } = st;
@@ -124,7 +124,20 @@ function evalEncl(e) {
     a.why = why;
   }
 }
+// animals grouped by habitat, rebuilt once per tick (looping over every animal for every animal
+// was the slowest thing in a big zoo)
+let animalsByE = new Map();
+function groupAnimals() {
+  animalsByE = new Map();
+  for (const a of S.animals) {
+    let l = animalsByE.get(a.e);
+    if (!l) animalsByE.set(a.e, (l = []));
+    l.push(a);
+  }
+}
+const animalsIn = (eid) => animalsByE.get(eid) || [];
 function tickAnimals() {
+  groupAnimals();
   for (const a of S.animals) {
     a.ox = a.x;
     a.oy = a.y;
@@ -175,7 +188,7 @@ function tickAnimals() {
     if (!e.barrier && !a.show) {
       let near = null,
         nd = 1e9;
-      for (const o of S.animals) {
+      for (const o of animalsIn(a.e)) {
         if (o === a || o.e !== a.e || o.killed || !!SPECIES[o.sp].pred === !!sp.pred) continue;
         const dd = Math.hypot(o.x - a.x, o.y - a.y);
         if (dd < nd) {
@@ -289,7 +302,7 @@ function tickAnimals() {
   }
   if (S.clock % 20 === 0) {
     for (const e of S.encl) {
-      const n = S.animals.filter((a) => a.e === e.id).length;
+      const n = animalsIn(e.id).length;
       e.dirt = Math.min(100, (e.dirt || 0) + n * 0.13);
     }
     S.encl.forEach(evalEncl);

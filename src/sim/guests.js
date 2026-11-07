@@ -251,7 +251,10 @@ function tickGuests() {
     g.scenSum = (g.scenSum || 0) * 0.995 + F.scen[idx(g.x, g.y)];
     if (g.trash > 0 && --g.trash === 0) {
       const t = tileAt(g.x, g.y);
-      if (t.t === 'p') t.l = Math.min(4, t.l + 1);
+      if (t.t === 'p') {
+        t.l = Math.min(4, t.l + 1);
+        F.litter.add(idx(g.x, g.y));
+      }
     }
     if (g.t % 20 === g.id % 20) {
       guestMood(g);

@@ -1,6 +1,6 @@
 /* Surroundings: rolling hills, outer lake, mountains, clouds, birds, grass and flower instancing. */
 /* rolling hills, lake, mountains */
-const LAKE = { x: W + 10, z: 7, r: 5.5 };
+const LAKE = { x: 46, z: 7, r: 5.5 }; // moved beside the map by onMapResized()
 const sm = (t) => t * t * (3 - 2 * t);
 function hillH(x, z) {
   const dx = Math.max(0, -x - 1, x - (W + 1)),
@@ -15,8 +15,13 @@ function hillH(x, z) {
     Math.sin(x * 0.23 + 1) * Math.sin(z * 0.19) * 1.2;
   return m * (n + 9.4) * (0.45 + 0.55 * clamp(d / 45, 0, 1));
 }
-{
-  const g = new THREE.PlaneGeometry(420, 420, 170, 170);
+// the distant mountain ring, centred on the map and pushed out as it grows (see onMapResized)
+const mountains = new THREE.Group();
+// the hills around the park; rebuilt when the map grows
+let hills = null;
+function buildHills() {
+  const size = Math.max(420, Math.max(W, H) + 320),
+    g = new THREE.PlaneGeometry(size, size, 170, 170);
   g.rotateX(-Math.PI / 2);
   g.translate(W / 2, 0, H / 2);
   const pos = g.attributes.position,
@@ -34,7 +39,11 @@ function hillH(x, z) {
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.computeVertexNormals();
-  const hills = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  if (hills) {
+    scene.remove(hills);
+    hills.geometry.dispose();
+  }
+  hills = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
   hills.receiveShadow = true;
   scene.add(hills);
 }
@@ -87,6 +96,7 @@ const waterMat = new THREE.MeshPhongMaterial({
       false
     );
   }
+  scene.add(mountains);
   const mm = new THREE.MeshPhongMaterial({ color: LIN('#7b8f86'), flatShading: true, shininess: 0 }),
     snow = new THREE.MeshPhongMaterial({ color: LIN('#f4f8fb'), flatShading: true, shininess: 0 });
   for (let k = 0; k < 22; k++) {
@@ -95,14 +105,14 @@ const waterMat = new THREE.MeshPhongMaterial({
       h = rnd(28, 60),
       w = rnd(22, 40);
     const mt = new THREE.Mesh(new THREE.ConeGeometry(w, h, 6 + (k % 3)), mm);
-    mt.position.set(W / 2 + Math.cos(a) * r, h / 2 - 2, H / 2 + Math.sin(a) * r);
+    mt.position.set(Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r);
     mt.rotation.y = rnd(0, 6);
-    scene.add(mt);
+    mountains.add(mt);
     if (h > 40) {
       const cap = new THREE.Mesh(new THREE.ConeGeometry(w * 0.3, h * 0.3, 6 + (k % 3)), snow);
       cap.position.set(mt.position.x, h - 2 - h * 0.15 + 0.5, mt.position.z);
       cap.rotation.y = mt.rotation.y;
-      scene.add(cap);
+      mountains.add(cap);
     }
   }
 }
@@ -189,7 +199,7 @@ const tuftGeo = (() => {
   g.setIndex(idx);
   return g;
 })();
-const TUFT_MAX = 9000,
+const TUFT_MAX = 30000, // countryside outside the map only; each scenery chunk has its own
   tufts = new THREE.InstancedMesh(
     tuftGeo,
     new THREE.MeshLambertMaterial({ color: '#ffffff', map: CLUMP_T, alphaTest: 0.45 }),

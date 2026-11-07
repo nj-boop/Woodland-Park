@@ -357,6 +357,12 @@ function applyHeights() {
   for (const m of groundRoot.children) {
     const [cx, cy, w, h] = m.userData.chunk,
       pos = m.geometry.attributes.position;
+    // skip chunks whose heights haven't changed since last time
+    let sum = 0;
+    for (let j = 0; j <= h; j++)
+      for (let i = 0; i <= w; i++) sum = (sum * 31 + Math.round(hC(cx + i, cy + j) * 1000)) | 0;
+    if (m.userData.hsum === sum) continue;
+    m.userData.hsum = sum;
     for (let j = 0; j <= h; j++) for (let i = 0; i <= w; i++) pos.setY(j * (w + 1) + i, hC(cx + i, cy + j));
     pos.needsUpdate = true;
     m.geometry.computeVertexNormals();
