@@ -203,7 +203,7 @@ function resize() {
 let groundT = 0;
 function render3D(alpha, dt) {
   if (groundDirty) {
-    drawGround();
+    paintGround();
     groundSig = groundSignature();
   }
   groundT += dt;
@@ -212,7 +212,7 @@ function render3D(alpha, dt) {
     const sg = groundSignature();
     if (sg !== groundSig) {
       groundSig = sg;
-      drawGround();
+      paintGround();
     }
   }
   if (staticDirty) rebuildStatic();

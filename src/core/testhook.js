@@ -95,7 +95,7 @@ window.__wg = {
       animals: count(animalRoot),
       edge: count(worldEdge),
       all: count(scene),
-      ground: [gcan.width, gcan.height],
+      ground: groundRoot.children.length,
       maxTex: renderer.capabilities.maxTextureSize,
     };
   },

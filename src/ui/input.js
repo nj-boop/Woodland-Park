@@ -12,7 +12,7 @@ function setRay(sx, sy) {
 }
 function toTile(sx, sy) {
   setRay(sx, sy);
-  const gh = ray.intersectObject(ground, false);
+  const gh = ray.intersectObjects(groundRoot.children, false);
   const p = gh.length ? gh[0].point : ray.ray.intersectPlane(gplane, hitV);
   if (!p) return { x: -99, y: -99, wx: -1e9, wy: -1e9 };
   return { x: Math.floor(p.x), y: Math.floor(p.z), wx: p.x * T, wy: p.z * T };

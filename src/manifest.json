@@ -15,6 +15,7 @@
   "render/scene.js",
   "render/landscape.js",
   "render/ground.js",
+  "render/ground-splat.js",
   "render/structures.js",
   "render/buildings.js",
   "render/animals-sculpted.js",

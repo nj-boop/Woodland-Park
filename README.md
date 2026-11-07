@@ -67,6 +67,10 @@ Order matters: a file can use anything defined in an earlier file, and functions
   `ui/staff-panel.js`; staff are drawn with the guest meshes, in uniform.
 - **Guests** walk path tiles using the distance maps, buy from shops they pass, react to what they
   see, and leave when tired or unhappy. Their final happiness feeds the zoo rating.
+- **The ground** (`render/ground-splat.js`) is drawn by a shader, not painted as one picture. A
+  small data texture holds one texel per tile (layer, curb and fence-edge bits, litter or dirt,
+  grass-detail strength), and the shader draws each tile from a shared atlas of repeating
+  textures. It works at any map size; the mesh is split into 32 × 32-tile chunks for culling.
 - **Rendering** keeps static things (items, fences, tanks) in a scene graph split into 16 × 16-tile
   chunks plus one group per habitat fence (`rebuildStatic()` in `render/structures.js`). Each is
   fingerprinted, and only the ones whose fingerprint changed are rebuilt, while animals and guests are updated every frame. Guests are instanced meshes.

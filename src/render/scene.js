@@ -1,4 +1,4 @@
-/* Three.js renderer, lights, sky dome, shared geometries and materials, ground texture canvas, terrain mesh, painted water. */
+/* Three.js renderer, lights, sky dome, shared geometries and materials, painted water. */
 /* ---------- 3D rendering ---------- */
 const coarse = matchMedia('(pointer:coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
@@ -72,15 +72,7 @@ function P(par, geo, col, x, y, z, sx, sy, sz, shadow) {
   return m;
 }
 
-/* ground texture */
-const GS = 2,
-  gcan = document.createElement('canvas');
-gcan.width = W * T * GS;
-gcan.height = H * T * GS;
-const g2 = gcan.getContext('2d');
-const gtex = new THREE.CanvasTexture(gcan);
-gtex.encoding = THREE.sRGBEncoding;
-gtex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+/* grass-blade detail texture, used by the ground shader (render/ground-splat.js) */
 const DETAIL = (() => {
   const n = 256,
     c = document.createElement('canvas');
@@ -110,31 +102,6 @@ const DETAIL = (() => {
   t.anisotropy = 8;
   return t;
 })();
-const gmaskC = document.createElement('canvas');
-gmaskC.width = W;
-gmaskC.height = H;
-const GMASK = new THREE.CanvasTexture(gmaskC);
-GMASK.magFilter = THREE.LinearFilter;
-const groundMat = new THREE.MeshLambertMaterial({ map: gtex });
-groundMat.onBeforeCompile = (sh) => {
-  sh.uniforms.detailMap = { value: DETAIL };
-  sh.uniforms.grassMask = { value: GMASK };
-  sh.uniforms.detailRep = { value: new THREE.Vector2(W * 1.6, H * 1.6) };
-  sh.fragmentShader =
-    'uniform sampler2D detailMap;uniform sampler2D grassMask;uniform vec2 detailRep;\n' +
-    sh.fragmentShader.replace(
-      '#include <map_fragment>',
-      '#include <map_fragment>\n float gmk=texture2D(grassMask,vUv).r; vec3 dtl=texture2D(detailMap,vUv*detailRep).rgb*2.0; vec3 dtl2=texture2D(detailMap,vUv*detailRep*.27+.31).rgb*2.0; diffuseColor.rgb*=mix(vec3(1.0),mix(dtl,dtl2,.35),gmk*.85+.15);'
-    );
-};
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, H, W, H), groundMat);
-function applyHeights() {
-  const pos = ground.geometry.attributes.position;
-  for (let j = 0; j <= H; j++) for (let i = 0; i <= W; i++) pos.setZ(j * HW + i, hC(i, j));
-  pos.needsUpdate = true;
-  ground.geometry.computeVertexNormals();
-  ground.geometry.computeBoundingSphere();
-}
 const waterRoot = new THREE.Group();
 scene.add(waterRoot);
 function buildWater() {
@@ -160,7 +127,3 @@ function buildWater() {
   m.receiveShadow = true;
   waterRoot.add(m);
 }
-ground.rotation.x = -Math.PI / 2;
-ground.position.set(W / 2, 0, H / 2);
-ground.receiveShadow = true;
-scene.add(ground);
