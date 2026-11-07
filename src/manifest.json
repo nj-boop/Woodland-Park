@@ -18,6 +18,7 @@
   "render/ground-splat.js",
   "render/structures.js",
   "render/buildings.js",
+  "render/batching.js",
   "render/animals-sculpted.js",
   "render/animals-rigged.js",
   "render/foliage-and-actors.js",

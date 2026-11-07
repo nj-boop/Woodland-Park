@@ -994,6 +994,7 @@ function modelFor(a) {
   animalRoot.add(g);
   return g;
 }
+const ANIMAL_FAR = 40; // tiles from the camera target
 function syncAnimals(alpha, time, dt) {
   const live = new Set();
   for (const a of S.animals) {
@@ -1037,7 +1038,20 @@ function syncAnimals(alpha, time, dt) {
         if (u.acts[u.cur]) u.acts[u.cur].fadeOut(0.35);
         u.cur = nw;
       }
-      u.mixer.update(((dt || 16) / 1000) * (speed || 0) * (nw === 'walk' ? (a.chase ? 2.3 : 1.1) : 1));
+      // level of detail: far-away animals stop casting shadows and animate 4× less often
+      const far = Math.hypot(m.position.x - CAM.tx, m.position.z - CAM.tz) > ANIMAL_FAR;
+      if (far !== u.far) {
+        u.far = far;
+        m.traverse((o) => {
+          if (o.isMesh) o.castShadow = !far;
+        });
+      }
+      u.acc = (u.acc || 0) + ((dt || 16) / 1000) * (speed || 0) * (nw === 'walk' ? (a.chase ? 2.3 : 1.1) : 1);
+      u.n = (u.n || 0) + 1;
+      if (!far || u.n % 4 === 0) {
+        u.mixer.update(u.acc);
+        u.acc = 0;
+      }
     }
     if (u.hop) y = mv ? Math.abs(Math.sin(ph * 0.8)) * 0.18 : 0;
     else if (mv) y = Math.abs(Math.sin(ph)) * 0.02;

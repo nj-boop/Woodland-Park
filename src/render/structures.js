@@ -722,6 +722,14 @@ function rebuildStatic() {
       }
       c.grp.clear();
       buildChunk(c.grp, cx, cy);
+      batchGroup(c.grp);
+      c.box = new THREE.Box3(
+        new THREE.Vector3(cx * CHUNK - 2, -3, cy * CHUNK - 2),
+        new THREE.Vector3((cx + 1) * CHUNK + 2, 9, (cy + 1) * CHUNK + 2)
+      );
+      c.cx = (cx + 0.5) * CHUNK;
+      c.cz = (cy + 0.5) * CHUNK;
+      c.far = undefined;
       c.sig = sig;
       staticStats.chunks++;
     }
@@ -747,6 +755,7 @@ function rebuildStatic() {
       seedRand(e.id * 7919);
       makeFence(f.grp, e);
     });
+    batchGroup(f.grp);
     f.sig = sig;
     staticStats.fences++;
   }

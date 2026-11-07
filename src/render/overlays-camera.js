@@ -216,6 +216,7 @@ function render3D(alpha, dt) {
     }
   }
   if (staticDirty) rebuildStatic();
+  cullChunks();
   const time = performance.now();
   syncAnimals(alpha, time, dt);
   syncGuests(alpha, time);

@@ -45,6 +45,7 @@ async function start(data) {
     window.claude.hot.snapshot(() => ({ save: serialize() }));
   setInterval(save, 15000);
   buildEdge();
+  batchEdge();
   loadModels();
   if (document.fonts && document.fonts.ready)
     document.fonts.ready.then(() => {

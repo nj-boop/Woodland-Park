@@ -67,6 +67,10 @@ Order matters: a file can use anything defined in an earlier file, and functions
   `ui/staff-panel.js`; staff are drawn with the guest meshes, in uniform.
 - **Guests** walk path tiles using the distance maps, buy from shops they pass, react to what they
   see, and leave when tired or unhappy. Their final happiness feeds the zoo rating.
+- **Batching and detail by distance** (`render/batching.js`). After a chunk, fence or the outer
+  forest is built, meshes sharing a geometry and material are merged into one `InstancedMesh`, so
+  hundreds of trees cost a few draw calls. Chunks are hidden when off-screen and stop casting
+  shadows when far away; far animals stop casting shadows and animate less often.
 - **The ground** (`render/ground-splat.js`) is drawn by a shader, not painted as one picture. A
   small data texture holds one texel per tile (layer, curb and fence-edge bits, litter or dirt,
   grass-detail strength), and the shader draws each tile from a shared atlas of repeating
