@@ -153,6 +153,9 @@ window.__wg = {
   },
   save,
   readSave,
+  saveSlot,
+  loadSlot,
+  slotList,
   get renderer() {
     return renderer;
   },

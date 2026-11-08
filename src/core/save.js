@@ -347,6 +347,60 @@ async function readSave() {
   if (rec && rec.data) return rec.data;
   return ls;
 }
+/* Save slots: three named copies of a zoo the player keeps on purpose, beside the autosave above.
+   Each slot stores the zoo plus a short summary for the Office list, so the list doesn't have to
+   unpack every save. */
+const SLOTS = 3;
+const slotKey = (n) => `${SAVE_KEY}-slot${n}`;
+const MO_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dateOf = (day) => `${MO_SHORT[(day - 1) % 12]}, Year ${Math.floor((day - 1) / 12) + 1}`;
+function slotSummary() {
+  return {
+    date: dateOf(S.day),
+    money: S.money,
+    animals: S.animals.length,
+    guests: S.guests.length,
+    size: `${W}×${H}`,
+  };
+}
+async function saveSlot(n) {
+  const rec = { t: Date.now(), data: serialize(), info: slotSummary() };
+  try {
+    await idbPut(slotKey(n), rec);
+  } catch (e) {
+    localStorage.setItem(slotKey(n), JSON.stringify(rec)); // throws if too big: the caller reports it
+  }
+  return rec;
+}
+async function readSlot(n) {
+  try {
+    const rec = await idbGet(slotKey(n));
+    if (rec) return rec;
+  } catch (e) {}
+  try {
+    const s = localStorage.getItem(slotKey(n));
+    if (s) return JSON.parse(s);
+  } catch (e) {}
+  return null;
+}
+async function slotList() {
+  const out = [];
+  for (let n = 1; n <= SLOTS; n++) {
+    const r = await readSlot(n);
+    out.push(r ? { n, t: r.t, info: r.info } : { n, t: 0, info: null });
+  }
+  return out;
+}
+// replace the current zoo with a slot's; the autosave then follows the loaded zoo
+async function loadSlot(n) {
+  const rec = await readSlot(n);
+  if (!rec || !rec.data) return false;
+  load(rec.data);
+  rebuild();
+  save();
+  return true;
+}
+
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) save();

@@ -663,6 +663,18 @@ const tests = {
       g.checkTier();
       return g.S.tier === 2 || `tier is ${g.S.tier}`;
     }),
+  'save slots keep separate zoos and load them back': async ({ page }) =>
+    page.evaluate(async () => {
+      const g = window.__wg;
+      g.S.money = 4321;
+      await g.saveSlot(2);
+      g.S.money = 99;
+      const list = await g.slotList();
+      if (list.length !== 3 || list[1].info.money !== 4321 || list[0].info) return 'bad list ' + JSON.stringify(list);
+      if (!(await g.loadSlot(2))) return 'load failed';
+      if (g.S.money !== 4321) return 'money after load ' + g.S.money;
+      return (await g.loadSlot(1)) === false || 'empty slot loaded';
+    }),
 };
 
 let failed = 0;

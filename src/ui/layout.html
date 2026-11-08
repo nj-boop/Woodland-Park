@@ -1,4 +1,3 @@
-
 <div id="app">
   <header class="bar">
     <div class="speed" role="group" aria-label="Game speed">
@@ -23,22 +22,166 @@
       <button id="rotL" title="Rotate left (Q)" aria-label="Rotate left">⟲</button>
       <button id="rotR" title="Rotate right (E)" aria-label="Rotate right">⟳</button>
       <button id="tilt" title="Tilt view" aria-label="Tilt view">⤢</button>
-      <button id="canopy" title="Hide tree tops (T)" aria-label="Hide tree tops" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-7"/><path d="M12 14c-4.5 0-7-2.6-7-5.8C5 6 8 3 12 3s7 3 7 6.2C19 12.4 16.5 15 12 15z"/></svg></button>
+      <button id="canopy" title="Hide tree tops (T)" aria-label="Hide tree tops" aria-pressed="false">
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 21v-7" />
+          <path d="M12 14c-4.5 0-7-2.6-7-5.8C5 6 8 3 12 3s7 3 7 6.2C19 12.4 16.5 15 12 15z" />
+        </svg>
+      </button>
       <button id="zIn" title="Zoom in" aria-label="Zoom in">+</button>
       <button id="zOut" title="Zoom out" aria-label="Zoom out">−</button>
     </div>
   </main>
   <div id="tray"></div>
   <nav class="tools" aria-label="Tools">
-    <button class="tool" data-tool="look" title="Look around (1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3.2"/></svg><span>Look</span></button>
-    <button class="tool" data-tool="path" title="Paths (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21l3-18M17 21l-3-18"/><path d="M9.6 6h4.8M9 10h6M8.4 14h7.2M7.8 18h8.4"/></svg><span>Paths</span></button>
-    <button class="tool" data-tool="habitat" title="Habitats (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V8l2-2 2 2v12M16 20V8l2-2 2 2v12"/><path d="M8 10h8M8 15h8"/><path d="M2 20h20"/></svg><span>Habitat</span></button>
-    <button class="tool" data-tool="animal" title="Animals (4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="16" rx="4.2" ry="3.6"/><circle cx="6" cy="10.5" r="1.9"/><circle cx="9.6" cy="6.6" r="1.9"/><circle cx="14.4" cy="6.6" r="1.9"/><circle cx="18" cy="10.5" r="1.9"/></svg><span>Animals</span></button>
-    <button class="tool" data-tool="plant" title="Plants (5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-6"/><path d="M12 15c-4.5 0-7-2.6-7-5.8C5 6 8 3 12 3s7 3 7 6.2C19 12.4 16.5 15 12 15z"/><path d="M9 21h6"/></svg><span>Scenery</span></button>
-    <button class="tool" data-tool="shop" title="Guest facilities (6)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10"/><path d="M3 10l2-6h14l2 6"/><path d="M3 10c0 1.7 1.3 2.5 2.25 2.5S7.5 11.7 7.5 10c0 1.7 1.3 2.5 2.25 2.5S12 11.7 12 10c0 1.7 1.3 2.5 2.25 2.5S16.5 11.7 16.5 10c0 1.7 1.3 2.5 2.25 2.5S21 11.7 21 10"/><path d="M10 20v-4.5h4V20"/></svg><span>Shops</span></button>
-    <button class="tool" data-tool="terrain" title="Landscape (8)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20l6-10 4 6 3-4 7 8z"/><path d="M8 10l2-3 2 3"/></svg><span>Land</span></button>
-    <button class="tool" data-tool="bulldoze" title="Bulldoze (7)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h11V9H8L6 13H3z"/><circle cx="6" cy="18.5" r="1.6"/><circle cx="11" cy="18.5" r="1.6"/><path d="M14 11l4 1v6l4 1.5"/><path d="M10 9V6"/></svg><span>Remove</span></button>
-    <button class="tool zoo" id="zooBtn" aria-pressed="false" title="Zoo office (Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/><path d="M7.5 11.5h1.5M15 11.5h1.5"/></svg><span>Office</span></button>
+    <button class="tool" data-tool="look" title="Look around (1)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+        <circle cx="12" cy="12" r="3.2" /></svg
+      ><span>Look</span>
+    </button>
+    <button class="tool" data-tool="path" title="Paths (2)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M7 21l3-18M17 21l-3-18" />
+        <path d="M9.6 6h4.8M9 10h6M8.4 14h7.2M7.8 18h8.4" /></svg
+      ><span>Paths</span>
+    </button>
+    <button class="tool" data-tool="habitat" title="Habitats (3)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 20V8l2-2 2 2v12M16 20V8l2-2 2 2v12" />
+        <path d="M8 10h8M8 15h8" />
+        <path d="M2 20h20" /></svg
+      ><span>Habitat</span>
+    </button>
+    <button class="tool" data-tool="animal" title="Animals (4)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <ellipse cx="12" cy="16" rx="4.2" ry="3.6" />
+        <circle cx="6" cy="10.5" r="1.9" />
+        <circle cx="9.6" cy="6.6" r="1.9" />
+        <circle cx="14.4" cy="6.6" r="1.9" />
+        <circle cx="18" cy="10.5" r="1.9" /></svg
+      ><span>Animals</span>
+    </button>
+    <button class="tool" data-tool="plant" title="Plants (5)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 21v-6" />
+        <path d="M12 15c-4.5 0-7-2.6-7-5.8C5 6 8 3 12 3s7 3 7 6.2C19 12.4 16.5 15 12 15z" />
+        <path d="M9 21h6" /></svg
+      ><span>Scenery</span>
+    </button>
+    <button class="tool" data-tool="shop" title="Guest facilities (6)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 10v10h16V10" />
+        <path d="M3 10l2-6h14l2 6" />
+        <path
+          d="M3 10c0 1.7 1.3 2.5 2.25 2.5S7.5 11.7 7.5 10c0 1.7 1.3 2.5 2.25 2.5S12 11.7 12 10c0 1.7 1.3 2.5 2.25 2.5S16.5 11.7 16.5 10c0 1.7 1.3 2.5 2.25 2.5S21 11.7 21 10"
+        />
+        <path d="M10 20v-4.5h4V20" /></svg
+      ><span>Shops</span>
+    </button>
+    <button class="tool" data-tool="terrain" title="Landscape (8)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M2 20l6-10 4 6 3-4 7 8z" />
+        <path d="M8 10l2-3 2 3" /></svg
+      ><span>Land</span>
+    </button>
+    <button class="tool" data-tool="bulldoze" title="Bulldoze (7)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 17h11V9H8L6 13H3z" />
+        <circle cx="6" cy="18.5" r="1.6" />
+        <circle cx="11" cy="18.5" r="1.6" />
+        <path d="M14 11l4 1v6l4 1.5" />
+        <path d="M10 9V6" /></svg
+      ><span>Remove</span>
+    </button>
+    <button class="tool zoo" id="zooBtn" aria-pressed="false" title="Zoo office (Z)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 21V10l9-6 9 6v11" />
+        <path d="M9 21v-6h6v6" />
+        <path d="M7.5 11.5h1.5M15 11.5h1.5" /></svg
+      ><span>Office</span>
+    </button>
   </nav>
 </div>
-

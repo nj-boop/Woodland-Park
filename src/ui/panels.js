@@ -625,6 +625,7 @@ function renderZoo() {
      <p class="help">Fair prices are about ${money(BASE_PRICE.food)} and ${money(BASE_PRICE.drink)}. Charge more and fewer hungry guests will buy.</p></div>
    <div class="sec"><h3>Recent months</h3><div id="zLed">${ledgerHTML()}</div></div>
    <div class="sec"><h3>Tips</h3><p class="help">Run paths alongside every habitat so guests can see in. Match plants and space to each species, keep predators away from prey unless the habitat has a predator barrier, and place snack stands, drink carts, benches and bins along busy paths. Staff need somewhere to work: a recycling yard for janitors, a keeper lodge plus a recycling yard for zookeepers, and a vet clinic for vets. Keepers walk in through a habitat gate to feed and clean, so every land habitat needs a gate on a path edge. Hire more staff as the zoo grows, and keep their pay fair. Dirty or unhappy habitats breed illness, and untreated sick animals can die. Happy pairs may have babies at the end of a month. For aquatic exhibits, build an Aquatic habitat, run a glass tunnel through it, and put a show stadium beside it so dolphins, sea lions and orcas can perform.</p></div>
+   <div class="sec"><h3>Saved zoos</h3><p class="help" style="margin-top:0">Your zoo also saves itself every few seconds. Keep extra copies here to try ideas or run more than one zoo.</p><div id="zSlots" class="slots">Loading…</div></div>
    <div class="sec" id="zNew">${newHTML()}</div>`;
   $('#zx').onclick = toggleZoo;
   $('#zAdmR').oninput = (e) => {
@@ -641,6 +642,58 @@ function renderZoo() {
   };
   bindStaffPanel();
   bindNew();
+  refreshSlots();
+}
+/* save slots: tap Save or Load, then tap again to confirm when it would overwrite something */
+let slotArm = null; // 'save1', 'load2', …
+async function refreshSlots() {
+  const box = $('#zSlots');
+  if (!box) return;
+  const list = await slotList();
+  box.innerHTML = list
+    .map(({ n, t, info }) => {
+      const desc = info
+        ? `<b>${info.date}</b> · ${money(info.money)} · ${info.animals} animals · ${info.size}<br><span class="help">Saved ${new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>`
+        : '<span class="help">Empty</span>';
+      const sv = slotArm === 'save' + n ? 'Tap again to overwrite' : 'Save here';
+      const ld = slotArm === 'load' + n ? 'Tap again · current zoo is replaced' : 'Load';
+      return `<div class="slot"><div class="slotN">${n}</div><div class="slotI">${desc}</div><div class="slotB"><button class="btn small" data-save="${n}">${sv}</button>${info ? `<button class="btn small" data-load="${n}">${ld}</button>` : ''}</div></div>`;
+    })
+    .join('');
+  box.querySelectorAll('[data-save]').forEach((b) => {
+    b.onclick = async () => {
+      const n = +b.dataset.save,
+        used = list[n - 1].info;
+      if (used && slotArm !== 'save' + n) {
+        slotArm = 'save' + n;
+        return refreshSlots();
+      }
+      slotArm = null;
+      try {
+        await saveSlot(n);
+        toast(`Zoo saved to slot ${n}.`, 'good');
+      } catch (e) {
+        toast('That zoo is too big to save in this browser.', 'bad');
+      }
+      refreshSlots();
+    };
+  });
+  box.querySelectorAll('[data-load]').forEach((b) => {
+    b.onclick = async () => {
+      const n = +b.dataset.load;
+      if (slotArm !== 'load' + n) {
+        slotArm = 'load' + n;
+        return refreshSlots();
+      }
+      slotArm = null;
+      if (!(await loadSlot(n))) return toast('That save could not be read.', 'bad');
+      closeInspector();
+      centerCam();
+      delete $('#zooPanel').dataset.built;
+      renderZoo();
+      toast(`Loaded slot ${n}: ${dateOf(S.day)}, ${money(S.money)} in the bank.`, 'good');
+    };
+  });
 }
 function tierHTML() {
   const cur = TIERS[(S.tier || 1) - 1],
