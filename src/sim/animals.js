@@ -37,7 +37,7 @@ function careList(e) {
       });
   }
   const need = Math.max(...list.map((a) => care(a.sp).str));
-  const fs = FSTR[e.fence || 'wood'];
+  const fs = fenceStrength(e);
   if (need > fs)
     items.push({
       ok: false,

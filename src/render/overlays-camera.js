@@ -231,6 +231,7 @@ function render3D(alpha, dt) {
   syncParkedCars(performance.now());
   syncDeliveries(alpha);
   syncFarms(performance.now());
+  syncSafari(performance.now());
   const time = performance.now();
   syncAnimals(alpha, time, dt);
   syncGuests(alpha, time);

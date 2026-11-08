@@ -54,7 +54,9 @@ function serialize() {
     pm: S.tiles
       .map((t) =>
         t.t === 'p'
-          ? { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v' }[t.pm || 'stone']
+          ? { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v', track: 'k' }[
+              t.pm || 'stone'
+            ]
           : '-'
       )
       .join(''),
@@ -199,7 +201,10 @@ function load(str) {
     t.t = d.t[i] === 'p' ? 'p' : 'g';
     if (t.t === 'p')
       t.pm =
-        (d.pm && { s: 'stone', b: 'brick', a: 'asphalt', d: 'dirt', n: 'sand', t: 'tunnel', v: 'service' }[d.pm[i]]) ||
+        (d.pm &&
+          { s: 'stone', b: 'brick', a: 'asphalt', d: 'dirt', n: 'sand', t: 'tunnel', v: 'service', k: 'track' }[
+            d.pm[i]
+          ]) ||
         'stone';
     t.o =
       typeof d.o[i] === 'string' ? (ITEMS[d.o[i]] ? d.o[i] : null) : d.o[i] ? LEGACY_ITEMS[d.o[i] - 1] || null : null;

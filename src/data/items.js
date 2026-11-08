@@ -113,6 +113,14 @@ const ITEMS = {
     access: 'road',
     help: 'Fish for penguins, sea lions and other fish-eaters.',
   },
+  station: {
+    name: 'Safari station',
+    cost: 6000,
+    kind: 'shop',
+    size: [4, 2],
+    price: 6,
+    help: 'Guests board safari trucks here for a drive along the safari track. Put the track behind or beside the station and run it through your habitats.',
+  },
   parking: {
     access: 'road',
     name: 'Parking lot',

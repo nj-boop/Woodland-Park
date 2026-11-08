@@ -632,6 +632,29 @@ const tests = {
       return (fed >= 150 && harvested) || `feed ${g.S.feed}, harvested ${harvested}`;
     }),
 
+  'a safari track through a habitat gives guests a tour, and weakens the fence': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        e = g.S.encl[0];
+      const fs0 = g.fenceStrength(e);
+      // a track along row 11: through the habitat (x 12-17) and out east over open ground
+      g.setTool('path');
+      g.set('pathSub', 'track');
+      for (let x = 12; x <= 25; x++) g.act(x, 11);
+      g.refresh();
+      g.setTool('shop');
+      g.set('sub', 'station');
+      let placed = false;
+      for (let y = 15; y < 20 && !placed; y++)
+        for (let x = 21; x < 26 && !placed; x++) if (g.check(x, y).ok) placed = g.act(x, y);
+      if (!placed) return 'no spot for the station: ' + g.check(22, 16).msg;
+      g.refresh();
+      const tour = Object.values(g.tours)[0];
+      if (!tour || tour.walk.length < 10 || tour.value <= 0)
+        return 'no tour: ' + JSON.stringify(tour && { n: tour.walk.length, v: tour.value });
+      return g.fenceStrength(e) === fs0 - 1 || `fence ${fs0} -> ${g.fenceStrength(e)}`;
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

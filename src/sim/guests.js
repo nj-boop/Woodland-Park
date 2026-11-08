@@ -158,6 +158,21 @@ function arrive(g) {
       g.spent += ITEMS.gift.price;
       continue;
     }
+    if (s === 'station' && !g.rode && g.mode === 'walk' && g.t > 120 && Math.random() < 0.3 * atmB) {
+      // find the station this path tile serves
+      let st = null;
+      for (const n of nbr4(i)) if (S.tiles[n].o === 'station' && F.tours[anchorOf(n)]) st = anchorOf(n);
+      if (st != null) {
+        const tour = F.tours[st];
+        g.rode = 1;
+        g.mode = 'ride';
+        g.rideT = Math.min(1500, tour.walk.length * RIDE_TICKS_PER_TILE);
+        g.rideVal = tour.value;
+        earn(ITEMS.station.price, 'shop');
+        g.spent += ITEMS.station.price;
+        continue;
+      }
+    }
     if (s === 'map' && !g.map) {
       g.map = 1;
       g.stay += 200;
@@ -244,6 +259,8 @@ function guestMood(g) {
   else if (g.energy < 25) th = 'My feet hurt. I need somewhere to sit.';
   else if (g.litter >= 2) th = 'This path is covered in trash.';
   else if (g.trash > 0 && g.trash < 80) th = "I can't find a trash bin anywhere.";
+  else if (g.mode === 'ride') th = 'On the safari! Look at them all!';
+  else if (g.safari && g.t - g.safari < 600) th = 'That safari drive was the best thing here!';
   else if (g.show && g.t - g.show < 500) th = 'That show was incredible!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
   else if (g.exc > 18) th = `The ${g.best.toLowerCase()} were amazing!`;
@@ -283,6 +300,16 @@ function tickGuests() {
   const out = [];
   for (const g of S.guests) {
     g.t++;
+    if (g.mode === 'ride') {
+      // out on a safari; back at the station afterwards, thrilled
+      if (--g.rideT <= 0) {
+        g.mode = 'walk';
+        g.exc += g.rideVal;
+        g.safari = g.t;
+      }
+      out.push(g);
+      continue;
+    }
     g.hunger = Math.min(100, g.hunger + 0.06);
     g.bath = Math.min(100, (g.bath || 0) + 0.05);
     g.thirst = Math.min(100, g.thirst + 0.08);

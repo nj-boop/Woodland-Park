@@ -6,6 +6,7 @@ const PATHS = {
   dirt: { name: 'Dirt trail', cost: 5, sw: '#8a6c47' },
   sand: { name: 'Sand', cost: 6, sw: '#d9c08a' },
   tunnel: { name: 'Glass tunnel', cost: 120, sw: '#7fc6e0' },
+  track: { name: 'Safari track', cost: 20, sw: '#9a7a4e', staffOnly: true }, // safari vehicles; can run through habitats
   service: { name: 'Road', cost: 8, sw: '#62666a', staffOnly: true }, // vehicles and staff only
 };
 // care profile per species: diet, favourite toy, shelter type, strength (escape risk), wants privacy

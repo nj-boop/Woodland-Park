@@ -127,6 +127,15 @@ over a season (`FARMS[kind].grow` ticks, growth in `S.farms[anchor].g`). Haulers
 first and carry the yield (feed units) to the feed store; if it's full, the harvest is sold at half
 value. Farms cost monthly upkeep. Crops are drawn by `syncFarms()`, sized and coloured by ripeness.
 
+### Safari tours
+
+`sim/safari.js`. The safari track is a path type that can run through land habitats. A safari station
+(4 × 2) opens onto a footpath with track beside it; `buildTours()` drives the connected track out and
+back from the station and scores it by the animals in or beside it. Guests pay, disappear for the
+ride (`mode: 'ride'`) and come back with the tour's excitement. Trucks are drawn from the clock
+(`syncSafari()`). A track crossing a fence is a vehicle gate: `fenceStrength()` is one lower there
+unless the fence is a moat.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes

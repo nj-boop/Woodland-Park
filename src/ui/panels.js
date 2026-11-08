@@ -64,6 +64,8 @@ Object.assign(IT_ICON, {
   vetclinic: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
 });
 Object.assign(IT_ICON, {
+  station:
+    '<path d="M3 17h14l3-4V9H3z"/><path d="M3 9l2-4h12l3 4"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>',
   hayfield: '<path d="M3 20h18M5 20c0-5 1-9 2-12M9 20c0-6 1-10 3-14M13 20c0-5 1-8 3-11M17 20c0-4 1-7 2-9"/>',
   banana: '<path d="M5 15c4 5 11 4 14-4"/><path d="M5 15c3 2 8 2 11-3M19 11l1-2"/>',
   browse: '<path d="M12 21v-8M4 10c2-3 5-4 8-4s6 1 8 4z"/>',
@@ -265,7 +267,7 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">Guest services</span>' +
-      ['restroom', 'parking', 'gift', 'atm', 'map', 'donation', 'playground', 'stage']
+      ['restroom', 'parking', 'gift', 'atm', 'map', 'donation', 'playground', 'stage', 'station']
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )

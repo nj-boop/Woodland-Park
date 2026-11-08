@@ -35,6 +35,7 @@ window.__wg = {
       habMode: () => (habMode = value),
       fenceSub: () => (fenceSub = value),
       paintE: () => (paintE = value),
+      pathSub: () => (pathSub = value),
     };
     setters[key]();
   },
@@ -49,6 +50,10 @@ window.__wg = {
     rebuild();
   },
   resizeMap,
+  get tours() {
+    return F.tours;
+  },
+  fenceStrength,
   farmOf,
   farmTiles,
   stockOf,

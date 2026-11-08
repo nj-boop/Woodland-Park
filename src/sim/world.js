@@ -196,7 +196,7 @@ function newZoo(w, h) {
 /* ---------- derived fields ---------- */
 const isPath = (i) => S.tiles[i].t === 'p';
 // guests can't use service roads
-const guestPath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service';
+const guestPath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 function nbr4(i) {
   const x = i % W,
     y = (i / W) | 0,
@@ -404,6 +404,7 @@ function rebuild() {
     }
   }
   F.cnt = cnt;
+  buildTours();
   F.cap = {
     keepers: cnt.recycle ? cnt.lodge * 4 : 0,
     janitors: cnt.recycle * 3,

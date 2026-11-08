@@ -13,7 +13,7 @@ function monthlyUpkeep() {
     const e = F.emap[a.e];
     if (!e || e.biome === 'pool') continue;
     const c = care(a.sp),
-      fs = FSTR[e.fence || 'wood'] * ((e.cond ?? 100) >= 40 ? 1 : 0.6);
+      fs = fenceStrength(e) * ((e.cond ?? 100) >= 40 ? 1 : 0.6);
     if (c.str > fs && a.happy < 55 && Math.random() < 0.35) {
       escape(a, e);
     }

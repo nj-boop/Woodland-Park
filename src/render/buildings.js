@@ -260,6 +260,18 @@ const BUILDINGS = {
     for (const x of [-(w / 2) + 0.4, w / 2 - 0.4]) P(g, 'box', '#8a6a42', x, 0.15, d / 2 - 0.35, 0.6, 0.12, 0.3);
     shed(g, w / 2 - 0.5, -d / 2 + 0.45);
   },
+  // 4 × 2: a thatched safari station with a boarding platform at the back
+  station(g) {
+    P(g, 'box', '#b9a27a', 0, 0.03, 0, 3.9, 0.06, 1.9, false).receiveShadow = true;
+    P(g, 'box', '#c9b38a', 0, 0.15, -0.55, 3.8, 0.24, 0.75);
+    for (const x of [-1.7, -0.6, 0.6, 1.7]) for (const z of [-0.85, 0.75]) P(g, 'cyl', '#6b4527', x, 0.7, z, 0.06, 1.4);
+    const r1 = P(g, 'box', '#c9a35a', 0, 1.5, -0.4, 4.0, 0.12, 1.2);
+    r1.rotation.x = -0.25;
+    const r2 = P(g, 'box', '#c9a35a', 0, 1.5, 0.45, 4.0, 0.12, 1.0);
+    r2.rotation.x = 0.3;
+    P(g, 'box', '#7a5230', 1.3, 0.5, 0.5, 0.7, 0.8, 0.5); // ticket hut
+    signBoard(g, 'SAFARI TOURS', '#6b4527', '#f2e2b6', -0.4, 1.15, 0.96, 1.4);
+  },
   // 6 × 4: asphalt with two rows of marked bays; the cars themselves are drawn by syncParkedCars()
   parking(g) {
     P(g, 'box', '#3b3d40', 0, 0.035, 0, 5.94, 0.05, 3.94, false).receiveShadow = true;
@@ -660,4 +672,56 @@ function syncFarms(time) {
   cropMesh.count = n;
   cropMesh.instanceMatrix.needsUpdate = true;
   if (cropMesh.instanceColor) cropMesh.instanceColor.needsUpdate = true;
+}
+
+/* Safari trucks: two per station, driving its tour (out and back along the track), drawn from the
+   clock rather than simulated: they run whether or not anyone is aboard. */
+const safariTrucks = new Map();
+function makeSafariTruck() {
+  const g = new THREE.Group();
+  P(g, 'box', '#c8a24a', 0, 0.32, 0, 0.62, 0.3, 1.25);
+  for (let k = 0; k < 3; k++) P(g, 'box', '#3a3a2e', 0, 0.5, -0.35 + k * 0.32, 0.6, 0.06, 0.08); // bench seats
+  for (const x of [-0.28, 0.28]) for (const z of [-0.5, 0.5]) P(g, 'cyl', '#3a3a2e', x, 0.75, z, 0.02, 0.6);
+  P(g, 'box', '#d9c27a', 0, 1.05, 0, 0.66, 0.04, 1.3); // canopy
+  for (const [x, z] of [
+    [-0.3, -0.42],
+    [0.3, -0.42],
+    [-0.3, 0.42],
+    [0.3, 0.42],
+  ]) {
+    const w = P(g, 'cyl', '#1d1f21', x, 0.12, z, 0.12, 0.08);
+    w.rotation.z = Math.PI / 2;
+  }
+  scene.add(g);
+  return g;
+}
+function syncSafari(time) {
+  const live = new Set();
+  for (const [a, tour] of Object.entries(F.tours || {})) {
+    const walk = tour.walk;
+    if (walk.length < 2) continue;
+    for (let k = 0; k < 2; k++) {
+      const key = a + ':' + k;
+      live.add(key);
+      let g = safariTrucks.get(key);
+      if (!g) safariTrucks.set(key, (g = makeSafariTruck()));
+      const t = ((time / 1000) * 1.6 + (k * walk.length) / 2) % walk.length,
+        i0 = Math.floor(t),
+        i1 = (i0 + 1) % walk.length,
+        f = t - i0,
+        x0 = (walk[i0] % W) + 0.5,
+        z0 = ((walk[i0] / W) | 0) + 0.5,
+        x1 = (walk[i1] % W) + 0.5,
+        z1 = ((walk[i1] / W) | 0) + 0.5,
+        x = x0 + (x1 - x0) * f,
+        z = z0 + (z1 - z0) * f;
+      g.position.set(x, heightAt(x, z), z);
+      if (x1 !== x0 || z1 !== z0) g.rotation.y = Math.atan2(x1 - x0, z1 - z0);
+    }
+  }
+  for (const [key, g] of safariTrucks)
+    if (!live.has(key)) {
+      scene.remove(g);
+      safariTrucks.delete(key);
+    }
 }

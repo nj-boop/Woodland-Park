@@ -5,13 +5,17 @@ function check(x, y) {
   if (tool === 'path') {
     if (t.t === 'p') return { ok: false, quiet: true };
     if (t.w) return { ok: false, msg: "You can't build a path over water." };
+    if (t.e && pathSub === 'track' && F.emap[t.e].biome !== 'pool') {
+      if (t.o) return { ok: false, msg: 'Something is in the way. Remove it first.' };
+      return { ok: true, cost: PATHS.track.cost };
+    }
     if (t.e && !(pathSub === 'tunnel' && F.emap[t.e].biome === 'pool'))
       return {
         ok: false,
         msg:
           pathSub === 'tunnel'
             ? 'Glass tunnels only run through aquatic habitats.'
-            : "Paths can't run through a habitat. Use a glass tunnel for aquatic ones.",
+            : "Paths can't run through a habitat. Use a safari track, or a glass tunnel for aquatic ones.",
       };
     if (!t.e && pathSub === 'tunnel') return { ok: false, msg: 'Glass tunnels only run through aquatic habitats.' };
     if (t.o) return { ok: false, msg: 'Something is in the way. Bulldoze it first.' };

@@ -31,7 +31,8 @@ function frontTiles(x0, y0, fw, fh, r) {
 }
 const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => S.tiles[i].t === 'p');
 const isRoad = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'service';
-const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service';
+const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
+const isTrack = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'track';
 // a footpath within 3 tiles, for staff on foot (buildings that need both a road and a footpath)
 function footpathBeside(p) {
   for (let y = p.y0 - 3; y < p.y0 + p.fh + 3; y++)
@@ -179,6 +180,8 @@ function checkPlan(kind, p) {
     );
   if (kind === 'stage' && !p.tiles.some((i) => nbr4(i).some((n) => S.tiles[n].t === 'p')))
     return fail('Guests need a path to reach the stadium.');
+  if (kind === 'station' && !p.tiles.some((i) => nbr4(i).some((n) => isTrack(n))))
+    return fail('Lay a safari track beside the station first (behind or at the side).');
   if (ITEMS[kind].needsFootpath && !footpathBeside(p))
     return fail(`The ${nm} also needs a footpath within 3 tiles, for staff on foot.`);
   const clears = p.tiles.filter((i) => S.tiles[i].o).length;

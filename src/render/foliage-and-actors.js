@@ -1157,7 +1157,7 @@ function syncGuests(alpha, time) {
   let nh = 0;
   for (let i = 0; i < n; i++) {
     const g = S.guests[i],
-      q = guestPos(g, alpha),
+      q = g.mode === 'ride' ? { x: -500, z: -500 } : guestPos(g, alpha), // out on a safari: off stage
       moving = g.mode !== 'rest' && g.p < 1;
     const bob = moving ? Math.abs(Math.sin(time * 0.014 + g.id)) * 0.03 : 0,
       sit = g.mode === 'rest' ? -0.08 : 0;

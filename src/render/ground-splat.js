@@ -26,6 +26,7 @@ const GROUND_LAYERS = [
   'tunnel',
   'waterbed',
   'service',
+  'track',
 ];
 const LAYER = Object.fromEntries(GROUND_LAYERS.map((k, i) => [k, i]));
 const ATLAS_CELL = 256,
@@ -126,6 +127,13 @@ function serviceLayer(x, n) {
   for (let j = 0; j < 4; j++)
     for (let i = 0; i < 4; i++) x.fillRect(i * tile + tile * 0.47, j * tile + tile * 0.15, tile * 0.06, tile * 0.32);
 }
+// safari track: packed dirt with two worn wheel ruts per tile
+function trackLayer(x, n) {
+  pathLayer(x, n, 'dirt');
+  const tile = n / 4;
+  x.fillStyle = 'rgba(70,50,30,.35)';
+  for (let k = 0; k < 4; k++) for (const o of [0.3, 0.62]) x.fillRect(k * tile + tile * o, 0, tile * 0.1, n);
+}
 function waterbedLayer(x, n) {
   x.fillStyle = '#55705a';
   x.fillRect(0, 0, n, n);
@@ -151,6 +159,7 @@ const GROUND_ATLAS = (() => {
       else if (BIOMES[k]) biomeLayer(cx, ATLAS_CELL, BIOMES[k]);
       else if (k === 'waterbed') waterbedLayer(cx, ATLAS_CELL);
       else if (k === 'service') serviceLayer(cx, ATLAS_CELL);
+      else if (k === 'track') trackLayer(cx, ATLAS_CELL);
       else pathLayer(cx, ATLAS_CELL, k === 'tunnel' ? 'stone' : k);
       // copy into the atlas with a wrapped gutter so filtering never bleeds in a neighbour
       const ox = (li % ATLAS_COLS) * ATLAS_STRIDE + ATLAS_PAD,
@@ -314,7 +323,7 @@ function paintGround() {
         layer = LAYER.waterbed;
         gm = 0;
       } else if (t.t === 'p') {
-        layer = e ? LAYER.tunnel : (LAYER[t.pm || 'stone'] ?? LAYER.stone);
+        layer = e && e.biome === 'pool' ? LAYER.tunnel : (LAYER[t.pm || 'stone'] ?? LAYER.stone);
         if (t.pm !== 'dirt' && t.pm !== 'sand') {
           if (!isP(x, y - 1)) edges |= 1;
           if (!isP(x, y + 1)) edges |= 2;
