@@ -229,6 +229,7 @@ function render3D(alpha, dt) {
   if (staticDirty) rebuildStatic();
   cullChunks();
   syncParkedCars(performance.now());
+  syncTraffic(dt || 16);
   syncDeliveries(alpha);
   syncFarms(performance.now());
   syncSafari(performance.now());

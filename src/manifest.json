@@ -22,6 +22,7 @@
   "render/ground-splat.js",
   "render/structures.js",
   "render/buildings.js",
+  "render/traffic.js",
   "render/batching.js",
   "render/animals-sculpted.js",
   "render/animals-rigged.js",

@@ -742,6 +742,7 @@ function buildChunk(grp, cx, cy) {
 let staticStats = { chunks: 0, fences: 0 };
 // everything sized to the map: ground mesh, hills, outer forest; all chunks rebuilt
 function onMapResized() {
+  resetTraffic();
   LAKE.x = W + 10;
   lakeGroup.position.set(LAKE.x, 0, LAKE.z);
   makeGroundMeshes();

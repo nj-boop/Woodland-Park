@@ -26,6 +26,12 @@ window.__wg = {
   load,
   rebuild,
   tick,
+  spawnGuest,
+  get traffic() {
+    return { movers: movers.map((m) => [m.d, m.len]), drawn: movBody.count, last: lastLotCars };
+  },
+  lotRoute,
+  lotsInOrder,
   setSpeed,
   set(key, value) {
     const setters = {
