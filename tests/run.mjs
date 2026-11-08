@@ -749,6 +749,19 @@ const tests = {
       if (g.S.money <= m0) return 'no prize money';
       return g.spawnRate() > r0 || 'no extra visitors';
     }),
+  'the getting-started guide ticks off steps as they happen': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        box = document.querySelector('#tut');
+      g.renderTutorial();
+      if (box.hidden || !/recycling yard/.test(box.textContent)) return 'first step not shown';
+      g.build('recycle');
+      g.renderTutorial();
+      if (!/keeper lodge/.test(box.textContent) || !/1 of 8/.test(box.textContent))
+        return 'did not advance: ' + box.textContent;
+      document.querySelector('#tutX').click();
+      return (box.hidden && g.S.tut === 'off') || 'could not hide';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

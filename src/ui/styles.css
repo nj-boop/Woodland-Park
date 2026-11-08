@@ -975,3 +975,43 @@ td.pos {
   background: linear-gradient(var(--panel-hi), var(--panel-2));
   color: var(--ink);
 }
+
+/* getting-started guide: a small card at the top left of the view */
+#tut {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left, 0px));
+  top: 10px;
+  width: min(300px, calc(100% - 20px));
+  padding: 10px 12px 12px;
+  z-index: 6;
+}
+#tut p {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.tutHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tutHead span {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-right: auto;
+}
+#tut .x {
+  position: static;
+}
+.tutBar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.12);
+  margin-top: 6px;
+  overflow: hidden;
+}
+.tutBar i {
+  display: block;
+  height: 100%;
+  background: var(--good);
+}

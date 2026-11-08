@@ -108,6 +108,7 @@ function newZoo(w, h, mode = 'standard') {
     v: 1,
     hgt: new Float32Array((W + 1) * (H + 1)),
     mode,
+    tut: 'on', // the getting-started guide
     tier: mode === 'sandbox' ? TIERS.length : 1,
     totalVis: 0,
     money: MODES[mode].money,

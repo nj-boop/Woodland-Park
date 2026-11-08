@@ -853,6 +853,7 @@ function stars(r) {
   return o.replace(/⯪/g, '★').slice(0, Math.ceil(s)) + '☆'.repeat(5 - Math.ceil(s));
 }
 function hud() {
+  renderTutorial();
   const m = $('#sMoney');
   m.textContent = S.mode === 'sandbox' ? 'Unlimited' : money(S.money);
   m.classList.toggle('neg', S.money < 0);

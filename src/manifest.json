@@ -34,6 +34,7 @@
   "ui/staff-panel.js",
   "ui/building-panel.js",
   "ui/sound.js",
+  "ui/tutorial.js",
   "core/save.js",
   "core/boot.js"
 ]
