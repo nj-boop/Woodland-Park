@@ -19,6 +19,10 @@ const MODELS = {
   turtle: { top: 0.2 },
   shark: { top: 0.3 },
   orca: { top: 0.45 },
+  beluga: { top: 0.4 },
+  manatee: { top: 0.35 },
+  mammoth: { top: 1.35 },
+  sabre: { top: 0.7 },
 };
 for (const k in MODELS) MODELS[k].url = 'models/' + k + '.json';
 function loadModels() {}

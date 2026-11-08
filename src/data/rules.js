@@ -29,6 +29,10 @@ const CARE = {
   turtle: ['greens', 'floater', null, 1],
   shark: ['fish', null, null, 1],
   orca: ['fish', 'floater', null, 1],
+  beluga: ['fish', 'floater', null, 1],
+  manatee: ['greens', 'floater', null, 1],
+  mammoth: ['hay', 'log', 'stable', 4],
+  sabre: ['meat', 'ball', 'cave', 4, 1],
 };
 const DIET = {
   hay: { name: 'Hay and grass', cost: 6 },
@@ -59,6 +63,10 @@ const GUIDE = {
   turtle: ['Endangered', 'Sea turtles return to the beach where they hatched to lay eggs.'],
   shark: ['Vulnerable', 'Sharks grow and shed thousands of teeth over a lifetime.'],
   orca: ['Data deficient', 'Orca pods have their own dialects of calls.'],
+  beluga: ['Least concern', 'Belugas reshape the bulge on their forehead, the melon, to focus their calls.'],
+  manatee: ['Vulnerable', 'Manatees are distant relatives of elephants.'],
+  mammoth: ['Extinct', 'The last woolly mammoths lived on Wrangel Island until about 4,000 years ago.'],
+  sabre: ['Extinct', 'Smilodon’s upper canine teeth grew up to 28 cm long.'],
 };
 const care = (k) => {
   const c = CARE[k] || ['hay', null, null, 1];
@@ -66,16 +74,29 @@ const care = (k) => {
 };
 const TIERS = [
   { n: 1, name: 'Petting-zoo start', sp: ['zebra', 'kangaroo', 'camel', 'fox', 'penguin', 'monkey', 'turtle'] },
-  { n: 2, name: 'Regional attraction', rating: 50, vis: 100, sp: ['giraffe', 'bison', 'sealion', 'polar'] },
+  {
+    n: 2,
+    name: 'Regional attraction',
+    rating: 50,
+    vis: 100,
+    sp: ['giraffe', 'bison', 'sealion', 'polar', 'manatee'],
+  },
   {
     n: 3,
     name: 'Major zoo',
     rating: 62,
     vis: 400,
     need: 'vetclinic',
-    sp: ['lion', 'tiger', 'gorilla', 'dolphin', 'shark'],
+    sp: ['lion', 'tiger', 'gorilla', 'dolphin', 'shark', 'beluga'],
   },
-  { n: 4, name: 'World-class zoo', rating: 76, vis: 1200, need: 'stage', sp: ['elephant', 'orca'] },
+  {
+    n: 4,
+    name: 'World-class zoo',
+    rating: 76,
+    vis: 1200,
+    need: 'stage',
+    sp: ['elephant', 'orca', 'mammoth', 'sabre'],
+  },
 ];
 /* Game modes, chosen when starting a zoo:
    - standard: $1,000,000 to start, animals unlock as the zoo grows through the tiers
@@ -92,10 +113,13 @@ const MODES = {
   },
 };
 const SANDBOX_FLOOR = 5e8; // sandbox money is topped back up whenever it drops below this
+// extinct animals also need the Ice Age revival research (except in sandbox)
+const EXTINCT = new Set(['mammoth', 'sabre']);
 const tierOf = (sp) => TIERS.find((t) => t.sp.includes(sp)).n;
-const unlocked = (sp) => tierOf(sp) <= (S.tier || 1);
+const unlocked = (sp) =>
+  tierOf(sp) <= (S.tier || 1) && (!EXTINCT.has(sp) || S.mode === 'sandbox' || researched('revival'));
 const BARRIER_COST = 1500;
-const SWIM_Y = { dolphin: 0.25, sealion: 0.22, turtle: 0.2, shark: 0.26, orca: 0.3 };
+const SWIM_Y = { dolphin: 0.25, sealion: 0.22, turtle: 0.2, shark: 0.26, orca: 0.3, beluga: 0.28, manatee: 0.24 };
 const TANK_H = 0.62;
 const FENCES = {
   glass: { name: 'Glass tank', cost: 80, sw: '#9fd3e4', hidden: true },

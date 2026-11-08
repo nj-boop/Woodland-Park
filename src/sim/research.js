@@ -24,6 +24,12 @@ const RESEARCH = {
     does: 'Every fence holds as if it were one grade stronger.',
   },
   breed: { name: 'Breeding programme', cost: 30000, months: 4, does: 'Happy pairs have babies more often.' },
+  revival: {
+    name: 'Ice Age revival',
+    cost: 120000,
+    months: 6,
+    does: 'Brings back woolly mammoths and sabre-toothed cats for world-class zoos.',
+  },
 };
 const researched = (id) => !!(S.done && S.done.includes(id));
 function startResearch(id) {

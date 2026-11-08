@@ -704,6 +704,8 @@ for (const [k, cfg] of Object.entries({
   turtle: ['#5f5531', '#7a7a4e', 0.28, 0.06],
   shark: ['#6b7a84', '#eef0ed', 0.45, 0.1],
   orca: ['#121417', '#f1f2ef', 0.6, 0.17],
+  beluga: ['#e9ece4', '#f4f5f0', 0.48, 0.14],
+  manatee: ['#7d7b72', '#8e8b80', 0.42, 0.14],
 })) {
   const [c1, c2, L, R] = cfg;
   SPEC[k] = () => ({
@@ -723,6 +725,9 @@ for (const [k, cfg] of Object.entries({
     top: R * 2,
   });
 }
+// stand-in shapes while a model loads: the closest living relative
+SPEC.mammoth = SPEC.elephant;
+SPEC.sabre = SPEC.lion;
 const AMAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0 });
 const EYEMAT = new THREE.MeshStandardMaterial({ color: '#050505', roughness: 0.15, metalness: 0 });
 const EYEGEO = new THREE.SphereGeometry(1, 10, 8);

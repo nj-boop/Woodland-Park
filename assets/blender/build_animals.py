@@ -259,6 +259,57 @@ def coat_eye(p, J, col, r=.012):
     ex, ez = J['eye'] if 'eye' in J else (None, None)
     return col
 
+def coat_mammoth(p, n, J):
+    x, y, z = p.T
+    # long shaggy hair: streaks running down the body, darker underneath
+    streak = noise(p * np.array([3, 3, .6]), 40) * .6 + noise(p, 90) * .4
+    col = C('#6b4426')[None, :] * (.62 + .55 * streak[:, None])
+    col = np.where((n[:, 2] < -.3)[:, None], col * .7, col)
+    for sy in (1, -1):  # tusks, matching attach_mammoth()
+        for c, s, ax in mammoth_tusk(J, sy):
+            a0, a1 = c - ax * s, c + ax * s
+            ba = a1 - a0; h = np.clip(((p - a0) @ ba) / (ba @ ba), 0, 1); dd = np.linalg.norm(p - a0 - h[:, None] * ba, axis=1)
+            col = sel(dd < .03, C('#efe3c4'), col)
+    col = sel(z < .02, C('#3a2a1e'), col)
+    return col
+
+def mammoth_tusk(J, sy):
+    # two segments per tusk, curving forward, outward and up: (centre, half-length, axis)
+    m = np.array(J['muzzle'][0])
+    a1 = np.array([.55, sy * .25, -.8]); a1 /= np.linalg.norm(a1)
+    a2 = np.array([.75, sy * .35, .55]); a2 /= np.linalg.norm(a2)
+    c1 = m + np.array([.02, sy * .07, -.1]) + a1 * .12
+    c2 = c1 + a1 * .12 + a2 * .15
+    return [(c1, .12, a1), (c2, .15, a2)]
+
+def attach_mammoth(J):
+    out = []
+    for sy in (1, -1):
+        for c, s, ax in mammoth_tusk(J, sy):
+            # cones point along +z; tilt that onto the tusk's axis
+            pitch = math.atan2(math.hypot(ax[0], ax[1]), ax[2]); yaw = math.atan2(ax[1], ax[0])
+            out.append(attach_cone(Vector(tuple(c)), (.03, .03, s), (0, pitch, yaw)))
+        out.append(attach_ellipsoid(Vector(J['head'][0]) + Vector((-.07, sy * .14, .0)), (.025, .06, .07), (0, 0, sy * -.3)))  # small ears
+    out.append(attach_ellipsoid(Vector(J['head'][0]) + Vector((-.03, 0, .1)), (.12, .11, .1)))  # domed head
+    out.append(attach_ellipsoid(Vector(J['withers'][0]) + Vector((-.02, 0, .06)), (.16, .14, .1)))  # shoulder hump
+    return out
+
+def coat_sabre(p, n, J):
+    x, y, z = p.T
+    base = fur(C('#b8864c'), p, 30, .2)
+    e, cid = voronoi(p * np.array([1, 1.4, 1]), .05)
+    col = np.where(((e > .55) & (cid > .55) & (n[:, 2] > -.2))[:, None], base * .72, base)  # faint spots
+    col = sel(n[:, 2] < -.45, C('#e6cfa2'), col)
+    col = sel(x > J['muzzle'][0][0] - .01, C('#e8d4ab'), col)
+    col = sel(x > J['nose'][0][0] + .01, C('#3a2418'), col)
+    m = np.array(J['muzzle'][0])
+    for sy in (1, -1):  # the sabre teeth
+        c = m + np.array([.02, sy * .022, -.06])
+        d = np.linalg.norm((p - c) / np.array([.012, .012, .05]), axis=1)
+        col = sel(d < 1, C('#f2ead6'), col)
+    col = sel(z < .02, C('#5a3c22'), col)
+    return col
+
 def attach_ellipsoid(c, s, rot=(0, 0, 0)):
     return ('sph', c, s, rot)
 def attach_cone(c, s, rot=(0, 0, 0)):
@@ -293,6 +344,12 @@ SPECIES = {
                                         + [attach_cone(Vector(J['poll'][0]) + Vector((.0, s * .1, .05)), (.02, .02, .045), (s * -.9, 0, 0)) for s in (1, -1)]),
     'monkey': quad_spec(dict(L=.18, Zp=.2, Zc=.27, w=.07, h=.075, lr=.025, na=.9, nl=.04, nr=(.05, .05), ha=-.1, hl=.09, hr=(.07, .07),
                              mr=(.04, .038), tl=.32, tr=.016, ta=-.6, el=.01, er=.03, paw=True, es=.6, fx=.02), coat_monkey),
+    'mammoth': quad_spec(dict(L=.6, Zp=.66, Zc=.78, w=.25, h=.27, lr=.1, na=.2, nl=.05, nr=(.17, .2), ha=-1.0, hl=.2, hr=(.16, .17),
+                              mr=(.1, .1), tl=.12, tr=.025, tuft=.04, ta=1.4, el=.015, er=.015, chestH=1.15), coat_mammoth,
+                         attach=attach_mammoth, extra_bones='trunk'),
+    'sabre': quad_spec(dict(L=.42, Zp=.36, Zc=.4, w=.12, h=.13, lr=.05, na=.45, nl=.11, nr=(.085, .1), ha=-.3, hl=.16, hr=(.075, .072),
+                            mr=(.05, .045), tl=.08, tr=.022, ta=1.0, el=.026, er=.022, paw=True, es=.2, chestH=1.2), coat_sabre,
+                       attach=lambda J: [attach_cone(Vector(J['muzzle'][0]) + Vector((.02, s * .022, -.06)), (.01, .01, .05), (math.pi, 0, 0)) for s in (1, -1)]),
     'gorilla': quad_spec(dict(L=.32, Zp=.36, Zc=.55, w=.15, h=.15, lr=.07, na=.8, nl=.04, nr=(.1, .1), ha=-.3, hl=.14, hr=(.1, .1),
                               mr=(.07, .065), tl=.01, tr=.01, ta=1.2, el=.01, er=.022, paw=True, es=.6, chestH=1.25, fx=.04), coat_gorilla),
 }
@@ -347,7 +404,26 @@ def coat_turtle(p, n, J, S=1.0):
     skin = np.where((e2 < .2)[:, None], C('#c9c79a'), C('#6f7046')[None, :] * (.85 + .3 * c2[:, None]))
     col = np.where(shell[:, None], shellc, np.where(plast[:, None], C('#d6c78c'), skin))
     return col
+def coat_beluga(p, n, J, S=1.0):
+    x, y, z = (p / S).T
+    col = C('#e9ece4')[None, :] * (.9 + .1 * noise(p / S, 14)[:, None])
+    col = np.where((z > .06)[:, None], col * .95, col)
+    return col
+def coat_manatee(p, n, J, S=1.0):
+    x, y, z = (p / S).T
+    wr = noise(p / S * np.array([1, 1, 2]), 26) * .6 + noise(p / S, 60) * .4
+    col = C('#7d7b72')[None, :] * (.78 + .3 * wr[:, None])
+    algae = (z > .05) & (noise(p / S, 9) > .6)
+    col = np.where(algae[:, None], col * np.array([.85, 1.0, .8]), col)
+    col = np.where((x > .27)[:, None], C('#9a968a'), col)
+    return col
 SWIM = {
+    'beluga': dict(S=1.4, coat=coat_beluga, axis='Y', prof=[(.33, .03, .03), (.3, .062, .068), (.24, .088, .094), (.14, .096, .1), (.03, .1, .1), (-.09, .085, .088), (-.19, .055, .058), (-.27, .03, .033), (-.33, .016, .02)],
+                   att=[('sph', (.13, .09, -.05), (.05, .032, .01), (.5, .3, 0)), ('sph', (.13, -.09, -.05), (.05, .032, .01), (-.5, .3, 0)),
+                        ('sph', (.0, 0, .085), (.12, .02, .02), (0, 0, 0)), ('sph', (-.37, 0, 0), (.045, .12, .011), (0, 0, 0))], eye=(.24, .07, .02)),
+    'manatee': dict(S=1.3, coat=coat_manatee, axis='Y', prof=[(.3, .035, .03), (.26, .06, .055), (.19, .075, .07), (.08, .1, .09), (-.05, .11, .095), (-.16, .085, .075), (-.24, .05, .045), (-.29, .03, .025)],
+                    att=[('sph', (.14, .1, -.05), (.06, .035, .012), (.5, .3, 0)), ('sph', (.14, -.1, -.05), (.06, .035, .012), (-.5, .3, 0)),
+                         ('sph', (-.36, 0, 0), (.08, .09, .012), (0, 0, 0))], eye=(.27, .05, .02)),
     'dolphin': dict(S=1.0, coat=coat_dolphin, axis='Y', prof=[(.37, .01, .01), (.31, .024, .022), (.25, .055, .062), (.17, .08, .086), (.06, .096, .1), (-.06, .085, .09), (-.17, .055, .06), (-.27, .03, .037), (-.34, .016, .02)],
                     att=[('sph', (-.02, 0, .13), (.07, .012, .06), (0, -.45, 0)), ('sph', (.09, .09, -.05), (.065, .028, .011), (.5, .3, 0)), ('sph', (.09, -.09, -.05), (.065, .028, .011), (-.5, .3, 0)),
                          ('sph', (-.38, 0, 0), (.045, .13, .011), (0, 0, 0))], eye=(.2, .055, .015)),
@@ -541,6 +617,7 @@ bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
 bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=.012); bpy.ops.object.mode_set(mode='OBJECT')
 for k_, v_ in SWIM.items(): pass
 COATS = {'giraffe': coat_giraffe, 'lion': coat_lion, 'tiger': coat_tiger, 'elephant': coat_elephant, 'polar': coat_polar, 'camel': coat_camel,
+         'mammoth': coat_mammoth, 'sabre': coat_sabre,
          'fox': coat_fox, 'bison': coat_bison, 'monkey': coat_monkey, 'gorilla': coat_gorilla, 'kangaroo': coat_kangaroo, 'penguin': coat_penguin}
 coatf = (lambda p, n, J: SWIM[SP]['coat'](p, n, J, SWIM[SP]['S'])) if kind == 'swim' else COATS[SP]
 eyes = []

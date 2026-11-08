@@ -158,6 +158,10 @@ const CALLS = {
   orca: 'click',
   turtle: 'splash',
   shark: 'splash',
+  beluga: 'click',
+  manatee: 'grunt',
+  mammoth: 'trumpet',
+  sabre: 'roar',
 };
 function animalCall(sp, vol, pan) {
   const p = AC.createStereoPanner ? AC.createStereoPanner() : AC.createGain();

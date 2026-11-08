@@ -772,6 +772,16 @@ const tests = {
       for (let i = 0; i < 3 * 1200 + 5 && !g.researched('vet'); i++) g.tick();
       return g.researched('vet') || 'not done after 3 months';
     }),
+  'extinct animals need a world-class zoo and the Ice Age revival': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.tier = 4;
+      if (!g.unlocked('orca') || g.unlocked('mammoth')) return 'mammoth unlocked without research';
+      g.S.done = ['revival'];
+      if (!g.unlocked('mammoth') || !g.unlocked('sabre')) return 'still locked after research';
+      g.S.tier = 3;
+      return !g.unlocked('mammoth') || 'mammoth unlocked below world class';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;
