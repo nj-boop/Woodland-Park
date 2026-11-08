@@ -525,6 +525,44 @@ const tests = {
       return Math.abs(full / open - 0.25) < 0.05 || `open ${open}, full ${full}`;
     }),
 
+  'feed comes by truck to the dock, haulers store it, keepers feed from it': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.money = 1e6;
+      for (const b of ['lodge', 'recycle', 'dock', 'feedstore']) if (!g.build(b)) return 'no room for ' + b;
+      g.refresh();
+      if (!g.feedByTruck()) return 'bulk feed not active';
+      g.hireRole('keeper');
+      g.hireRole('hauler');
+      let sawTruck = false,
+        sawCrate = false,
+        stored = 0;
+      for (let i = 0; i < 6000 && !(stored > 0); i++) {
+        g.tick();
+        if (g.S.trucks.length) sawTruck = true;
+        if (g.S.crates.length) sawCrate = true;
+        stored = g.S.feed;
+      }
+      if (!sawTruck || !sawCrate || !stored) return `truck ${sawTruck}, crates ${sawCrate}, feed ${stored}`;
+      const zebras = g.S.animals.filter((a) => a.e === g.S.encl[0].id);
+      zebras.forEach((a) => (a.hunger = 80));
+      const m0 = g.S.money;
+      for (let i = 0; i < 3000 && zebras.some((a) => a.hunger > 20); i++) g.tick();
+      return (
+        (zebras.every((a) => a.hunger <= 20) && g.S.feed < 300) ||
+        `zebras ${zebras.map((a) => a.hunger | 0)}, feed ${g.S.feed}`
+      );
+    }),
+
+  'guests never walk on service roads': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      for (let x = 20; x < 27; x++) g.setPath(x, 20, 'service');
+      g.refresh();
+      const t = g.S.tiles[20 * 36 + 22];
+      return (t.t === 'p' && t.pm === 'service' && !g.guestPath(20 * 36 + 22)) || 'service road open to guests';
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

@@ -95,6 +95,15 @@ lot (6 × 4 tiles) 30 more. When every space is taken, visitors park off-site an
 to a quarter (`arrivalChance()`); the Office shows cars parked and visitors turned away. Parked
 cars are drawn into lot bays by `syncParkedCars()` (`render/buildings.js`).
 
+### Deliveries
+
+`sim/logistics.js`. With a loading dock and a feed store, animal feed is bought in bulk (60% of the
+courier price): `orderFeed()` sends a truck along the paths from the entrance to the dock when
+stock runs low; it unloads crates; haulers (a staff role housed at the dock) carry them into the
+feed store; keepers collect a habitat's feed there before tending it (`fetch` then `tend` jobs in
+`sim/staff.js`). Without both buildings, feed is couriered at the full price. Service roads are a
+path material guests can't use (`guestPath()`); staff and trucks use them.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes

@@ -48,6 +48,20 @@ const ITEMS = {
   bench: { name: 'Bench', cost: 80, kind: 'shop' },
   stage: { name: 'Show stadium', cost: 2500, kind: 'shop', size: [4, 3] },
   restroom: { name: 'Restroom', cost: 700, kind: 'shop', size: [2, 2], help: 'Guests need to use one now and then.' },
+  dock: {
+    name: 'Loading dock',
+    cost: 2500,
+    kind: 'staff',
+    size: [4, 3],
+    help: 'Delivery trucks unload here. With a feed store, animal feed comes in bulk at 60% of the courier price. Room for 3 haulers.',
+  },
+  feedstore: {
+    name: 'Feed store',
+    cost: 1500,
+    kind: 'staff',
+    size: [3, 2],
+    help: 'Holds 300 meals of animal feed. Keepers collect feed here.',
+  },
   parking: {
     name: 'Parking lot',
     cost: 1200,

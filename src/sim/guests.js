@@ -30,7 +30,7 @@ function spawnRate() {
 }
 function spawnGuest() {
   const gi = idx(GATE.x, GATE.y);
-  if (!nbr4(gi).some(isPath)) return;
+  if (!nbr4(gi).some(guestPath)) return;
   const g = {
     id: S.nextId++,
     name: pick(NAMES),
@@ -67,7 +67,7 @@ function spawnGuest() {
 }
 function chooseNext(g) {
   const i = idx(g.x, g.y),
-    ns = nbr4(i).filter(isPath);
+    ns = nbr4(i).filter(guestPath);
   if (!ns.length) return null;
   let fld = null;
   if (g.mode === 'leave') fld = F.gate;

@@ -115,6 +115,9 @@ function newZoo(w, h) {
     admission: 15,
     staff: [],
     cands: [],
+    feed: 0,
+    crates: [],
+    trucks: [],
     prices: { ...BASE_PRICE },
     ledger: [],
     tiles: blankTiles(),
@@ -182,6 +185,8 @@ function newZoo(w, h) {
 
 /* ---------- derived fields ---------- */
 const isPath = (i) => S.tiles[i].t === 'p';
+// guests can't use service roads
+const guestPath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service';
 function nbr4(i) {
   const x = i % W,
     y = (i / W) | 0,
@@ -196,14 +201,14 @@ function bfs(src) {
   const d = new Int16Array(W * H).fill(-1),
     q = [];
   for (const s of src)
-    if (d[s] < 0 && isPath(s)) {
+    if (d[s] < 0 && guestPath(s)) {
       d[s] = 0;
       q.push(s);
     }
   for (let k = 0; k < q.length; k++) {
     const c = q[k];
     for (const n of nbr4(c))
-      if (d[n] < 0 && isPath(n)) {
+      if (d[n] < 0 && guestPath(n)) {
         d[n] = d[c] + 1;
         q.push(n);
       }
@@ -287,7 +292,7 @@ function rebuild() {
   }
   const src = (type) => {
     const o = [];
-    for (let i = 0; i < N; i++) if (S.tiles[i].o === type) for (const n of nbr4(i)) if (isPath(n)) o.push(n);
+    for (let i = 0; i < N; i++) if (S.tiles[i].o === type) for (const n of nbr4(i)) if (guestPath(n)) o.push(n);
     return o;
   };
   F.restroom = bfs(src('restroom'));
@@ -314,7 +319,7 @@ function rebuild() {
   };
   F.paths = [];
   F.litter = new Set();
-  F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set() };
+  F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
   for (let i = 0; i < N; i++) {
     const t = S.tiles[i],
       o = t.o;
@@ -352,13 +357,18 @@ function rebuild() {
     F.shops[i] = sh;
     F.scen[i] = Math.min(8, scen[i]);
   }
-  const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0 };
+  const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0, dock: 0, feedstore: 0 };
   for (let i = 0; i < N; i++) {
     const o = S.tiles[i].o;
     if (o in cnt && isAnchor(i)) cnt[o]++;
   }
   F.cnt = cnt;
-  F.cap = { keepers: cnt.recycle ? cnt.lodge * 4 : 0, janitors: cnt.recycle * 3, vets: cnt.vetclinic * 2 };
+  F.cap = {
+    keepers: cnt.recycle ? cnt.lodge * 4 : 0,
+    janitors: cnt.recycle * 3,
+    vets: cnt.vetclinic * 2,
+    haulers: cnt.dock * 3,
+  };
   dirty = false;
   groundDirty = true;
   staticDirty = true;

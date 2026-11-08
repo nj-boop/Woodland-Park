@@ -2,6 +2,7 @@
    and the keeper line in the habitat inspector. */
 
 const ROLE_ICON = {
+  hauler: '<path d="M4 9l8-4 8 4v9l-8 4-8-4z"/><path d="M4 9l8 4 8-4M12 13v9"/>',
   keeper:
     '<path d="M4 11c0-4 3.6-7 8-7s8 3 8 7"/><path d="M2 11h20"/><circle cx="12" cy="15" r="3"/><path d="M7 21c1-2.5 2.8-3.5 5-3.5s4 1 5 3.5"/>',
   vet: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
@@ -13,7 +14,7 @@ const skillStars = (n) =>
   `<span class="stars-s" aria-label="Skill ${n} of 5">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
 
 function roomLine() {
-  return ['keeper', 'janitor', 'vet']
+  return ['keeper', 'janitor', 'vet', 'hauler']
     .map((r) => {
       const room = staffRoom(r),
         n = staffCount(r);
@@ -55,7 +56,7 @@ function staffSignature() {
     '#' +
     (S.cands || []).map((c) => c.id).join(',') +
     '#' +
-    ['keeper', 'janitor', 'vet'].map(staffRoom).join(',')
+    ['keeper', 'janitor', 'vet', 'hauler'].map(staffRoom).join(',')
   );
 }
 function refreshStaffPanel() {

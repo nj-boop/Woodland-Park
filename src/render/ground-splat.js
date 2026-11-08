@@ -25,6 +25,7 @@ const GROUND_LAYERS = [
   'sand',
   'tunnel',
   'waterbed',
+  'service',
 ];
 const LAYER = Object.fromEntries(GROUND_LAYERS.map((k, i) => [k, i]));
 const ATLAS_CELL = 256,
@@ -115,6 +116,16 @@ function pathLayer(x, n, m) {
   for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) drawPaving(x, i + 40, j + 40, i * T, j * T, m);
   x.restore();
 }
+// service road: plain asphalt with a dashed yellow centre line every tile
+function serviceLayer(x, n) {
+  pathLayer(x, n, 'asphalt');
+  x.fillStyle = 'rgba(70,72,76,.35)';
+  x.fillRect(0, 0, n, n);
+  x.fillStyle = '#d9b43a';
+  const tile = n / 4;
+  for (let j = 0; j < 4; j++)
+    for (let i = 0; i < 4; i++) x.fillRect(i * tile + tile * 0.47, j * tile + tile * 0.15, tile * 0.06, tile * 0.32);
+}
 function waterbedLayer(x, n) {
   x.fillStyle = '#55705a';
   x.fillRect(0, 0, n, n);
@@ -139,6 +150,7 @@ const GROUND_ATLAS = (() => {
       if (k === 'grass') grassLayer(cx, ATLAS_CELL);
       else if (BIOMES[k]) biomeLayer(cx, ATLAS_CELL, BIOMES[k]);
       else if (k === 'waterbed') waterbedLayer(cx, ATLAS_CELL);
+      else if (k === 'service') serviceLayer(cx, ATLAS_CELL);
       else pathLayer(cx, ATLAS_CELL, k === 'tunnel' ? 'stone' : k);
       // copy into the atlas with a wrapped gutter so filtering never bleeds in a neighbour
       const ox = (li % ATLAS_COLS) * ATLAS_STRIDE + ATLAS_PAD,
@@ -246,7 +258,7 @@ float bit(float v, float b) { return mod(floor(v / b), 2.0); }`
   // soft large-scale variation on lawn and floors
   if (layer < 7.0) col *= 0.88 + texture2D(varyMap, wp / 34.0).r * 0.24;
   // curbs on paved paths
-  if (layer >= 7.0 && layer <= 9.0 || layer == 12.0) {
+  if (layer >= 7.0 && layer <= 9.0 || layer == 12.0 || layer == 14.0) {
     vec3 curb = layer == 8.0 ? vec3(0.090, 0.025, 0.014) : vec3(0.113, 0.106, 0.095);
     float cw = 0.078;
     if ((bit(edges, 1.0) > 0.5 && f.y < cw) || (bit(edges, 2.0) > 0.5 && f.y > 1.0 - cw) ||

@@ -29,10 +29,16 @@ function serialize() {
       assign: s.assign,
       raised: s.raised,
       mood: s.mood,
+      carry: s.carry || 0,
+      carryFeed: s.carryFeed || 0,
       x: s.x,
       y: s.y,
     })),
     cands: S.cands,
+    feed: Math.round(S.feed * 10) / 10,
+    crates: S.crates,
+    // trucks on the road are saved as already unloaded
+    trucks: [],
     prices: S.prices,
     ledger: S.ledger,
     rating: S.rating,
@@ -42,7 +48,9 @@ function serialize() {
     t: S.tiles.map((t) => t.t).join(''),
     pm: S.tiles
       .map((t) =>
-        t.t === 'p' ? { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't' }[t.pm || 'stone'] : '-'
+        t.t === 'p'
+          ? { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v' }[t.pm || 'stone']
+          : '-'
       )
       .join(''),
     // items are stored on their anchor tile only, with the facing; footprints are re-stamped on load
@@ -185,7 +193,9 @@ function load(str) {
   S.tiles.forEach((t, i) => {
     t.t = d.t[i] === 'p' ? 'p' : 'g';
     if (t.t === 'p')
-      t.pm = (d.pm && { s: 'stone', b: 'brick', a: 'asphalt', d: 'dirt', n: 'sand', t: 'tunnel' }[d.pm[i]]) || 'stone';
+      t.pm =
+        (d.pm && { s: 'stone', b: 'brick', a: 'asphalt', d: 'dirt', n: 'sand', t: 'tunnel', v: 'service' }[d.pm[i]]) ||
+        'stone';
     t.o =
       typeof d.o[i] === 'string' ? (ITEMS[d.o[i]] ? d.o[i] : null) : d.o[i] ? LEGACY_ITEMS[d.o[i] - 1] || null : null;
     t.l = +d.l[i] || 0;
@@ -250,6 +260,9 @@ function load(str) {
   delete S.janitors;
   delete S.vets;
   if (!S.cands || !S.cands.length) refreshCandidates();
+  S.feed = d.feed || 0;
+  S.crates = d.crates || [];
+  S.trucks = [];
   dirty = true;
 }
 /* Saves live in the browser's IndexedDB (no practical size limit, unlike localStorage's ~5 MB).

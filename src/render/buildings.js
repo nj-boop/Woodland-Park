@@ -172,6 +172,36 @@ const BUILDINGS = {
     // ambulance-van parking bay
     P(g, 'box', '#efeadc', 1.4, 0.065, 1.05, 0.9, 0.01, 0.06, false);
   },
+  // 4 × 3: a raised concrete dock with roll-up doors into a small warehouse
+  dock(g) {
+    P(g, 'box', '#8f9590', 0, 0.03, 0, 3.9, 0.06, 2.9, false).receiveShadow = true;
+    P(g, 'box', '#b9b7ae', 0, 0.2, 0.45, 3.8, 0.34, 1.9);
+    for (let k = 0; k < 4; k++) P(g, 'box', '#2d2f31', -1.4 + k * 0.93, 0.2, 1.41, 0.22, 0.2, 0.08); // bumpers
+    P(g, 'box', '#d8d2c0', 0, 0.75, -0.95, 3.8, 1.3, 0.95);
+    for (const x of [-1.0, 0.3]) {
+      P(g, 'box', '#9aa3a8', x, 0.72, -0.465, 0.95, 0.8, 0.02, false);
+      for (let k = 0; k < 6; k++) P(g, 'box', '#7f888d', x, 0.4 + k * 0.13, -0.45, 0.95, 0.015, 0.012, false);
+    }
+    const rf = P(g, 'box', '#6f7570', 0, 1.45, -0.7, 3.95, 0.05, 1.5);
+    rf.rotation.x = -0.08;
+    signBoard(g, 'DELIVERIES', '#c9771f', '#ffffff', 1.3, 1.15, -0.46, 0.95);
+    // a pallet jack
+    P(g, 'box', '#c9771f', 1.4, 0.43, 0.9, 0.3, 0.06, 0.45);
+    P(g, 'cyl', '#2d2f31', 1.4, 0.62, 0.68, 0.015, 0.4);
+  },
+  // 3 × 2: a barn-like store with sacks and hay
+  feedstore(g) {
+    P(g, 'box', '#b9ad92', 0, 0.03, 0, 2.9, 0.06, 1.9, false).receiveShadow = true;
+    P(g, 'box', '#9b3b2c', 0, 0.55, -0.2, 2.4, 1.0, 1.25);
+    gableRoof(g, '#5b5f63', 0, 1.05, -0.2, 2.6, 1.45, 0.55);
+    for (const x of [-0.6, 0.6]) {
+      P(g, 'box', '#f2ead8', x, 0.42, 0.43, 0.6, 0.78, 0.02, false);
+      P(g, 'box', '#7d2c20', x, 0.42, 0.445, 0.5, 0.7, 0.02, false);
+    }
+    signBoard(g, 'FEED', '#f2ead8', '#7d2c20', 0, 0.95, 0.44, 0.6);
+    for (let k = 0; k < 3; k++) P(g, 'box', '#d8c48a', -1.05 + k * 0.32, 0.12, 0.72, 0.26, 0.2, 0.32);
+    P(g, 'box', '#d8bf6a', 1.1, 0.16, 0.7, 0.4, 0.26, 0.3);
+  },
   // 6 × 4: asphalt with two rows of marked bays; the cars themselves are drawn by syncParkedCars()
   parking(g) {
     P(g, 'box', '#3b3d40', 0, 0.035, 0, 5.94, 0.05, 3.94, false).receiveShadow = true;
@@ -403,4 +433,79 @@ function syncParkedCars(time) {
   carBody.count = carCab.count = n;
   carBody.instanceMatrix.needsUpdate = carCab.instanceMatrix.needsUpdate = true;
   if (carBody.instanceColor) carBody.instanceColor.needsUpdate = true;
+}
+
+/* Crates waiting on loading docks, and delivery trucks on the road: both drawn from simulation state
+   every frame (there are only ever a few). */
+const crateMesh = new THREE.InstancedMesh(
+  new THREE.BoxGeometry(0.3, 0.26, 0.3),
+  new THREE.MeshLambertMaterial({ color: LIN('#b4874f') }),
+  200
+);
+crateMesh.castShadow = true;
+crateMesh.frustumCulled = false;
+crateMesh.count = 0;
+scene.add(crateMesh);
+const truckGroups = new Map();
+function makeTruck() {
+  const g = new THREE.Group();
+  P(g, 'box', '#f4f1ea', 0, 0.42, -0.25, 0.62, 0.62, 1.3); // box body
+  P(g, 'box', '#c9771f', 0, 0.36, 0.62, 0.6, 0.5, 0.44); // cab
+  P(g, 'box', '#2a3a44', 0, 0.48, 0.85, 0.52, 0.2, 0.02, false); // windscreen
+  for (const [x, z] of [
+    [-0.3, -0.6],
+    [0.3, -0.6],
+    [-0.3, 0.55],
+    [0.3, 0.55],
+  ]) {
+    const w = P(g, 'cyl', '#1d1f21', x, 0.11, z, 0.11, 0.08);
+    w.rotation.z = Math.PI / 2;
+  }
+  signBoard(g, 'FEED', '#f4f1ea', '#c9771f', 0.312, 0.5, -0.25, 0.7).rotation.y = Math.PI / 2;
+  scene.add(g);
+  return g;
+}
+function syncDeliveries(alpha) {
+  // crates: stacked in rows on the dock platform
+  const o = new THREE.Object3D();
+  let n = 0;
+  const perDock = new Map();
+  for (const c of S.crates) {
+    if (n >= 200) break;
+    const k = perDock.get(c.dock) || 0;
+    perDock.set(c.dock, k + 1);
+    if (!S.tiles[c.dock] || S.tiles[c.dock].o !== 'dock') continue;
+    const p = planOf(c.dock),
+      cx = p.x0 + p.fw / 2,
+      cz = p.y0 + p.fh / 2,
+      rot = (p.r * Math.PI) / 2,
+      lx = -1.5 + (k % 8) * 0.36,
+      lz = 0.3 + Math.floor(k / 8) * 0.34;
+    o.position.set(
+      cx + lx * Math.cos(rot) + lz * Math.sin(rot),
+      heightAt(cx, cz) + 0.5,
+      cz - lx * Math.sin(rot) + lz * Math.cos(rot)
+    );
+    o.rotation.set(0, rot, 0);
+    o.updateMatrix();
+    crateMesh.setMatrixAt(n++, o.matrix);
+  }
+  crateMesh.count = n;
+  crateMesh.instanceMatrix.needsUpdate = true;
+  // trucks
+  const live = new Set();
+  for (const t of S.trucks) {
+    live.add(t.id);
+    let g = truckGroups.get(t.id);
+    if (!g) truckGroups.set(t.id, (g = makeTruck()));
+    const x = t.ox + (t.x - t.ox) * alpha,
+      z = t.oy + (t.y - t.oy) * alpha;
+    g.position.set(x, heightAt(x, z), z);
+    g.rotation.y = t.dir || 0;
+  }
+  for (const [id, g] of truckGroups)
+    if (!live.has(id)) {
+      scene.remove(g);
+      truckGroups.delete(id);
+    }
 }

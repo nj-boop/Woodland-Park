@@ -151,6 +151,7 @@ function tick() {
   S.clock++;
   tickAnimals();
   tickStaff();
+  tickLogistics();
   tickGuests();
   if (S.clock % TPS === 0) {
     const ex = S.exits.length ? S.exits.reduce((a, b) => a + b, 0) / S.exits.length : 60;

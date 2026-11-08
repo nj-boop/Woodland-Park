@@ -10,6 +10,7 @@
   "sim/guests.js",
   "sim/animals.js",
   "sim/staff.js",
+  "sim/logistics.js",
   "sim/events.js",
   "sim/terrain.js",
   "sim/building.js",

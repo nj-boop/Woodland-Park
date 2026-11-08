@@ -6,6 +6,7 @@ const PATHS = {
   dirt: { name: 'Dirt trail', cost: 5, sw: '#8a6c47' },
   sand: { name: 'Sand', cost: 6, sw: '#d9c08a' },
   tunnel: { name: 'Glass tunnel', cost: 120, sw: '#7fc6e0' },
+  service: { name: 'Service road', cost: 8, sw: '#62666a', staffOnly: true },
 };
 // care profile per species: diet, favourite toy, shelter type, strength (escape risk), wants privacy
 const CARE = {

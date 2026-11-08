@@ -22,6 +22,16 @@ const STAFF_ROLES = {
     uniform: '#eeeee8',
     hat: null,
   },
+  hauler: {
+    name: 'Hauler',
+    pl: 'Haulers',
+    base: 50,
+    home: 'dock',
+    cap: 'haulers',
+    does: 'Carries delivered crates from the loading dock to the feed store.',
+    uniform: '#c9771f',
+    hat: '#f2c94c',
+  },
   janitor: {
     name: 'Janitor',
     pl: 'Janitors',
@@ -128,7 +138,7 @@ function makeCandidate(role) {
   };
 }
 function refreshCandidates() {
-  S.cands = ['keeper', 'keeper', 'janitor', 'janitor', 'vet', 'vet'].map(makeCandidate);
+  S.cands = ['keeper', 'keeper', 'janitor', 'janitor', 'vet', 'vet', 'hauler', 'hauler'].map(makeCandidate);
 }
 
 function hire(cid) {
@@ -197,6 +207,7 @@ function capHint(role) {
         ? 'The lodge opens once you build a recycling yard.'
         : 'Build another keeper lodge for 4 more.';
   if (role === 'vet') return 'Each vet clinic has room for 2.';
+  if (role === 'hauler') return 'Each loading dock has room for 3.';
   return 'Each recycling yard has room for 3.';
 }
 
@@ -236,9 +247,10 @@ function staffStep(a, b, dr) {
   }
   return true;
 }
-const stepCost = (b) => (S.tiles[b].t === 'p' ? 1 : S.tiles[b].e ? 1.6 : 2.4);
+// service roads are the quickest way round for staff
+const stepCost = (b) => (S.tiles[b].t === 'p' ? (S.tiles[b].pm === 'service' ? 0.8 : 1) : S.tiles[b].e ? 1.6 : 2.4);
 // cheapest route from tile `from` to the nearest tile in `goals` (a Set of tile indices); null if none can be reached
-function staffRoute(from, goals) {
+function staffRoute(from, goals, step = staffStep, cost = stepCost) {
   if (goals.has(from)) return [];
   // A*: the heuristic is the distance to the box around all goal tiles, so the search heads
   // toward the goals instead of flooding the whole map
@@ -326,8 +338,8 @@ function staffRoute(from, goals) {
         ny = y + DIRS[dr][1];
       if (!inB(nx, ny)) continue;
       const n = ny * W + nx;
-      if (!staffStep(c, n, dr)) continue;
-      const nd = d + stepCost(n);
+      if (!step(c, n, dr)) continue;
+      const nd = d + cost(n);
       if (seen[n] !== st || nd < dist[n]) {
         seen[n] = st;
         dist[n] = nd;
@@ -407,7 +419,12 @@ function pickJob(s) {
         best = e;
       }
     }
-    if (best) return { kind: 'tend', id: best.id, goals: serviceTiles(best) };
+    if (best) {
+      // with a feed store, collect the habitat's feed there first
+      if (feedByTruck() && !s.carryFeed && F.homes.feedstore.size)
+        return { kind: 'fetch', id: best.id, goals: new Set(F.homes.feedstore) };
+      return { kind: 'tend', id: best.id, goals: serviceTiles(best) };
+    }
   }
   if (s.role === 'vet') {
     const sick = S.animals
@@ -418,6 +435,18 @@ function pickJob(s) {
       const e = F.emap[sick.e];
       const goals = sick.escaped || e.biome !== 'pool' ? around(sick.x, sick.y) : serviceTiles(e);
       return { kind: 'treat', id: sick.id, goals };
+    }
+  }
+  if (s.role === 'hauler') {
+    if (s.carry && F.homes.feedstore.size) return { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) };
+    const room = feedCapacity() - S.feed - S.staff.reduce((t, o) => t + (o.carry || 0), 0);
+    const crate = S.crates.find((c) => !taken('haul', c.id) && c.n <= room);
+    if (crate && F.homes.feedstore.size) {
+      const p = planOf(crate.dock),
+        goals = new Set();
+      for (const i of fpTiles(p.x0 - 1, p.y0 - 1, p.fw + 2, p.fh + 2))
+        if (i >= 0 && S.tiles[i].o !== 'dock') goals.add(i);
+      return { kind: 'haul', id: crate.id, goals };
     }
   }
   if (s.role === 'janitor') {
@@ -444,8 +473,11 @@ function pickJob(s) {
 /* ---------- each tick ---------- */
 const workRate = (s) =>
   STAFF_TRAITS[s.trait].speed * (0.75 + 0.1 * s.skill) * (0.6 + 0.6 * (s.morale / 100)) * (s.energy > 0 ? 1 : 0.6);
-const JOB_TIME = { tend: 70, treat: 90, catch: 50, fence: 110, sweep: 14 };
+const JOB_TIME = { tend: 70, treat: 90, catch: 50, fence: 110, sweep: 14, fetch: 30, haul: 25, drop: 25 };
 const JOB_TEXT = {
+  fetch: 'Collecting feed for',
+  haul: 'Picking up a crate',
+  drop: 'Carrying a crate to the feed store',
   tend: 'Tending',
   treat: 'Treating',
   catch: 'Catching',
@@ -473,12 +505,22 @@ function finishJob(s) {
     const e = F.emap[j.id];
     if (e) {
       let cost = 0;
-      for (const a of S.animals)
-        if (a.e === e.id && !a.escaped && a.hunger > 15) {
-          cost += DIET[care(a.sp).diet].cost;
+      const bulk = feedByTruck();
+      for (const a of animalsIn(e.id))
+        if (!a.escaped && a.hunger > 15) {
+          if (bulk) {
+            // feed carried from the feed store; animals left over stay hungry
+            const u = mealUnits(a.sp);
+            if ((s.carryFeed || 0) < u - 1e-6) continue;
+            s.carryFeed -= u;
+          } else cost += DIET[care(a.sp).diet].cost; // couriered at the full price
           a.hunger = 0;
           if (gentle) a.happy = Math.min(100, a.happy + 6);
         }
+      if (s.carryFeed) {
+        S.feed += s.carryFeed; // bring back what's left
+        s.carryFeed = 0;
+      }
       e.dirt = Math.max(0, (e.dirt || 0) - 60);
       S.money -= cost + 5;
       S.today.run += cost + 5;
@@ -505,6 +547,42 @@ function finishJob(s) {
     const e = F.emap[j.id];
     if (e) {
       e.cond = 100;
+      ok = true;
+    }
+  } else if (j.kind === 'fetch') {
+    const e = F.emap[j.id];
+    if (e) {
+      let need = 0;
+      for (const a of animalsIn(e.id)) if (!a.escaped && a.hunger > 15) need += mealUnits(a.sp);
+      const take = Math.min(need, S.feed);
+      S.feed -= take;
+      s.carryFeed = take;
+      if (take < need - 1e-6 && S.clock - (S.feedLowAt || -1e9) > DAY / 2) {
+        S.feedLowAt = S.clock;
+        toast('The feed store is running out. Feed trucks need a loading dock reachable from the entrance.', 'bad');
+      }
+      s.job = null;
+      s.st = 'idle';
+      // straight on to the habitat
+      if (startJob(s, { kind: 'tend', id: e.id, goals: serviceTiles(e) })) return;
+      if (s.carryFeed) S.feed += s.carryFeed;
+      s.carryFeed = 0;
+      return;
+    }
+  } else if (j.kind === 'haul') {
+    const c = S.crates.find((k) => k.id === j.id);
+    if (c) {
+      S.crates = S.crates.filter((k) => k !== c);
+      s.carry = c.n;
+      s.job = null;
+      s.st = 'idle';
+      if (F.homes.feedstore.size && startJob(s, { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) })) return;
+      return;
+    }
+  } else if (j.kind === 'drop') {
+    if (s.carry) {
+      S.feed = Math.min(feedCapacity(), S.feed + s.carry);
+      s.carry = 0;
       ok = true;
     }
   } else if (j.kind === 'sweep') {
@@ -540,7 +618,8 @@ function jobStillValid(s) {
     const a = S.animals.find((k) => k.id === j.id);
     return !!(a && a.escaped);
   }
-  if (j.kind === 'fence') return !!F.emap[j.id];
+  if (j.kind === 'fence' || j.kind === 'fetch') return !!F.emap[j.id];
+  if (j.kind === 'haul') return S.crates.some((c) => c.id === j.id);
   return true;
 }
 // moving animals: re-aim at them when they wander off
@@ -659,6 +738,7 @@ const dirOf = (a, b) => (b === a - W ? 0 : b === a + W ? 1 : b === a - 1 ? 2 : 3
 function pickJobFor(s) {
   const j = s.job;
   if (j.kind === 'tend' && F.emap[j.id]) return serviceTiles(F.emap[j.id]);
+  if ((j.kind === 'fetch' || j.kind === 'drop') && F.homes.feedstore.size) return new Set(F.homes.feedstore);
   if (j.kind === 'fence' && F.emap[j.id]) return fenceSideTiles(F.emap[j.id]);
   const t = jobTarget(s);
   if (t >= 0) return around((t % W) + 0.5, ((t / W) | 0) + 0.5);
@@ -710,7 +790,7 @@ function staffDoing(s) {
   const j = s.job;
   if (!j) return s.energy <= 0 ? 'Exhausted' : 'Waiting for work';
   const verb = (s.st === 'walk' ? 'On the way: ' : '') + JOB_TEXT[j.kind];
-  if (j.kind === 'tend' || j.kind === 'fence') {
+  if (j.kind === 'tend' || j.kind === 'fence' || j.kind === 'fetch') {
     const e = F.emap[j.id];
     return `${verb} ${e ? BIOMES[e.biome].name.toLowerCase() + ' habitat #' + e.id : ''}`;
   }
