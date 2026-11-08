@@ -34,8 +34,7 @@ function escape(a, e) {
   a.tx = a.x;
   a.ty = a.y;
   a.wait = 0;
-  e.cond = Math.min(e.cond ?? 100, 20);
-  dirty = true;
+  e.cond = Math.min(e.cond ?? 100, 20); // nothing on the map changed, so no rebuild is needed
   toast(`${a.name} the ${sp.name.toLowerCase()} broke out of the habitat! Tap the animal and choose Recapture.`, 'bad');
 }
 function recapture(a) {
@@ -128,8 +127,7 @@ function countWatchers() {
   }
 }
 function runShows() {
-  for (let i = 0; i < W * H; i++) {
-    if (S.tiles[i].o !== 'stage' || !isAnchor(i)) continue;
+  for (const i of anchorsOf('stage')) {
     const parts = buildingTiles(i),
       x = i % W,
       y = (i / W) | 0;

@@ -5,11 +5,8 @@
 const RIDE_TICKS_PER_TILE = 6;
 // per station: the drive (tiles in order) and its value; rebuilt with the rest of the map data
 function buildTours() {
-  F.tours = {};
-  F.trackIn = new Set(); // habitats a safari track runs into
-  for (let i = 0; i < W * H; i++) if (isTrack(i) && S.tiles[i].e) F.trackIn.add(S.tiles[i].e);
-  for (let i = 0; i < W * H; i++) {
-    if (S.tiles[i].o !== 'station' || !isAnchor(i)) continue;
+  F.tours = {}; // F.trackIn (habitats a track runs into) was gathered by rebuild()
+  for (const i of anchorsOf('station')) {
     let start = -1;
     for (const k of buildingTiles(i)) for (const n of nbr4(k)) if (start < 0 && isTrack(n)) start = n;
     if (start < 0) continue;

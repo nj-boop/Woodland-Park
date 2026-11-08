@@ -13,7 +13,7 @@ const FARMS = {
 const farmOf = (a) => S.farms[a] || (S.farms[a] = { g: 0 });
 function farmTiles() {
   const out = [];
-  for (let i = 0; i < W * H; i++) if (FARMS[S.tiles[i].o] && isAnchor(i)) out.push(i);
+  for (const k in FARMS) out.push(...anchorsOf(k));
   return out;
 }
 // ripe farms waiting for a hauler

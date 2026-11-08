@@ -465,8 +465,7 @@ let carSyncAt = 0;
 function syncParkedCars(time) {
   if (time - carSyncAt < 1000) return;
   carSyncAt = time;
-  const lots = [];
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'parking' && isAnchor(i)) lots.push(i);
+  const lots = anchorsOf('parking');
   let cars = Math.max(0, carsParked() - STREET_CARS),
     n = 0;
   const o = new THREE.Object3D(),
@@ -584,8 +583,8 @@ function syncDeliveries(alpha) {
   // trash bags in front of the skips, one per 10 bags of waste
   let b = 0,
     left = Math.ceil(S.waste / 10);
-  for (let i = 0; i < W * H && left > 0; i++) {
-    if (S.tiles[i].o !== 'recycle' || !isAnchor(i)) continue;
+  for (const i of anchorsOf('recycle')) {
+    if (left <= 0) break;
     const p = planOf(i),
       cx = p.x0 + p.fw / 2,
       cz = p.y0 + p.fh / 2,

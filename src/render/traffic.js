@@ -67,9 +67,7 @@ function polyAt(pts, d) {
   return [pts[0][0], pts[0][1], 0];
 }
 function lotsInOrder() {
-  const lots = [];
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'parking' && isAnchor(i)) lots.push(i);
-  return lots;
+  return anchorsOf('parking');
 }
 // start cars driving in (n > 0) or out (n < 0) of the lot that is filling or emptying
 function spawnMovers(n) {

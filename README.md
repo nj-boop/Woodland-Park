@@ -138,12 +138,17 @@ unless the fence is a moat.
 
 ### Keeping big maps fast
 
-Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes
-about 0.7 ms, placing something about 80 ms in total. Rules that keep it that way:
+Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, about 1,000 guests, 18 staff): a
+simulation tick takes about 1 ms, `rebuild()` after an edit about 45 ms, and an autosave about
+28 ms. Rules that keep it that way:
 
 - Don't loop over every tile, or every animal for every animal, inside per-tick code. Use the
-  lists `rebuild()` keeps: `F.paths`, `F.litter`, `F.homes`, `animalsIn(habitatId)`.
-- Area effects (scenery, bins, ATMs) are stamped onto a grid around each item in `rebuild()`.
+  lists `rebuild()` keeps: `F.paths`, `F.litter`, `F.homes`, `animalsIn(habitatId)`, and
+  `anchorsOf(kind)` for every building of a kind.
+- `rebuild()` reads the map in one pass. Only set `dirty` when the map itself changed (paths,
+  habitats, buildings, water): `tick()` rebuilds whenever it is set.
+- Area effects (bins, ATMs, decorations) are stamped onto a grid around each item in `rebuild()`;
+  plants and water, which are everywhere, use a 5 × 5 box sum instead.
 - Staff routes use A* with reused buffers (`staffRoute()`); give it small goal sets.
 - Scenery, grass tufts and ground heights rebuild per chunk, only where something changed.
 
@@ -161,6 +166,9 @@ about 0.7 ms, placing something about 80 ms in total. Rules that keep it that wa
 ## Saves
 
 Saves go to the browser's IndexedDB (database `wildgrove`, key `wildgrove-zoo-v1`), with a copy in
-local storage while the save is under 2 MB. `load()` understands older save
+local storage while the save is under 2 MB. Three save slots sit beside it (keys
+`wildgrove-zoo-v1-slot1` … `slot3`), each with a short summary for the Office list. Per-tile layers
+are stored compactly: heights as base64 16-bit integers (`hg16`), habitat ids run-length coded
+(`er`), and buildings as `[anchor tile, kind, facing]` (`os`); `unpackLayers()` expands them. `load()` understands older save
 formats (rectangular habitats, item numbers instead of names, staff head counts instead of named
 staff, habitats without gates) so updates don't wipe zoos.

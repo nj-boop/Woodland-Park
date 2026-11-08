@@ -113,6 +113,10 @@ function stampBuilding(kind, p) {
   }
   S.tiles[a].r = p.r;
 }
+/* every building of a kind, by anchor tile. Gathered by rebuild(); between an edit and the next
+   rebuild the list can be a step behind, so each entry is checked against the map. */
+const anchorsOf = (kind) =>
+  F.anchors && F.anchors[kind] ? F.anchors[kind].filter((a) => S.tiles[a].o === kind && isAnchor(a)) : [];
 const anchorOf = (i) => (S.tiles[i].a != null ? S.tiles[i].a : i);
 const isAnchor = (i) => !!S.tiles[i].o && anchorOf(i) === i;
 // all tiles of the building covering tile i
@@ -208,7 +212,7 @@ function checkEntrance(x) {
   return { ok: true, cost: ITEMS.entrance.cost, plan: p };
 }
 function placeEntrance(p) {
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'entrance' && isAnchor(i)) clearBuilding(i);
+  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'entrance' && isAnchor(i)) clearBuilding(i); // rare: a full scan is fine
   for (const i of p.tiles) {
     S.tiles[i].t = 'g';
     S.tiles[i].pm = undefined;

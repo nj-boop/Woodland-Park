@@ -20,10 +20,7 @@ const GOODS_CRATE = 40;
 const stockOf = (a) => S.stock[a] ?? (STOCK[S.tiles[a] && S.tiles[a].o] || { max: 0 }).max;
 function stockedShops() {
   const out = [];
-  for (let i = 0; i < W * H; i++) {
-    const o = S.tiles[i].o;
-    if (o && STOCK[o] && isAnchor(i)) out.push(i);
-  }
+  for (const k in STOCK) out.push(...anchorsOf(k));
   return out;
 }
 const stockShare = (a) => stockOf(a) / STOCK[S.tiles[a].o].max;
@@ -62,11 +59,10 @@ const WASTE_PER_YARD = 150,
 const wasteCapacity = () => WASTE_PER_YARD * ((F.cnt && F.cnt.recycle) || 0);
 function yardBay() {
   const out = new Set();
-  for (let i = 0; i < W * H; i++)
-    if (S.tiles[i].o === 'recycle' && isAnchor(i)) {
-      const p = planOf(i);
-      for (const k of frontTiles(p.x0, p.y0, p.fw, p.fh, p.r)) if (S.tiles[k].t === 'p') out.add(k);
-    }
+  for (const i of anchorsOf('recycle')) {
+    const p = planOf(i);
+    for (const k of frontTiles(p.x0, p.y0, p.fw, p.fh, p.r)) if (S.tiles[k].t === 'p') out.add(k);
+  }
   return out;
 }
 
@@ -104,9 +100,7 @@ function truckEntry(goals) {
 }
 const truckCost = () => 1;
 function dockTiles() {
-  const out = [];
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'dock' && isAnchor(i)) out.push(i);
-  return out;
+  return anchorsOf('dock');
 }
 // the path tiles in front of a dock, where trucks pull up
 function dockBay(a) {

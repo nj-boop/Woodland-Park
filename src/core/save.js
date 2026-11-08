@@ -1,14 +1,79 @@
 /* Saving and loading the zoo (browser storage), legacy save compatibility, initial camera. */
 /* ---------- save / load ---------- */
+/* Compact encodings for the per-tile layers, so a 512×512 zoo saves in a few milliseconds:
+   heights as base64 16-bit integers, habitat ids run-length coded, and buildings as a list of
+   [anchor tile, kind, facing]. The one-character-per-tile layers are built in a single pass. */
+function b64Int16(arr) {
+  const u8 = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+  let s = '';
+  for (let k = 0; k < u8.length; k += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(k, k + 0x8000));
+  return btoa(s);
+}
+function int16B64(str) {
+  const bin = atob(str),
+    u8 = new Uint8Array(bin.length);
+  for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+  return new Int16Array(u8.buffer);
+}
+const PM_CODE = { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v', track: 'k' };
+function tileLayers() {
+  const N = W * H,
+    t = new Array(N),
+    pm = new Array(N),
+    l = new Array(N),
+    wt = new Array(N),
+    er = [],
+    os = [];
+  let run = -1,
+    cnt = 0;
+  for (let i = 0; i < N; i++) {
+    const tile = S.tiles[i];
+    t[i] = tile.t;
+    pm[i] = tile.t === 'p' ? PM_CODE[tile.pm || 'stone'] : '-';
+    l[i] = tile.l || 0;
+    wt[i] = tile.w ? 1 : 0;
+    const e = tile.e || 0;
+    if (e === run) cnt++;
+    else {
+      if (cnt) er.push(run, cnt);
+      run = e;
+      cnt = 1;
+    }
+    if (tile.o && isAnchor(i)) os.push([i, tile.o, tile.r || 0]);
+  }
+  er.push(run, cnt);
+  const hg = new Int16Array(S.hgt ? S.hgt.length : 0);
+  for (let k = 0; k < hg.length; k++) hg[k] = Math.round(S.hgt[k] * 100);
+  return { t: t.join(''), pm: pm.join(''), l: l.join(''), wt: wt.join(''), er, os, hg16: b64Int16(hg) };
+}
+// turn the compact layers back into the long forms the loader below reads
+function unpackLayers(d) {
+  const N = (d.mapW || 36) * (d.mapH || 26);
+  if (d.er) {
+    d.ee = new Array(N);
+    let k = 0;
+    for (let j = 0; j < d.er.length; j += 2) for (let c = 0; c < d.er[j + 1]; c++) d.ee[k++] = d.er[j];
+  }
+  if (d.os) {
+    d.o = new Array(N).fill(0);
+    const ro = new Array(N).fill(0);
+    for (const [i, kind, r] of d.os) {
+      d.o[i] = kind;
+      ro[i] = r;
+    }
+    d.ro = ro.join('');
+  }
+}
 function serialize() {
+  const L = tileLayers();
   return JSON.stringify({
     v: 1,
     mapW: W,
     mapH: H,
     gate: { x: GATE.x, y: GATE.y },
-    hg: Array.from(S.hgt || [], (v) => Math.round(v * 100)).join(','),
-    wt: S.tiles.map((t) => (t.w ? 1 : 0)).join(''),
-    ee: S.tiles.map((t) => t.e || 0),
+    hg16: L.hg16,
+    wt: L.wt,
+    er: L.er,
     tier: S.tier,
     totalVis: S.totalVis,
     money: S.money,
@@ -51,21 +116,12 @@ function serialize() {
     exits: S.exits,
     nextId: S.nextId,
     today: S.today,
-    t: S.tiles.map((t) => t.t).join(''),
-    pm: S.tiles
-      .map((t) =>
-        t.t === 'p'
-          ? { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v', track: 'k' }[
-              t.pm || 'stone'
-            ]
-          : '-'
-      )
-      .join(''),
+    t: L.t,
+    pm: L.pm,
     // items are stored on their anchor tile only, with the facing; footprints are re-stamped on load
     fp: 1,
-    o: S.tiles.map((t, i) => (t.o && isAnchor(i) ? t.o : 0)),
-    ro: S.tiles.map((t, i) => (t.o && isAnchor(i) ? t.r || 0 : 0)).join(''),
-    l: S.tiles.map((t) => t.l).join(''),
+    os: L.os,
+    l: L.l,
     encl: S.encl,
     animals: S.animals.map((a) => ({
       id: a.id,
@@ -185,6 +241,7 @@ const LEGACY_ITEMS = [
 function load(str) {
   const d = JSON.parse(str);
   if (!d || d.v !== 1) throw 0;
+  unpackLayers(d);
   const keys = Object.keys(ITEMS);
   setMapSize(d.mapW || 36, d.mapH || 26);
   GATE.x = d.gate ? d.gate.x : 18;
@@ -218,7 +275,8 @@ function load(str) {
       for (let j = e.y; j < e.y + e.h; j++) for (let i = e.x; i < e.x + e.w; i++) tileAt(i, j).e = e.id;
     });
   S.hgt = new Float32Array((W + 1) * (H + 1));
-  if (d.hg) {
+  if (d.hg16) S.hgt.set(Array.from(int16B64(d.hg16), (v) => v / 100));
+  else if (d.hg) {
     const a = d.hg.split(',');
     for (let i = 0; i < S.hgt.length; i++) S.hgt[i] = (+a[i] || 0) / 100;
   }
@@ -231,6 +289,10 @@ function load(str) {
     placeEntrance(entrancePlan(ex));
   }
   delete S.hg;
+  delete S.hg16;
+  delete S.er;
+  delete S.os;
+  for (const k of ['o', 'ro', 't', 'pm', 'l']) delete S[k]; // per-tile layers now live in S.tiles
   delete S.wt;
   delete S.ee;
   S.animals = d.animals

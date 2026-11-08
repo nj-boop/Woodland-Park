@@ -397,6 +397,6 @@ function groundSignature() {
   let s = '';
   for (const e of S.encl) s += Math.floor((e.dirt || 0) / 6) + ',';
   let l = 0;
-  for (let i = 0; i < W * H; i++) if (S.tiles[i].l) l += S.tiles[i].l * (i + 1);
+  for (const i of F.paths || []) if (S.tiles[i].l) l += S.tiles[i].l * (i + 1); // litter lies on paths only
   return s + l;
 }

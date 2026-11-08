@@ -138,8 +138,11 @@ const tests = {
     page.evaluate(() => {
       const g = window.__wg;
       const d = JSON.parse(g.serialize());
+      // the old form: an item name (or 0) for every tile, and no facings
+      d.o = new Array(d.mapW * d.mapH).fill(0);
+      for (const [i, k] of d.os) d.o[i] = k;
+      delete d.os;
       delete d.fp;
-      delete d.ro;
       // an old one-tile lodge in open ground beside the path, and one squeezed between paths
       d.o[17 * 36 + 20] = 'lodge';
       d.o[15 * 36 + 18] = 'lodge';
@@ -681,6 +684,36 @@ const tests = {
       document.querySelector('#bDemo').click();
       document.querySelector('#bDemo').click();
       return (!g.S.tiles[a].o && box.hidden) || 'still standing';
+    }),
+  'compact saves round-trip, and old long-form saves still load': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.build('restaurant');
+      g.S.hgt[40] = 1.23;
+      g.S.hgt[41] = -0.4;
+      g.refresh();
+      const s1 = g.serialize();
+      g.load(s1);
+      g.refresh();
+      const s2 = g.serialize();
+      if (s1 !== s2) return 'round trip differs at ' + [...s1].findIndex((c, i) => c !== s2[i]);
+      // rebuild the old long form: heights as a list, habitat ids and items per tile
+      const d = JSON.parse(s1),
+        N = d.mapW * d.mapH,
+        h = Array.from(g.S.hgt, (v) => Math.round(v * 100));
+      d.hg = h.join(',');
+      d.ee = g.S.tiles.map((t) => t.e || 0);
+      d.o = new Array(N).fill(0);
+      const ro = new Array(N).fill(0);
+      for (const [i, k, r] of d.os) (d.o[i] = k), (ro[i] = r);
+      d.ro = ro.join('');
+      delete d.hg16;
+      delete d.er;
+      delete d.os;
+      g.load(JSON.stringify(d));
+      g.refresh();
+      const s3 = g.serialize();
+      return s3 === s1 || 'old form differs at ' + [...s1].findIndex((c, i) => c !== s3[i]);
     }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {

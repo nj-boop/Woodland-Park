@@ -301,11 +301,59 @@ function rebuild() {
       }
     }
   }
-  const src = (type) => {
-    const o = [];
-    for (let i = 0; i < N; i++) if (S.tiles[i].o === type) for (const n of nbr4(i)) if (guestPath(n)) o.push(n);
-    return o;
+  // one pass over the map gathers what the rest of rebuild needs
+  F.paths = [];
+  F.litter = new Set();
+  F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
+  F.anchors = {}; // building kind -> anchor tiles, so nothing has to scan the whole map for buildings
+  F.trackIn = new Set(); // habitats a safari track runs into
+  const SERVICE = { restroom: [], food: [], restaurant: [], drink: [], bench: [] };
+  const scen = new Float32Array(N),
+    base = new Float32Array(N); // plants and water, summed over a 5×5 box after the pass
+  F.atm = new Uint8Array(N);
+  F.bin = new Uint8Array(N);
+  const stamp = (i, r, diamond, fn) => {
+    const cx = i % W,
+      cy = (i / W) | 0;
+    for (let y = Math.max(0, cy - r); y <= Math.min(H - 1, cy + r); y++)
+      for (let x = Math.max(0, cx - r); x <= Math.min(W - 1, cx + r); x++)
+        if (!diamond || Math.abs(x - cx) + Math.abs(y - cy) <= r) fn(y * W + x);
   };
+  for (let i = 0; i < N; i++) {
+    const t = S.tiles[i],
+      o = t.o;
+    if (t.t === 'p') {
+      F.paths.push(i);
+      if (t.l > 0) F.litter.add(i);
+      if (t.e && t.pm === 'track') F.trackIn.add(t.e);
+    }
+    if (t.w) base[i] += 0.3;
+    if (!o) continue;
+    if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
+    if (o in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[o].push(n);
+    if (ITEMS[o].kind === 'plant') base[i] += 1;
+    if (!isAnchor(i)) continue; // count each building once, at its anchor tile
+    (F.anchors[o] ||= []).push(i);
+    if (ITEMS[o].kind === 'decor') stamp(i, 2, false, (k) => (scen[k] += ITEMS[o].scen));
+    if (o === 'playground') stamp(i, 2, false, (k) => (scen[k] += 3));
+    if (o === 'atm') stamp(i, 6, true, (k) => (F.atm[k] = 1));
+    if (o === 'bin') stamp(i, 3, true, (k) => (F.bin[k] = 1));
+  }
+  // plants and water count for every tile within 2: a box sum, rows then columns
+  const row = new Float32Array(N);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let s = 0;
+      for (let d = Math.max(0, x - 2); d <= Math.min(W - 1, x + 2); d++) s += base[y * W + d];
+      row[y * W + x] = s;
+    }
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let s = 0;
+      for (let d = Math.max(0, y - 2); d <= Math.min(H - 1, y + 2); d++) s += row[d * W + x];
+      scen[y * W + x] += s;
+    }
+  const src = (type) => SERVICE[type];
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);
   F.gate = bfs([idx(GATE.x, GATE.y)]);
@@ -333,40 +381,9 @@ function rebuild() {
   F.view = new Array(N);
   F.shops = new Array(N);
   F.shopAt = new Array(N); // path tile -> { kind: anchor tile of the shop of that kind next to it }
-  F.bin = new Uint8Array(N);
+  // things that affect nearby path tiles were "stamped" onto a grid around themselves above, which
+  // costs (number of things × area) instead of (path tiles × things)
   F.scen = new Uint8Array(N);
-  // things that affect nearby path tiles are "stamped" onto a grid around themselves, which costs
-  // (number of things × area) instead of (path tiles × things)
-  const scen = new Float32Array(N);
-  F.atm = new Uint8Array(N);
-  F.bin = new Uint8Array(N);
-  const stamp = (i, r, diamond, fn) => {
-    const cx = i % W,
-      cy = (i / W) | 0;
-    for (let y = Math.max(0, cy - r); y <= Math.min(H - 1, cy + r); y++)
-      for (let x = Math.max(0, cx - r); x <= Math.min(W - 1, cx + r); x++)
-        if (!diamond || Math.abs(x - cx) + Math.abs(y - cy) <= r) fn(y * W + x);
-  };
-  F.paths = [];
-  F.litter = new Set();
-  F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
-  for (let i = 0; i < N; i++) {
-    const t = S.tiles[i],
-      o = t.o;
-    if (t.t === 'p') {
-      F.paths.push(i);
-      if (t.l > 0) F.litter.add(i);
-    }
-    if (t.w) stamp(i, 2, false, (k) => (scen[k] += 0.3));
-    if (!o) continue;
-    if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
-    if (ITEMS[o].kind === 'plant') stamp(i, 2, false, (k) => scen[k]++);
-    if (!isAnchor(i)) continue; // count each building once, at its anchor tile
-    if (ITEMS[o].kind === 'decor') stamp(i, 2, false, (k) => (scen[k] += ITEMS[o].scen));
-    if (o === 'playground') stamp(i, 2, false, (k) => (scen[k] += 3));
-    if (o === 'atm') stamp(i, 6, true, (k) => (F.atm[k] = 1));
-    if (o === 'bin') stamp(i, 3, true, (k) => (F.bin[k] = 1));
-  }
   for (const i of F.paths) {
     const x = i % W,
       y = (i / W) | 0,
@@ -393,9 +410,8 @@ function rebuild() {
     F.scen[i] = Math.min(8, scen[i]);
   }
   const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0, dock: 0, feedstore: 0 };
-  for (let i = 0; i < N; i++) {
-    const o = S.tiles[i].o;
-    if (o in cnt && isAnchor(i)) {
+  for (const o of Object.keys(cnt))
+    for (const i of F.anchors[o] || []) {
       // a parking lot only counts if cars can reach it by road
       if (o === 'parking') {
         const p = planOf(i);
@@ -403,7 +419,6 @@ function rebuild() {
       }
       cnt[o]++;
     }
-  }
   F.cnt = cnt;
   buildTours();
   F.cap = {

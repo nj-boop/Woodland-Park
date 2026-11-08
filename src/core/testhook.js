@@ -23,6 +23,7 @@ window.__wg = {
   monthlyUpkeep,
   checkTier,
   serialize,
+  isAnchor,
   load,
   rebuild,
   tick,
@@ -158,6 +159,9 @@ window.__wg = {
     return staticStats;
   },
   save,
+  serialize,
+  isAnchor,
+  load,
   readSave,
   saveSlot,
   inspectAt,
