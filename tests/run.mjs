@@ -609,6 +609,29 @@ const tests = {
       return (dumped >= 6 && sawTruck && g.S.waste === 0) || `dumped ${dumped}, truck ${sawTruck}, waste ${g.S.waste}`;
     }),
 
+  'farms grow, haulers harvest into the feed store': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      // no dock, so the only feed coming in is the harvest
+      for (const b of ['feedstore', 'veg']) if (!g.build(b)) return 'no room for ' + b;
+      g.refresh();
+      g.build('dock'); // haulers live at the dock...
+      g.refresh();
+      g.hireRole('hauler');
+      g.S.money = 0; // ...but with no money, no delivery truck gets ordered
+      const farm = g.farmTiles()[0];
+      g.S.feed = 0;
+      g.farmOf(farm).g = 0.99;
+      let fed = 0,
+        harvested = false;
+      for (let i = 0; i < 4000 && !fed; i++) {
+        g.tick();
+        if (g.farmOf(farm).g < 0.5) harvested = true;
+        if (g.S.feed >= 150) fed = g.S.feed;
+      }
+      return (fed >= 150 && harvested) || `feed ${g.S.feed}, harvested ${harvested}`;
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

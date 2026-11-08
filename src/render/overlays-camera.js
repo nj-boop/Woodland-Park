@@ -230,6 +230,7 @@ function render3D(alpha, dt) {
   cullChunks();
   syncParkedCars(performance.now());
   syncDeliveries(alpha);
+  syncFarms(performance.now());
   const time = performance.now();
   syncAnimals(alpha, time, dt);
   syncGuests(alpha, time);

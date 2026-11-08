@@ -120,6 +120,7 @@ function newZoo(w, h) {
     trucks: [],
     stock: {},
     waste: 0,
+    farms: {},
     prices: { ...BASE_PRICE },
     ledger: [],
     tiles: blankTiles(),

@@ -64,6 +64,11 @@ Object.assign(IT_ICON, {
   vetclinic: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
 });
 Object.assign(IT_ICON, {
+  hayfield: '<path d="M3 20h18M5 20c0-5 1-9 2-12M9 20c0-6 1-10 3-14M13 20c0-5 1-8 3-11M17 20c0-4 1-7 2-9"/>',
+  banana: '<path d="M5 15c4 5 11 4 14-4"/><path d="M5 15c3 2 8 2 11-3M19 11l1-2"/>',
+  browse: '<path d="M12 21v-8M4 10c2-3 5-4 8-4s6 1 8 4z"/>',
+  veg: '<path d="M12 20V10M12 10c-3 0-5-2-5-5 3 0 5 2 5 5zM12 13c3 0 5-2 5-5-3 0-5 2-5 5z"/><path d="M4 20h16"/>',
+  fishpond: '<ellipse cx="12" cy="14" rx="9" ry="5"/><path d="M9 14c2-2 4-2 6 0-2 2-4 2-6 0zM15 14l2-1v2z"/>',
   entrance: '<path d="M4 21V8M20 21V8M3 8h18M7 5h10"/><path d="M9 21v-6h6v6"/>',
   dock: '<path d="M2 20h20M4 20V9l8-5 8 5v11"/><path d="M8 20v-6h8v6"/>',
   feedstore: '<path d="M3 21V10l9-6 9 6v11z"/><path d="M9 21v-5h6v5M8 12h8"/>',
@@ -267,6 +272,12 @@ function renderTray() {
         .join('') +
       '<span class="group">For staff</span>' +
       ['entrance', 'recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
+        .map((k) =>
+          chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
+        )
+        .join('') +
+      '<span class="group">Farms</span>' +
+      Object.keys(FARMS)
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )
@@ -654,6 +665,12 @@ function statsHTML(ah, gh) {
       return sh.length
         ? `${out ? `<b style="color:var(--bad)">${out} sold out</b> · ` : ''}${low} of ${sh.length} running low · ${F.cnt.dock ? 'restocked by delivery' : 'restocked by courier'}`
         : 'No shops yet';
+    })()}</span>
+    <span>Farms</span><span>${(() => {
+      const f = farmTiles();
+      return f.length
+        ? `${f.length} farm${f.length > 1 ? 's' : ''} · ${ripeFarms().length} ready to harvest · upkeep ${money(farmUpkeep())}/month`
+        : 'None yet (grow your own feed with a feed store and haulers)';
     })()}</span>
     <span>Trash</span><span>${F.cnt.recycle ? `${S.waste} / ${wasteCapacity()} bags at the recycling yard${S.trucks.some((t) => t.type === 'garbage') ? ' · garbage truck on the way' : ''}` : 'No recycling yard'}</span>
     <span>Parking</span><span>${carsParked()} / ${parkingSpaces()} cars${S.today.turned ? ` · <b style="color:var(--bad)">${S.today.turned} turned away</b>` : ''}</span>

@@ -46,6 +46,7 @@ function frontOK(kind, p) {
       return e && F.emap[e] && F.emap[e].biome === 'pool';
     });
   if (ITEMS[kind].kind === 'decor') return true;
+  if (ITEMS[kind].kind === 'farm') return frontTiles(p.x0, p.y0, p.fw, p.fh, p.r).some((i) => S.tiles[i].t === 'p');
   const front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r);
   // service buildings and parking open onto a road; guest buildings onto a footpath
   return ITEMS[kind].access === 'road' ? front.some(isRoad) : front.some(isFootpath);

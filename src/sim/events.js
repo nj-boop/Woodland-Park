@@ -1,5 +1,8 @@
 /* Monthly upkeep (fence wear, repairs, escapes), month-end report and births, tier unlocks, shows, and the main tick. */
 function monthlyUpkeep() {
+  const fu = farmUpkeep();
+  S.money -= fu;
+  S.today.run += fu;
   // fences wear every month; janitors walk out and repair them (see sim/staff.js)
   for (const e of S.encl) {
     if (e.biome === 'pool') continue;
@@ -152,6 +155,7 @@ function tick() {
   tickAnimals();
   tickStaff();
   tickLogistics();
+  tickFarms();
   tickGuests();
   if (S.clock % TPS === 0) {
     const ex = S.exits.length ? S.exits.reduce((a, b) => a + b, 0) / S.exits.length : 60;

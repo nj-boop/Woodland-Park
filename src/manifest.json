@@ -11,6 +11,7 @@
   "sim/animals.js",
   "sim/staff.js",
   "sim/logistics.js",
+  "sim/farms.js",
   "sim/events.js",
   "sim/terrain.js",
   "sim/building.js",

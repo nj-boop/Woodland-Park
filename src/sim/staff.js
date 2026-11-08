@@ -28,7 +28,7 @@ const STAFF_ROLES = {
     base: 50,
     home: 'dock',
     cap: 'haulers',
-    does: 'Carries delivered crates from the loading dock to the feed store.',
+    does: 'Harvests farms, and carries feed and goods from the loading dock to the feed store and shops.',
     uniform: '#c9771f',
     hat: '#f2c94c',
   },
@@ -443,6 +443,13 @@ function pickJob(s) {
       const shop = neediestShop(s);
       if (shop != null) return { kind: 'drop', id: shop, goals: shopDoor(shop) };
     } else if (s.carry && F.homes.feedstore.size) return { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) };
+    // ripe crops come first: they don't keep
+    const ripe = ripeFarms().find((a) => !taken('harvest', a));
+    if (ripe != null) {
+      const goals = new Set();
+      for (const i of buildingTiles(ripe)) for (const n of nbr4(i)) if (S.tiles[n].o !== S.tiles[ripe].o) goals.add(n);
+      return { kind: 'harvest', id: ripe, goals };
+    }
     const room =
       feedCapacity() - S.feed - S.staff.reduce((t, o) => t + (o.carryKind !== 'goods' ? o.carry || 0 : 0), 0);
     const crate = S.crates.find(
@@ -490,8 +497,20 @@ function pickJob(s) {
 /* ---------- each tick ---------- */
 const workRate = (s) =>
   STAFF_TRAITS[s.trait].speed * (0.75 + 0.1 * s.skill) * (0.6 + 0.6 * (s.morale / 100)) * (s.energy > 0 ? 1 : 0.6);
-const JOB_TIME = { tend: 70, treat: 90, catch: 50, fence: 110, sweep: 14, fetch: 30, haul: 25, drop: 25, dump: 20 };
+const JOB_TIME = {
+  harvest: 90,
+  tend: 70,
+  treat: 90,
+  catch: 50,
+  fence: 110,
+  sweep: 14,
+  fetch: 30,
+  haul: 25,
+  drop: 25,
+  dump: 20,
+};
 const JOB_TEXT = {
+  harvest: 'Harvesting',
   fetch: 'Collecting feed for',
   haul: 'Picking up a crate',
   drop: 'Delivering a crate',
@@ -599,6 +618,28 @@ function finishJob(s) {
       if (next) startJob(s, next);
       return;
     }
+  } else if (j.kind === 'harvest') {
+    const units = harvestFarm(j.id);
+    if (units) {
+      s.job = null;
+      s.st = 'idle';
+      s.done++;
+      s.xp++;
+      // carry it to the feed store if there's room; otherwise sell it at half price
+      const room = feedCapacity() - S.feed;
+      if (F.homes.feedstore.size && room >= units) {
+        s.carry = units;
+        s.carryKind = 'feed';
+        startJob(s, { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) });
+      } else {
+        const v = Math.round(units * FEED_UNIT * 0.5);
+        earn(v, 'shop');
+        toast(
+          `No room in the feed store: sold a ${FARMS[S.tiles[j.id].o].crop.toLowerCase()} harvest for ${money(v)}.`
+        );
+      }
+      return;
+    }
   } else if (j.kind === 'drop') {
     if (s.carry && s.carryKind === 'goods') {
       const k = S.tiles[j.id] && STOCK[S.tiles[j.id].o];
@@ -656,6 +697,7 @@ function jobStillValid(s) {
   }
   if (j.kind === 'fence' || j.kind === 'fetch') return !!F.emap[j.id];
   if (j.kind === 'haul') return S.crates.some((c) => c.id === j.id);
+  if (j.kind === 'harvest') return !!S.tiles[j.id] && !!FARMS[S.tiles[j.id].o] && farmOf(j.id).g >= 1;
   return true;
 }
 // moving animals: re-aim at them when they wander off
@@ -828,6 +870,7 @@ function staffDoing(s) {
   const j = s.job;
   if (!j) return s.energy <= 0 ? 'Exhausted' : 'Waiting for work';
   const verb = (s.st === 'walk' ? 'On the way: ' : '') + JOB_TEXT[j.kind];
+  if (j.kind === 'harvest') return `${verb} the ${ITEMS[S.tiles[j.id].o].name.toLowerCase()}`;
   if (j.kind === 'tend' || j.kind === 'fence' || j.kind === 'fetch') {
     const e = F.emap[j.id];
     return `${verb} ${e ? BIOMES[e.biome].name.toLowerCase() + ' habitat #' + e.id : ''}`;

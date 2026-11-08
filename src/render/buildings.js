@@ -77,6 +77,20 @@ const bush3 = (g, x, z, s) => g.add(leafMesh(BUSH, LEAFMATS[1], LEAF_DEPTH, x, 0
 // slot positions in a parking lot, local to its footprint (front = +z): two rows of 7 bays
 const LOT_SLOTS = [];
 for (const z of [-1.15, 1.15]) for (let k = 0; k < 7; k++) LOT_SLOTS.push([-2.55 + k * 0.85, z]);
+function farmPlot(g, w, d, soil) {
+  P(g, 'box', soil, 0, 0.03, 0, w - 0.1, 0.06, d - 0.1, false).receiveShadow = true;
+  for (let z = -d / 2 + 0.6; z < d / 2 - 0.3; z += 0.5)
+    P(g, 'box', '#4a3622', 0, 0.065, z, w - 0.5, 0.012, 0.08, false);
+  fencePanel(g, -w / 2 + 0.05, -d / 2 + 0.05, w / 2 - 0.05, -d / 2 + 0.05, '#9a7550');
+  fencePanel(g, -w / 2 + 0.05, -d / 2 + 0.05, -w / 2 + 0.05, d / 2 - 0.05, '#9a7550');
+  fencePanel(g, w / 2 - 0.05, -d / 2 + 0.05, w / 2 - 0.05, d / 2 - 0.05, '#9a7550');
+  shed(g, w / 2 - 0.5, -d / 2 + 0.45);
+}
+function shed(g, x, z) {
+  P(g, 'box', '#8a6440', x, 0.3, z, 0.6, 0.6, 0.5);
+  const r = P(g, 'box', '#5b5f63', x, 0.64, z, 0.72, 0.05, 0.62);
+  r.rotation.x = 0.15;
+}
 const BUILDINGS = {
   // 3 × 2: a timber cabin with a porch, a feed shed and a woodpile
   lodge(g) {
@@ -226,6 +240,25 @@ const BUILDINGS = {
       P(g, 'box', '#7fb7cf', x, 0.5, 0.065, 0.3, 0.25, 0.02, false);
     }
     for (const x of [-0.18, 0.18]) P(g, 'cyl', '#9aa3a8', x, 0.3, 0.1, 0.05, 0.6);
+  },
+  // farms: tilled ground, a fence, a small shed; the crops themselves grow in syncFarms()
+  hayfield(g, w, d) {
+    farmPlot(g, w, d, '#8a6a42');
+  },
+  banana(g, w, d) {
+    farmPlot(g, w, d, '#6b5236');
+  },
+  browse(g, w, d) {
+    farmPlot(g, w, d, '#7a5e3c');
+  },
+  veg(g, w, d) {
+    farmPlot(g, w, d, '#5a4128');
+  },
+  fishpond(g, w, d) {
+    P(g, 'box', '#6a553a', 0, 0.03, 0, w - 0.1, 0.06, d - 0.1, false).receiveShadow = true;
+    P(g, 'box', '#3d7f99', 0, 0.065, -0.1, w - 0.7, 0.02, d - 0.9, false);
+    for (const x of [-(w / 2) + 0.4, w / 2 - 0.4]) P(g, 'box', '#8a6a42', x, 0.15, d / 2 - 0.35, 0.6, 0.12, 0.3);
+    shed(g, w / 2 - 0.5, -d / 2 + 0.45);
   },
   // 6 × 4: asphalt with two rows of marked bays; the cars themselves are drawn by syncParkedCars()
   parking(g) {
@@ -576,4 +609,55 @@ function syncDeliveries(alpha) {
       scene.remove(g);
       truckGroups.delete(id);
     }
+}
+
+/* Crops: one instanced set of plant clumps over every farm, scaled and coloured by how ripe it is. */
+const CROP_MAX = 4000;
+const cropMesh = new THREE.InstancedMesh(
+  new THREE.ConeGeometry(0.16, 0.5, 5),
+  new THREE.MeshLambertMaterial({ color: 0xffffff }),
+  CROP_MAX
+);
+cropMesh.setColorAt(0, new THREE.Color(1, 1, 1)); // sized from count, so before count is zeroed
+cropMesh.castShadow = true;
+cropMesh.frustumCulled = false;
+cropMesh.count = 0;
+scene.add(cropMesh);
+let farmSyncAt = 0;
+function syncFarms(time) {
+  if (time - farmSyncAt < 1500) return;
+  farmSyncAt = time;
+  const o = new THREE.Object3D(),
+    c = new THREE.Color(),
+    c2 = new THREE.Color();
+  let n = 0;
+  for (const a of farmTiles()) {
+    const kind = S.tiles[a].o,
+      Fm = FARMS[kind],
+      g = farmOf(a).g;
+    if (kind === 'fishpond') continue;
+    const p = planOf(a),
+      [w, d] = sizeOf(kind),
+      cx = p.x0 + p.fw / 2,
+      cz = p.y0 + p.fh / 2,
+      rot = (p.r * Math.PI) / 2,
+      tall = kind === 'banana' || kind === 'browse' ? 2.4 : kind === 'veg' ? 0.6 : 1;
+    c.set(Fm.col[0]).lerp(c2.set(Fm.col[1]), g).convertSRGBToLinear();
+    for (let lz = -d / 2 + 0.6; lz < d / 2 - 0.3 && n < CROP_MAX; lz += 0.5)
+      for (let lx = -w / 2 + 0.4; lx < w / 2 - 0.9 && n < CROP_MAX; lx += tall > 1 ? 0.7 : 0.35) {
+        const wx = cx + lx * Math.cos(rot) + lz * Math.sin(rot),
+          wz = cz - lx * Math.sin(rot) + lz * Math.cos(rot),
+          s = (0.15 + g * 0.85) * tall;
+        o.position.set(wx, heightAt(wx, wz) + 0.06 + 0.25 * s, wz);
+        o.scale.set(tall > 1 ? 1.6 : 1, s, tall > 1 ? 1.6 : 1);
+        o.rotation.set(0, lx * 3, 0);
+        o.updateMatrix();
+        cropMesh.setMatrixAt(n, o.matrix);
+        cropMesh.setColorAt(n, c);
+        n++;
+      }
+  }
+  cropMesh.count = n;
+  cropMesh.instanceMatrix.needsUpdate = true;
+  if (cropMesh.instanceColor) cropMesh.instanceColor.needsUpdate = true;
 }

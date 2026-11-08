@@ -49,6 +49,8 @@ window.__wg = {
     rebuild();
   },
   resizeMap,
+  farmOf,
+  farmTiles,
   stockOf,
   stockedShops,
   feedByTruck,

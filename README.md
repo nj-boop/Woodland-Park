@@ -120,6 +120,13 @@ below a quarter. With one, goods crates ride on the delivery truck and haulers c
 lowest shop. Janitors bag swept litter (6 sweeps a bag) and drop bags at the recycling yard
 (150 per yard); a garbage truck collects when yards are 40% full. Full yards stop janitors.
 
+### Farms
+
+`sim/farms.js`. Hay meadow, banana grove, browse plantation, vegetable beds and fish pond grow a crop
+over a season (`FARMS[kind].grow` ticks, growth in `S.farms[anchor].g`). Haulers harvest ripe farms
+first and carry the yield (feed units) to the feed store; if it's full, the harvest is sold at half
+value. Farms cost monthly upkeep. Crops are drawn by `syncFarms()`, sized and coloured by ripeness.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes
