@@ -83,7 +83,13 @@ function resizeMap(w, h, ox, oy) {
     s.job = null;
     s.st = 'idle';
   }
-  S.guests = [];
+  for (const g of S.guests) {
+    g.x += ox;
+    g.fx += ox;
+    g.y += oy;
+    g.fy += oy;
+    g.mem = (g.mem || []).map((i) => ni(i % oldW, (i / oldW) | 0));
+  }
   GATE.x += ox;
   GATE.y += oy;
   S.mapW = w;

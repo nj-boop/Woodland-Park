@@ -706,6 +706,7 @@ let staticStats = { chunks: 0, fences: 0 };
 // everything sized to the map: ground mesh, hills, outer forest; all chunks rebuilt
 function onMapResized() {
   LAKE.x = W + 10;
+  lakeGroup.position.set(LAKE.x, 0, LAKE.z);
   makeGroundMeshes();
   buildHills();
   const ms = Math.max(1, (Math.max(W, H) + 300) / 336);

@@ -232,9 +232,11 @@ function guestMood(g) {
   else th = 'What a lovely day for the zoo.';
   g.thought = th;
 }
+// how many guests can be in the zoo at once: grows with the land, up to the most we draw
+const guestCap = () => Math.min(GMAX, Math.round(220 + (W * H - 936) / 30));
 function tickGuests() {
   const sp = spawnRate() / TPS;
-  if (S.guests.length < 220 && Math.random() < sp) spawnGuest();
+  if (S.guests.length < guestCap() && Math.random() < sp) spawnGuest();
   const out = [];
   for (const g of S.guests) {
     g.t++;

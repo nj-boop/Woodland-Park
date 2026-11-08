@@ -6,6 +6,7 @@
   "core/state.js",
   "sim/world.js",
   "sim/footprints.js",
+  "sim/land.js",
   "sim/guests.js",
   "sim/animals.js",
   "sim/staff.js",

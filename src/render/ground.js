@@ -89,6 +89,11 @@ function tuftsForTile(w, x, y) {
 function buildChunkTufts(grp, cx, cy) {
   const tm = new THREE.InstancedMesh(tuftGeo, tufts.material, CHUNK * CHUNK * 4),
     fm = new THREE.InstancedMesh(flGeo, flowers.material, CHUNK * CHUNK);
+  // give every instance mesh a colour buffer, even an empty one: meshes sharing a material must
+  // agree on having per-instance colour, or three.js reuses a shader that expects it
+  const white = new THREE.Color(1, 1, 1);
+  tm.setColorAt(0, white);
+  fm.setColorAt(0, white);
   const w = tuftWriter(tm, fm);
   seeded(() => {
     for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)

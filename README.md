@@ -82,6 +82,12 @@ Order matters: a file can use anything defined in an earlier file, and functions
   fingerprinted, and only the ones whose fingerprint changed are rebuilt, while animals and guests are updated every frame. Guests are instanced meshes.
   Scenery uses seeded randomness so it looks the same every rebuild.
 
+### Buying land
+
+`sim/land.js`: the zoo grows in 16-tile strips to the north, east or west (the entrance road stays
+on the south edge), up to 512 × 512. `landPrice()` rises with the zoo's area; new strips arrive as
+woodland. The guest cap (`guestCap()` in `sim/guests.js`) grows with the land, up to 1,500.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes

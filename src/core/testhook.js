@@ -49,6 +49,9 @@ window.__wg = {
     rebuild();
   },
   resizeMap,
+  buyLand,
+  landPrice,
+  guestCap,
   profileTick(n) {
     const parts = {
       animals: tickAnimals,

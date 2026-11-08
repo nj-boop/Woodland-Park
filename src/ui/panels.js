@@ -7,12 +7,19 @@ function setSpeed(s) {
 [0, 1, 3].forEach((v) => ($('#sp' + v).onclick = () => setSpeed(v)));
 const DEF = { habitat: 'savanna', animal: 'zebra', plant: 'tree', shop: 'food' };
 // R or the Turn button: auto-facing first, then the four facings in turn
+let landArm = null; // land purchase waiting for its confirming tap
+const LAND_ICON = {
+  north: '<path d="M12 20V5M6 11l6-6 6 6"/><path d="M4 20h16"/>',
+  east: '<path d="M4 12h15M13 6l6 6-6 6"/><path d="M4 4v16"/>',
+  west: '<path d="M20 12H5M11 6l-6 6 6 6"/><path d="M20 4v16"/>',
+};
 function rotateBuild() {
   buildRot = buildRot == null ? 0 : buildRot === 3 ? null : buildRot + 1;
   renderTray();
 }
 function setTool(t, s) {
   tool = t;
+  landArm = null;
   pendingBuild = null;
   sub = s || (sub && validSub(t, sub) ? sub : DEF[t] || null);
   document
@@ -145,7 +152,15 @@ function renderTray() {
             `<button class="chip" data-brush="${n}" aria-pressed="${brushSize === n}"><span class="nm2">${['Small', 'Medium', 'Large'][n - 1]}</span></button>`
         )
         .join('') +
-      '<span class="note">Drag to sculpt. Lower the ground around a habitat for a moat, or paint water for lakes and ponds. Water inside a habitat gives animals a place to drink. Tanks stay level.</span>';
+      '<span class="note">Drag to sculpt. Lower the ground around a habitat for a moat, or paint water for lakes and ponds. Water inside a habitat gives animals a place to drink. Tanks stay level.</span>' +
+      '<span class="group">Buy more land</span>' +
+      Object.keys(LAND_SIDES)
+        .map((k) => {
+          const can = canBuyLand(k);
+          return `<button class="chip" data-land="${k}" ${can ? '' : 'disabled'} aria-pressed="${landArm === k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${LAND_ICON[k]}</svg><span class="nm2">${landArm === k ? 'Tap to buy' : LAND_SIDES[k].name}</span><small>${can ? money(landPrice(k)) : 'Max size'}</small></button>`;
+        })
+        .join('') +
+      `<span class="note">Your zoo is ${W} × ${H} tiles (about ${Math.round(W * 3)} × ${Math.round(H * 3)} m). Each purchase adds a 16-tile strip of woodland; the entrance road stays on the south side. Land costs more as the zoo grows. Up to 512 × 512.</span>`;
   } else if (tool === 'habitat') {
     h =
       '<span class="group">Shape</span>' +
@@ -273,7 +288,13 @@ function renderTray() {
         else if (d.fence) fenceSub = d.fence;
         else if (d.hm) habMode = d.hm;
         else if (d.terr) terrSub = d.terr;
-        else if (d.brush) brushSize = +d.brush;
+        else if (d.land) {
+          // two taps: the first shows "Tap to buy", the second buys
+          if (landArm === d.land) {
+            landArm = null;
+            buyLand(d.land);
+          } else landArm = d.land;
+        } else if (d.brush) brushSize = +d.brush;
         else sub = d.sub;
         renderTray();
       })

@@ -472,6 +472,42 @@ const tests = {
       return (g.W === 100 && g.S.tiles.filter((t) => t.o === 'lodge').length === 6) || 'size lost on save';
     }),
 
+  'buying land grows the zoo north, east and west and keeps the entrance on the road': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.money = 1e7;
+      for (let i = 0; i < 400 && !g.S.guests.length; i++) g.tick();
+      const guests = g.S.guests.length,
+        cap0 = g.guestCap(),
+        zebra = g.S.animals[0],
+        zx = zebra.x,
+        zy = zebra.y;
+      const price = g.landPrice('north'),
+        m0 = g.S.money;
+      if (!g.buyLand('north') || !g.buyLand('west') || !g.buyLand('east')) return 'purchase refused';
+      g.refresh();
+      const ok =
+        g.W === 36 + 32 &&
+        g.H === 26 + 16 &&
+        g.S.gate.y === g.H - 1 &&
+        zebra.x === zx + 16 &&
+        zebra.y === zy + 16 &&
+        g.S.guests.length === guests &&
+        m0 - g.S.money >= price &&
+        g.guestCap() > cap0 &&
+        g.S.tiles.some((t, i) => t.o && i < 16 * g.W); // woodland in the new northern strip
+      return (
+        ok ||
+        JSON.stringify({
+          W: g.W,
+          H: g.H,
+          gate: g.S.gate,
+          dz: [zebra.x - zx, zebra.y - zy],
+          guests: [guests, g.S.guests.length],
+        })
+      );
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

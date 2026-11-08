@@ -1,6 +1,7 @@
 /* Surroundings: rolling hills, outer lake, mountains, clouds, birds, grass and flower instancing. */
 /* rolling hills, lake, mountains */
 const LAKE = { x: 46, z: 7, r: 5.5 }; // moved beside the map by onMapResized()
+const lakeGroup = new THREE.Group();
 const sm = (t) => t * t * (3 - 2 * t);
 function hillH(x, z) {
   const dx = Math.max(0, -x - 1, x - (W + 1)),
@@ -73,23 +74,25 @@ const waterMat = new THREE.MeshPhongMaterial({
   opacity: 0.92,
 });
 {
+  scene.add(lakeGroup);
+  lakeGroup.position.set(LAKE.x, 0, LAKE.z);
   const shore = new THREE.Mesh(new THREE.CircleGeometry(LAKE.r + 1.1, 40), M('#6a553a'));
   shore.rotation.x = -Math.PI / 2;
-  shore.position.set(LAKE.x, 0.005, LAKE.z);
+  shore.position.set(0, 0.005, 0);
   shore.receiveShadow = true;
-  scene.add(shore);
+  lakeGroup.add(shore);
   const lake = new THREE.Mesh(new THREE.CircleGeometry(LAKE.r, 40), waterMat);
   lake.rotation.x = -Math.PI / 2;
-  lake.position.set(LAKE.x, 0.02, LAKE.z);
-  scene.add(lake);
+  lake.position.set(0, 0.02, 0);
+  lakeGroup.add(lake);
   for (let k = 0; k < 4; k++) {
     const lp = P(
-      scene,
+      lakeGroup,
       'cyl',
       '#4f9a46',
-      LAKE.x + Math.cos(k * 1.7) * LAKE.r * 0.6,
+      Math.cos(k * 1.7) * LAKE.r * 0.6,
       0.03,
-      LAKE.z + Math.sin(k * 1.7) * LAKE.r * 0.55,
+      Math.sin(k * 1.7) * LAKE.r * 0.55,
       0.28,
       0.01,
       0.28,

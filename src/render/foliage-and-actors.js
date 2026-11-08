@@ -1085,7 +1085,7 @@ function syncAnimals(alpha, time, dt) {
 }
 
 /* guests (instanced) */
-const GMAX = 260,
+const GMAX = 1500,
   dummy = new THREE.Object3D(),
   tmpC = new THREE.Color();
 const WHITE = () => [1, 1, 1];
