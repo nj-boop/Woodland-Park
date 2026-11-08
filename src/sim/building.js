@@ -133,11 +133,16 @@ function act(x, y) {
   if (tool === 'plant' || tool === 'shop') {
     const it = ITEMS[sub];
     if (!spend(it.cost, `a ${it.name.toLowerCase()}`)) return false;
-    stampBuilding(sub, c.plan || { r: 0, x0: x, y0: y, fw: 1, fh: 1, tiles: [idx(x, y)] });
+    if (sub === 'entrance') placeEntrance(c.plan);
+    else stampBuilding(sub, c.plan || { r: 0, x0: x, y0: y, fw: 1, fh: 1, tiles: [idx(x, y)] });
     dirty = true;
     return true;
   }
   if (tool === 'bulldoze') {
+    if (t.o === 'entrance') {
+      toast('The zoo needs an entrance. Place a new one to move it.', 'bad');
+      return false;
+    }
     if (t.o) {
       S.money += Math.round(ITEMS[t.o].cost / 2);
       clearBuilding(idx(x, y));

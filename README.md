@@ -95,6 +95,16 @@ lot (6 × 4 tiles) 30 more. When every space is taken, visitors park off-site an
 to a quarter (`arrivalChance()`); the Office shows cars parked and visitors turned away. Parked
 cars are drawn into lot bays by `syncParkedCars()` (`render/buildings.js`).
 
+### Roads, the highway and the entrance
+
+Paths come in two kinds: footpaths (guests and staff) and roads (`pm === 'service'`: trucks, cars and
+staff). A highway runs along the outside of the south edge; road tiles on the bottom row join it.
+`F.roadLinked` is every road reachable from it. Service buildings (`access: 'road'` in `ITEMS`:
+dock, feed store, recycling yard, vet clinic) open onto a road and need a footpath within 3 tiles;
+parking lots open onto a road and only count when road-linked. The park entrance is a building
+(3 × 1) placed on the south edge (`placeEntrance()` in `sim/footprints.js`); guests arrive on the
+footpath tile inside it (`GATE`). New zoos start with a footpath and road side by side on the east.
+
 ### Deliveries
 
 `sim/logistics.js`. With a loading dock and a feed store, animal feed is bought in bulk (60% of the

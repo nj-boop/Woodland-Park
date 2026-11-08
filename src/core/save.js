@@ -217,6 +217,12 @@ function load(str) {
   }
   if (d.wt) S.tiles.forEach((t, i) => (t.w = d.wt[i] === '1' ? 1 : 0));
   restampBuildings(d); // after paths, habitats and water are known
+  if (!S.tiles.some((t) => t.o === 'entrance')) {
+    // zoos from before the entrance was a building: put one where the gate was
+    const ex = GATE.x;
+    for (const i of entrancePlan(ex).tiles) if (S.tiles[i].o && S.tiles[i].o !== 'entrance') clearBuilding(i);
+    placeEntrance(entrancePlan(ex));
+  }
   delete S.hg;
   delete S.wt;
   delete S.ee;

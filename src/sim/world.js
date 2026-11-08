@@ -177,6 +177,13 @@ function newZoo(w, h) {
     if (t.t === 'g' && !t.e) t.o = o;
   });
   refreshCandidates();
+  // a service strip on the east side: the footpath carries on south, and a road from the highway runs
+  // beside it, leaving a 3-tile band for staff buildings and room for parking east of the road
+  for (let y = 15; y < 26; y++) {
+    setPath(27, y);
+    setPath(31, y, 'service');
+  }
+  placeEntrance(entrancePlan(18));
   S.mapW = 36;
   S.mapH = 26;
   S.gate = { ...GATE };
@@ -300,6 +307,24 @@ function rebuild() {
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);
   F.gate = bfs([idx(GATE.x, GATE.y)]);
+  // roads connected to the highway along the south edge
+  F.roadLinked = new Set();
+  const rq = [];
+  for (let x = 0; x < W; x++) {
+    const i = idx(x, H - 1);
+    if (isRoad(i)) {
+      F.roadLinked.add(i);
+      rq.push(i);
+    }
+  }
+  while (rq.length) {
+    const c = rq.pop();
+    for (const n of nbr4(c))
+      if (!F.roadLinked.has(n) && isRoad(n) && !S.tiles[n].e) {
+        F.roadLinked.add(n);
+        rq.push(n);
+      }
+  }
   F.food = bfs(src('food'));
   F.drink = bfs(src('drink'));
   F.bench = bfs(src('bench'));
@@ -368,7 +393,14 @@ function rebuild() {
   const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0, dock: 0, feedstore: 0 };
   for (let i = 0; i < N; i++) {
     const o = S.tiles[i].o;
-    if (o in cnt && isAnchor(i)) cnt[o]++;
+    if (o in cnt && isAnchor(i)) {
+      // a parking lot only counts if cars can reach it by road
+      if (o === 'parking') {
+        const p = planOf(i);
+        if (!frontTiles(p.x0, p.y0, p.fw, p.fh, p.r).some((k) => F.roadLinked.has(k))) continue;
+      }
+      cnt[o]++;
+    }
   }
   F.cnt = cnt;
   F.cap = {

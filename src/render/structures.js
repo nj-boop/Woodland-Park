@@ -619,12 +619,11 @@ function buildEdge() {
   P(worldEdge, 'box', hedge, W / 2, 0.2, -0.15, W + 0.6, 0.4, 0.3);
   P(worldEdge, 'box', hedge, -0.15, 0.2, H / 2, 0.3, 0.4, H);
   P(worldEdge, 'box', hedge, W + 0.15, 0.2, H / 2, 0.3, 0.4, H);
-  P(worldEdge, 'box', hedge, GATE.x / 2, 0.2, H + 0.15, GATE.x, 0.4, 0.3);
-  P(worldEdge, 'box', hedge, (GATE.x + 1 + W) / 2, 0.2, H + 0.15, W - GATE.x - 1, 0.4, 0.3);
-  const road = P(worldEdge, 'box', '#d6be8f', GATE.x + 0.5, 0.0, H + 8, 1, 0.02, 16, false);
-  road.receiveShadow = true;
-  const lot = P(worldEdge, 'box', '#8b8f8c', GATE.x + 0.5, 0, H + 12, 14, 0.02, 6, false);
-  lot.receiveShadow = true;
+  // the highway along the south edge: vehicles join it from road tiles on the bottom row
+  const hw = P(worldEdge, 'box', '#3b3d40', W / 2, 0.01, H + 1.6, W + 80, 0.02, 2.4, false);
+  hw.receiveShadow = true;
+  for (let x = -38; x < W + 38; x += 2) P(worldEdge, 'box', '#d9b43a', x, 0.025, H + 1.6, 0.9, 0.005, 0.08, false);
+  P(worldEdge, 'box', '#b9b7ae', W / 2, 0.03, H + 0.2, W + 80, 0.04, 0.4, false); // kerb and verge
   const trees = Math.round((300 * (W + H)) / 62);
   for (let k = 0; k < trees; k++) {
     let x, z;
@@ -633,7 +632,7 @@ function buildEdge() {
       z = rnd(-26, H + 26);
     } while (
       (x > -1.2 && x < W + 1.2 && z > -1.2 && z < H + 1.2) ||
-      (Math.abs(x - GATE.x - 0.5) < 8 && z > H && z < H + 16) ||
+      (z > H - 0.5 && z < H + 3.5) ||
       Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 2
     );
     const t = makeTree(worldEdge, Math.random() < 0.45 ? 'pine' : 'leafy', rnd(1.1, 2.1));
@@ -791,21 +790,4 @@ function rebuildStatic() {
   if (!gateRoot.children.length || !signTex) buildGate();
   staticDirty = false;
 }
-function buildGate() {
-  gateRoot.clear();
-  const gx = GATE.x,
-    gz = GATE.y;
-  P(gateRoot, 'box', '#6b4527', gx - 0.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
-  P(gateRoot, 'box', '#6b4527', gx + 1.05, 0.65, gz + 0.75, 0.24, 1.3, 0.24);
-  P(gateRoot, 'box', '#7a5230', gx + 0.5, 1.38, gz + 0.75, 1.6, 0.16, 0.22);
-  if (!signTex) makeSign();
-  const sm = new THREE.MeshBasicMaterial({ map: signTex });
-  const s1 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.375), sm);
-  s1.position.set(gx + 0.5, 1.66, gz + 0.76);
-  gateRoot.add(s1);
-  const s2 = s1.clone();
-  s2.rotation.y = Math.PI;
-  s2.position.z = gz + 0.74;
-  gateRoot.add(s2);
-  P(gateRoot, 'box', '#5b3c22', gx + 0.5, 1.66, gz + 0.75, 1.56, 0.42, 0.012);
-}
+function buildGate() {} // the gate is drawn as the 'entrance' building

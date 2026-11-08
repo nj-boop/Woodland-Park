@@ -86,8 +86,22 @@ function feedInbound() {
   return n;
 }
 
-// trucks drive on any path outside habitats (service roads included)
-const truckStep = (a, b) => S.tiles[b].t === 'p' && !S.tiles[b].e;
+// trucks drive on roads only, coming in from the highway along the south edge
+const truckStep = (a, b) => isRoad(b) && !S.tiles[b].e;
+const highwayTiles = () => {
+  const out = [];
+  for (let x = 0; x < W; x++) if (isRoad(idx(x, H - 1))) out.push(idx(x, H - 1));
+  return out;
+};
+// the highway road tile with the shortest drive to the goals
+function truckEntry(goals) {
+  let best = null;
+  for (const h of highwayTiles()) {
+    const r = staffRoute(h, goals, truckStep, truckCost);
+    if (r && (!best || r.length < best.r.length)) best = { h, r };
+  }
+  return best;
+}
 const truckCost = () => 1;
 function dockTiles() {
   const out = [];
@@ -108,22 +122,25 @@ function warnOnce(msg) {
   }
 }
 function sendTruck(type, goals, cargo, goods, dock) {
-  const route = staffRoute(idx(GATE.x, GATE.y), goals, truckStep, truckCost);
-  if (!route) return false;
+  const e = truckEntry(goals);
+  if (!e) return false;
+  const x = (e.h % W) + 0.5,
+    y = ((e.h / W) | 0) + 0.5;
   S.trucks.push({
     id: S.nextId++,
     type,
-    x: GATE.x + 0.5,
-    y: GATE.y + 0.5,
-    ox: GATE.x + 0.5,
-    oy: GATE.y + 0.5,
+    x,
+    y,
+    ox: x,
+    oy: y + 1,
     dir: Math.PI,
-    path: route,
+    path: e.r,
     st: 'in',
     wt: 0,
     dock,
     cargo,
     goods,
+    exit: e.h,
   });
   return true;
 }
@@ -143,7 +160,7 @@ function orderDeliveries() {
   if (S.money < cost) return warnOnce(`Not enough money for the next delivery (${money(cost)}).`);
   if (!sendTruck('delivery', dockBay(a), Array(feedCrates).fill(CRATE_UNITS), Array(goodsCrates).fill(GOODS_CRATE), a))
     return warnOnce(
-      'A delivery truck could not reach the loading dock. Connect it to the entrance with a path or service road.'
+      'A delivery truck could not reach the loading dock. Build a road from the dock to the highway on the south edge.'
     );
   S.money -= cost;
   S.today.run += cost;
@@ -153,7 +170,7 @@ function orderPickup() {
   const bay = yardBay();
   if (!bay.size || !sendTruck('garbage', bay, [], [], -1))
     return warnOnce(
-      'The garbage truck could not reach a recycling yard. Connect it to the entrance with a path or service road.'
+      'The garbage truck could not reach a recycling yard. Build a road from it to the highway on the south edge.'
     );
   S.money -= PICKUP_COST;
   S.today.run += PICKUP_COST;
@@ -170,8 +187,7 @@ function tickTrucks() {
         t.cargo = [];
         t.goods = [];
         t.st = 'out';
-        t.path =
-          staffRoute(idx(Math.floor(t.x), Math.floor(t.y)), new Set([idx(GATE.x, GATE.y)]), truckStep, truckCost) || [];
+        t.path = staffRoute(idx(Math.floor(t.x), Math.floor(t.y)), new Set(highwayTiles()), truckStep, truckCost) || [];
       }
       continue;
     }

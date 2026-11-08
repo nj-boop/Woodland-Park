@@ -48,7 +48,16 @@ const ITEMS = {
   bench: { name: 'Bench', cost: 80, kind: 'shop' },
   stage: { name: 'Show stadium', cost: 2500, kind: 'shop', size: [4, 3] },
   restroom: { name: 'Restroom', cost: 700, kind: 'shop', size: [2, 2], help: 'Guests need to use one now and then.' },
+  entrance: {
+    name: 'Park entrance',
+    cost: 500,
+    kind: 'staff',
+    size: [3, 1],
+    help: 'Where guests come in. Place it on the south edge, by the highway; placing a new one moves it.',
+  },
   dock: {
+    access: 'road',
+    needsFootpath: true,
     name: 'Loading dock',
     cost: 2500,
     kind: 'staff',
@@ -56,6 +65,8 @@ const ITEMS = {
     help: 'Delivery trucks unload here. With a feed store, animal feed comes in bulk at 60% of the courier price. Room for 3 haulers.',
   },
   feedstore: {
+    access: 'road',
+    needsFootpath: true,
     name: 'Feed store',
     cost: 1500,
     kind: 'staff',
@@ -63,6 +74,7 @@ const ITEMS = {
     help: 'Holds 300 meals of animal feed. Keepers collect feed here.',
   },
   parking: {
+    access: 'road',
     name: 'Parking lot',
     cost: 1200,
     kind: 'shop',
@@ -109,12 +121,22 @@ const ITEMS = {
     help: 'Houses 4 zookeepers. Needs a recycling yard.',
   },
   recycle: {
+    access: 'road',
+    needsFootpath: true,
     name: 'Recycling yard',
     cost: 1500,
     kind: 'staff',
     size: [3, 3],
     help: 'Houses 3 janitors and handles dung and trash.',
   },
-  vetclinic: { name: 'Vet clinic', cost: 3000, kind: 'staff', size: [4, 3], help: 'Houses 2 vets.' },
+  vetclinic: {
+    access: 'road',
+    needsFootpath: true,
+    name: 'Vet clinic',
+    cost: 3000,
+    kind: 'staff',
+    size: [4, 3],
+    help: 'Houses 2 vets.',
+  },
   bin: { name: 'Trash bin', cost: 50, kind: 'shop' },
 };

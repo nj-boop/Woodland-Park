@@ -30,6 +30,14 @@ function frontTiles(x0, y0, fw, fh, r) {
   return out.filter(([i, j]) => inB(i, j)).map(([i, j]) => idx(i, j));
 }
 const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => S.tiles[i].t === 'p');
+const isRoad = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'service';
+const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service';
+// a footpath within 3 tiles, for staff on foot (buildings that need both a road and a footpath)
+function footpathBeside(p) {
+  for (let y = p.y0 - 3; y < p.y0 + p.fh + 3; y++)
+    for (let x = p.x0 - 3; x < p.x0 + p.fw + 3; x++) if (inB(x, y) && isFootpath(idx(x, y))) return true;
+  return false;
+}
 // does this facing work? Guest and staff buildings open onto a path; a show stadium faces its tank
 function frontOK(kind, p) {
   if (kind === 'stage')
@@ -38,7 +46,9 @@ function frontOK(kind, p) {
       return e && F.emap[e] && F.emap[e].biome === 'pool';
     });
   if (ITEMS[kind].kind === 'decor') return true;
-  return frontOnPath(p.x0, p.y0, p.fw, p.fh, p.r);
+  const front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r);
+  // service buildings and parking open onto a road; guest buildings onto a footpath
+  return ITEMS[kind].access === 'road' ? front.some(isRoad) : front.some(isFootpath);
 }
 
 // candidate placements for a building at the cursor, best first:
@@ -127,6 +137,7 @@ function planOf(a) {
 
 // placement check for a building bigger than one tile; returns a check() result with the plan attached
 function checkBuilding(kind, x, y) {
+  if (kind === 'entrance') return checkEntrance(x);
   let firstFail = null;
   for (const p of fpPlans(kind, x, y)) {
     const c = checkPlan(kind, p);
@@ -161,12 +172,49 @@ function checkPlan(kind, p) {
         ? 'The stadium seats have to face an aquatic habitat.'
         : buildRot != null
           ? `The ${nm}'s door has to open onto a path. Press R (or ⟳ in the menu) to turn it.`
-          : `Move closer to a path: the ${nm}'s door side has to open onto one.`
+          : ITEMS[kind].access === 'road'
+            ? `The ${nm}'s door side has to open onto a road (vehicles only), connected to the highway on the south edge.`
+            : `Move closer to a footpath: the ${nm}'s door side has to open onto one.`
     );
   if (kind === 'stage' && !p.tiles.some((i) => nbr4(i).some((n) => S.tiles[n].t === 'p')))
     return fail('Guests need a path to reach the stadium.');
+  if (ITEMS[kind].needsFootpath && !footpathBeside(p))
+    return fail(`The ${nm} also needs a footpath within 3 tiles, for staff on foot.`);
   const clears = p.tiles.filter((i) => S.tiles[i].o).length;
   return { ok: true, cost: it.cost, plan: p, clears };
 }
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';
+
+/* The park entrance: 3 tiles wide along the south edge, where the highway runs. Guests arrive on
+   the footpath tile just inside it (GATE). Placing a new entrance moves the old one. */
+function entrancePlan(x) {
+  const x0 = clamp(x - 1, 0, W - 3);
+  return { r: 2, x0, y0: H - 1, fw: 3, fh: 1, tiles: fpTiles(x0, H - 1, 3, 1) };
+}
+function checkEntrance(x) {
+  const p = entrancePlan(x);
+  const fail = (msg) => ({ ok: false, msg, plan: p });
+  for (const i of [...p.tiles, idx(p.x0 + 1, H - 2)]) {
+    const t = S.tiles[i];
+    if (t.e) return fail('The entrance can’t go in a habitat.');
+    if (t.w) return fail('Part of that spot is under water.');
+    if (t.o && t.o !== 'entrance' && !clearable(t.o)) return fail('Something is in the way of the entrance.');
+  }
+  return { ok: true, cost: ITEMS.entrance.cost, plan: p };
+}
+function placeEntrance(p) {
+  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'entrance' && isAnchor(i)) clearBuilding(i);
+  for (const i of p.tiles) {
+    S.tiles[i].t = 'g';
+    S.tiles[i].pm = undefined;
+  }
+  stampBuilding('entrance', p);
+  GATE.x = p.x0 + 1;
+  GATE.y = H - 2;
+  S.gate = { ...GATE };
+  // guests step in onto a footpath
+  const g = S.tiles[idx(GATE.x, GATE.y)];
+  if (g.t !== 'p' || g.pm === 'service') setPath(GATE.x, GATE.y, 'stone');
+  g.o = null;
+}

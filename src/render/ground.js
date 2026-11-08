@@ -116,7 +116,11 @@ function buildTufts() {
     do {
       x = rnd(-22, W + 22);
       z = rnd(-22, H + 22);
-    } while ((x > -1 && x < W + 1 && z > -1 && z < H + 1) || Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2);
+    } while (
+      (x > -1 && x < W + 1 && z > -1 && z < H + 1) ||
+      (z >= H && z < H + 3.2) || // the highway
+      Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2
+    );
     const y = hillH(x, z);
     w.put(x, z, y, rnd(1, 1.7), pick(['#c8d8b0', '#b8cca0', '#d0dcbc']));
     if (Math.random() < 0.12) w.flower(x, z, y);

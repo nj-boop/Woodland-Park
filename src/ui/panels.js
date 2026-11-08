@@ -64,6 +64,7 @@ Object.assign(IT_ICON, {
   vetclinic: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
 });
 Object.assign(IT_ICON, {
+  entrance: '<path d="M4 21V8M20 21V8M3 8h18M7 5h10"/><path d="M9 21v-6h6v6"/>',
   dock: '<path d="M2 20h20M4 20V9l8-5 8 5v11"/><path d="M8 20v-6h8v6"/>',
   feedstore: '<path d="M3 21V10l9-6 9 6v11z"/><path d="M9 21v-5h6v5M8 12h8"/>',
   parking: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>',
@@ -125,7 +126,7 @@ function renderTray() {
       '<span class="note">Drag to move. Pinch or scroll to zoom. Twist two fingers, right-drag, or use ⟲ ⟳ to rotate. Tap an animal, guest or habitat to inspect it.</span>';
   else if (tool === 'path')
     h =
-      '<span class="note">Drag to lay path. Guests only walk on paths.</span>' +
+      '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are for trucks and cars (and staff). Service buildings and parking lots open onto a road that runs to the highway on the south edge.</span>' +
       Object.entries(PATHS)
         .map(
           ([k, p]) =>
@@ -265,7 +266,7 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">For staff</span>' +
-      ['recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
+      ['entrance', 'recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )

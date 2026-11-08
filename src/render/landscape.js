@@ -9,7 +9,7 @@ function hillH(x, z) {
     d = Math.hypot(dx, dz);
   let m = sm(clamp((d - 3) / 16, 0, 1));
   m *= sm(clamp((Math.hypot(x - LAKE.x, z - LAKE.z) - LAKE.r - 2.5) / 7, 0, 1));
-  if (z > H - 1) m *= sm(clamp((Math.abs(x - GATE.x - 0.5) - 5) / 7, 0, 1));
+  if (z > H - 1) m *= sm(clamp((z - H - 4) / 6, 0, 1)); // flat for the highway
   const n =
     Math.sin(x * 0.11) * Math.cos(z * 0.09) * 3 +
     Math.sin(x * 0.05 + z * 0.07) * 5 +

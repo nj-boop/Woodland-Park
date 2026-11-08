@@ -489,7 +489,8 @@ const tests = {
       const ok =
         g.W === 36 + 32 &&
         g.H === 26 + 16 &&
-        g.S.gate.y === g.H - 1 &&
+        g.S.gate.y === g.H - 2 &&
+        g.S.tiles[(g.H - 1) * g.W + g.S.gate.x].o === 'entrance' &&
         zebra.x === zx + 16 &&
         zebra.y === zy + 16 &&
         g.S.guests.length === guests &&

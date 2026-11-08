@@ -202,6 +202,31 @@ const BUILDINGS = {
     for (let k = 0; k < 3; k++) P(g, 'box', '#d8c48a', -1.05 + k * 0.32, 0.12, 0.72, 0.26, 0.2, 0.32);
     P(g, 'box', '#d8bf6a', 1.1, 0.16, 0.7, 0.4, 0.26, 0.3);
   },
+  // 3 × 1: the park gate, facing into the zoo (+z); the highway is behind it
+  entrance(g) {
+    P(g, 'box', '#b9b7ae', 0, 0.03, 0, 2.95, 0.06, 0.95, false).receiveShadow = true;
+    for (const x of [-1.25, 1.25]) {
+      P(g, 'box', '#6b4527', x, 0.85, 0, 0.3, 1.7, 0.3);
+      P(g, 'box', '#c9a227', x, 1.75, 0, 0.36, 0.1, 0.36);
+    }
+    P(g, 'box', '#7a5230', 0, 1.85, 0, 2.9, 0.2, 0.26);
+    if (!signTex) makeSign();
+    const sm = new THREE.MeshBasicMaterial({ map: signTex });
+    for (const z of [0.14, -0.14]) {
+      const s1 = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.475), sm);
+      s1.position.set(0, 2.2, z);
+      if (z < 0) s1.rotation.y = Math.PI;
+      g.add(s1);
+    }
+    P(g, 'box', '#5b3c22', 0, 2.2, 0, 1.96, 0.52, 0.2);
+    // ticket booths either side of the turnstiles
+    for (const x of [-0.7, 0.7]) {
+      P(g, 'box', '#e8dcc0', x, 0.42, -0.15, 0.42, 0.8, 0.42);
+      P(g, 'box', '#2f6a48', x, 0.88, -0.15, 0.52, 0.08, 0.52);
+      P(g, 'box', '#7fb7cf', x, 0.5, 0.065, 0.3, 0.25, 0.02, false);
+    }
+    for (const x of [-0.18, 0.18]) P(g, 'cyl', '#9aa3a8', x, 0.3, 0.1, 0.05, 0.6);
+  },
   // 6 × 4: asphalt with two rows of marked bays; the cars themselves are drawn by syncParkedCars()
   parking(g) {
     P(g, 'box', '#3b3d40', 0, 0.035, 0, 5.94, 0.05, 3.94, false).receiveShadow = true;
