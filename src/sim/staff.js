@@ -438,10 +438,18 @@ function pickJob(s) {
     }
   }
   if (s.role === 'hauler') {
-    if (s.carry && F.homes.feedstore.size) return { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) };
-    const room = feedCapacity() - S.feed - S.staff.reduce((t, o) => t + (o.carry || 0), 0);
-    const crate = S.crates.find((c) => !taken('haul', c.id) && c.n <= room);
-    if (crate && F.homes.feedstore.size) {
+    // already carrying: take it where it's going
+    if (s.carry && s.carryKind === 'goods') {
+      const shop = neediestShop(s);
+      if (shop != null) return { kind: 'drop', id: shop, goals: shopDoor(shop) };
+    } else if (s.carry && F.homes.feedstore.size) return { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) };
+    const room =
+      feedCapacity() - S.feed - S.staff.reduce((t, o) => t + (o.carryKind !== 'goods' ? o.carry || 0 : 0), 0);
+    const crate = S.crates.find(
+      (c) =>
+        !taken('haul', c.id) && (c.kind === 'goods' ? neediestShop(s) != null : F.homes.feedstore.size && c.n <= room)
+    );
+    if (crate) {
       const p = planOf(crate.dock),
         goals = new Set();
       for (const i of fpTiles(p.x0 - 1, p.y0 - 1, p.fw + 2, p.fh + 2))
@@ -450,6 +458,15 @@ function pickJob(s) {
     }
   }
   if (s.role === 'janitor') {
+    if ((s.bag || 0) >= BAG_SIZE) {
+      if (S.waste + s.bag <= wasteCapacity() && F.homes.recycle.size)
+        return { kind: 'dump', id: -1, goals: new Set(F.homes.recycle) };
+      if (S.clock - (S.yardFullAt || -1e9) > DAY / 2) {
+        S.yardFullAt = S.clock;
+        toast('The recycling yard is full. Janitors can’t empty their bags until the garbage truck comes.', 'bad');
+      }
+      return null;
+    }
     const worn = S.encl
       .filter((e) => e.biome !== 'pool' && (e.cond ?? 100) < FENCE_AT && !taken('fence', e.id))
       .sort((a, b) => (a.cond ?? 100) - (b.cond ?? 100))[0];
@@ -473,11 +490,12 @@ function pickJob(s) {
 /* ---------- each tick ---------- */
 const workRate = (s) =>
   STAFF_TRAITS[s.trait].speed * (0.75 + 0.1 * s.skill) * (0.6 + 0.6 * (s.morale / 100)) * (s.energy > 0 ? 1 : 0.6);
-const JOB_TIME = { tend: 70, treat: 90, catch: 50, fence: 110, sweep: 14, fetch: 30, haul: 25, drop: 25 };
+const JOB_TIME = { tend: 70, treat: 90, catch: 50, fence: 110, sweep: 14, fetch: 30, haul: 25, drop: 25, dump: 20 };
 const JOB_TEXT = {
   fetch: 'Collecting feed for',
   haul: 'Picking up a crate',
-  drop: 'Carrying a crate to the feed store',
+  drop: 'Delivering a crate',
+  dump: 'Emptying a trash bag at the recycling yard',
   tend: 'Tending',
   treat: 'Treating',
   catch: 'Catching',
@@ -574,21 +592,39 @@ function finishJob(s) {
     if (c) {
       S.crates = S.crates.filter((k) => k !== c);
       s.carry = c.n;
+      s.carryKind = c.kind || 'feed';
       s.job = null;
       s.st = 'idle';
-      if (F.homes.feedstore.size && startJob(s, { kind: 'drop', id: -1, goals: new Set(F.homes.feedstore) })) return;
+      const next = pickJob(s); // the drop-off for what's now in hand
+      if (next) startJob(s, next);
       return;
     }
   } else if (j.kind === 'drop') {
-    if (s.carry) {
+    if (s.carry && s.carryKind === 'goods') {
+      const k = S.tiles[j.id] && STOCK[S.tiles[j.id].o];
+      if (k) {
+        S.stock[j.id] = Math.min(k.max, stockOf(j.id) + s.carry);
+        s.carry = 0;
+        s.carryKind = null;
+        ok = true;
+      }
+    } else if (s.carry) {
       S.feed = Math.min(feedCapacity(), S.feed + s.carry);
       s.carry = 0;
+      s.carryKind = null;
+      ok = true;
+    }
+  } else if (j.kind === 'dump') {
+    if (s.bag && S.waste + s.bag <= wasteCapacity()) {
+      S.waste += s.bag;
+      s.bag = 0;
       ok = true;
     }
   } else if (j.kind === 'sweep') {
     const t = S.tiles[sTile(s)];
     if (t.l > 0) {
       if (--t.l === 0) F.litter.delete(sTile(s));
+      if (F.cnt && F.cnt.recycle) s.bag = (s.bag || 0) + 1; // swept litter goes in the bag
       ok = true;
     }
   }
@@ -738,7 +774,9 @@ const dirOf = (a, b) => (b === a - W ? 0 : b === a + W ? 1 : b === a - 1 ? 2 : 3
 function pickJobFor(s) {
   const j = s.job;
   if (j.kind === 'tend' && F.emap[j.id]) return serviceTiles(F.emap[j.id]);
+  if (j.kind === 'drop' && s.carryKind === 'goods' && S.tiles[j.id] && STOCK[S.tiles[j.id].o]) return shopDoor(j.id);
   if ((j.kind === 'fetch' || j.kind === 'drop') && F.homes.feedstore.size) return new Set(F.homes.feedstore);
+  if (j.kind === 'dump' && F.homes.recycle.size) return new Set(F.homes.recycle);
   if (j.kind === 'fence' && F.emap[j.id]) return fenceSideTiles(F.emap[j.id]);
   const t = jobTarget(s);
   if (t >= 0) return around((t % W) + 0.5, ((t / W) | 0) + 0.5);
@@ -815,4 +853,25 @@ function staffFromCounts(d) {
       c.wage = fairWage(role, 2);
       addStaff(c);
     }
+}
+
+// the shop most in need of goods that no other hauler is already bringing some to
+function neediestShop(s) {
+  let best = null,
+    bestShare = 0.6;
+  for (const a of stockedShops()) {
+    if (S.staff.some((o) => o !== s && o.job && o.job.kind === 'drop' && o.job.id === a)) continue;
+    const sh = stockShare(a);
+    if (sh < bestShare) {
+      bestShare = sh;
+      best = a;
+    }
+  }
+  return best;
+}
+// the path tiles beside a shop's front
+function shopDoor(a) {
+  const out = new Set();
+  for (const i of buildingTiles(a)) for (const n of nbr4(i)) if (S.tiles[n].t === 'p') out.add(n);
+  return out;
 }

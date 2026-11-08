@@ -104,6 +104,12 @@ feed store; keepers collect a habitat's feed there before tending it (`fetch` th
 `sim/staff.js`). Without both buildings, feed is couriered at the full price. Service roads are a
 path material guests can't use (`guestPath()`); staff and trucks use them.
 
+Shops (snack stand, drinks, gift shop, restaurant) sell from stock (`STOCK`, `S.stock` by anchor
+tile); guests complain when one is sold out. Without a dock, a courier tops shops up when they fall
+below a quarter. With one, goods crates ride on the delivery truck and haulers carry them to the
+lowest shop. Janitors bag swept litter (6 sweeps a bag) and drop bags at the recycling yard
+(150 per yard); a garbage truck collects when yards are 40% full. Full yards stop janitors.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes

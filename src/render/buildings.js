@@ -446,11 +446,21 @@ crateMesh.castShadow = true;
 crateMesh.frustumCulled = false;
 crateMesh.count = 0;
 scene.add(crateMesh);
+const bagMesh = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(0.12, 8, 6),
+  new THREE.MeshLambertMaterial({ color: LIN('#1f2326') }),
+  120
+);
+bagMesh.castShadow = true;
+bagMesh.frustumCulled = false;
+bagMesh.count = 0;
+scene.add(bagMesh);
 const truckGroups = new Map();
-function makeTruck() {
-  const g = new THREE.Group();
-  P(g, 'box', '#f4f1ea', 0, 0.42, -0.25, 0.62, 0.62, 1.3); // box body
-  P(g, 'box', '#c9771f', 0, 0.36, 0.62, 0.6, 0.5, 0.44); // cab
+function makeTruck(type) {
+  const g = new THREE.Group(),
+    garbage = type === 'garbage';
+  P(g, 'box', garbage ? '#2f7a46' : '#f4f1ea', 0, 0.42, -0.25, 0.62, 0.62, 1.3); // body
+  P(g, 'box', garbage ? '#e8e6df' : '#c9771f', 0, 0.36, 0.62, 0.6, 0.5, 0.44); // cab
   P(g, 'box', '#2a3a44', 0, 0.48, 0.85, 0.52, 0.2, 0.02, false); // windscreen
   for (const [x, z] of [
     [-0.3, -0.6],
@@ -461,7 +471,16 @@ function makeTruck() {
     const w = P(g, 'cyl', '#1d1f21', x, 0.11, z, 0.11, 0.08);
     w.rotation.z = Math.PI / 2;
   }
-  signBoard(g, 'FEED', '#f4f1ea', '#c9771f', 0.312, 0.5, -0.25, 0.7).rotation.y = Math.PI / 2;
+  signBoard(
+    g,
+    garbage ? 'RECYCLING' : 'SUPPLIES',
+    garbage ? '#2f7a46' : '#f4f1ea',
+    garbage ? '#ffffff' : '#c9771f',
+    0.312,
+    0.5,
+    -0.25,
+    0.7
+  ).rotation.y = Math.PI / 2;
   scene.add(g);
   return g;
 }
@@ -492,12 +511,36 @@ function syncDeliveries(alpha) {
   }
   crateMesh.count = n;
   crateMesh.instanceMatrix.needsUpdate = true;
+  // trash bags in front of the skips, one per 10 bags of waste
+  let b = 0,
+    left = Math.ceil(S.waste / 10);
+  for (let i = 0; i < W * H && left > 0; i++) {
+    if (S.tiles[i].o !== 'recycle' || !isAnchor(i)) continue;
+    const p = planOf(i),
+      cx = p.x0 + p.fw / 2,
+      cz = p.y0 + p.fh / 2,
+      rot = (p.r * Math.PI) / 2;
+    for (let k = 0; k < 15 && left > 0 && b < 120; k++, left--) {
+      const lx = -1.2 + (k % 5) * 0.28,
+        lz = -0.1 + Math.floor(k / 5) * 0.24;
+      o.position.set(
+        cx + lx * Math.cos(rot) + lz * Math.sin(rot),
+        heightAt(cx, cz) + 0.14,
+        cz - lx * Math.sin(rot) + lz * Math.cos(rot)
+      );
+      o.rotation.set(0, k, 0);
+      o.updateMatrix();
+      bagMesh.setMatrixAt(b++, o.matrix);
+    }
+  }
+  bagMesh.count = b;
+  bagMesh.instanceMatrix.needsUpdate = true;
   // trucks
   const live = new Set();
   for (const t of S.trucks) {
     live.add(t.id);
     let g = truckGroups.get(t.id);
-    if (!g) truckGroups.set(t.id, (g = makeTruck()));
+    if (!g) truckGroups.set(t.id, (g = makeTruck(t.type)));
     const x = t.ox + (t.x - t.ox) * alpha,
       z = t.oy + (t.y - t.oy) * alpha;
     g.position.set(x, heightAt(x, z), z);

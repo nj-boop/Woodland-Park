@@ -646,6 +646,15 @@ function statsHTML(ah, gh) {
   return `<span>Guests in the zoo</span><span>${S.guests.length}</span>
     <span>Visitors this month</span><span>${S.today.vis}</span>
     <span>Animal feed</span><span>${feedByTruck() ? `${Math.floor(S.feed)} / ${feedCapacity()} meals in store${S.trucks.length ? ' · truck on the way' : ''}${S.crates.length ? ` · ${S.crates.length} crates at the dock` : ''}` : 'Couriered (build a loading dock and feed store to buy in bulk)'}</span>
+    <span>Shop stock</span><span>${(() => {
+      const sh = stockedShops(),
+        low = sh.filter((a) => stockShare(a) < 0.25).length,
+        out = sh.filter((a) => stockOf(a) <= 0).length;
+      return sh.length
+        ? `${out ? `<b style="color:var(--bad)">${out} sold out</b> · ` : ''}${low} of ${sh.length} running low · ${F.cnt.dock ? 'restocked by delivery' : 'restocked by courier'}`
+        : 'No shops yet';
+    })()}</span>
+    <span>Trash</span><span>${F.cnt.recycle ? `${S.waste} / ${wasteCapacity()} bags at the recycling yard${S.trucks.some((t) => t.type === 'garbage') ? ' · garbage truck on the way' : ''}` : 'No recycling yard'}</span>
     <span>Parking</span><span>${carsParked()} / ${parkingSpaces()} cars${S.today.turned ? ` · <b style="color:var(--bad)">${S.today.turned} turned away</b>` : ''}</span>
     <span>Earned this month</span><span>${money(S.today.inc)}</span>
     <span>Tickets / shops</span><span>${money(S.today.adm || 0)} / ${money(S.today.shop || 0)}</span>

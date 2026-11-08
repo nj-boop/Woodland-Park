@@ -563,6 +563,51 @@ const tests = {
       return (t.t === 'p' && t.pm === 'service' && !g.guestPath(20 * 36 + 22)) || 'service road open to guests';
     }),
 
+  'shops sell from stock: courier tops up without a dock, haulers with one': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.refresh();
+      const stand = g.stockedShops()[0];
+      if (stand == null) return 'no stocked shop in the starting zoo';
+      g.S.stock[stand] = 5;
+      const m0 = g.S.money;
+      for (let i = 0; i < 80; i++) g.tick();
+      if (g.stockOf(stand) !== 80 || g.S.money >= m0) return `courier: stock ${g.stockOf(stand)}`;
+      // now with a dock and a hauler: goods come by truck and get carried over
+      for (const b of ['dock']) if (!g.build(b)) return 'no room for ' + b;
+      g.refresh();
+      g.hireRole('hauler');
+      g.S.stock[stand] = 4;
+      let sawGoods = false;
+      for (let i = 0; i < 6000 && g.stockOf(stand) < 40; i++) {
+        g.tick();
+        if (g.S.crates.some((c) => c.kind === 'goods')) sawGoods = true;
+        if (g.stockOf(stand) <= 1) g.S.stock[stand] = 2; // keep guests from emptying it meanwhile
+      }
+      return (sawGoods && g.stockOf(stand) >= 40) || `goods crates ${sawGoods}, stock ${g.stockOf(stand)}`;
+    }),
+
+  'janitors bag litter for the recycling yard and a garbage truck empties it': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.build('recycle');
+      g.refresh();
+      const j = g.hireRole('janitor');
+      j.bag = 5;
+      const lit = g.S.tiles.findIndex((t, i) => t.t === 'p' && i > 20 * 36);
+      g.S.tiles[lit].l = 1;
+      g.refresh();
+      let dumped = 0,
+        sawTruck = false;
+      for (let i = 0; i < 4000 && !(dumped && sawTruck && g.S.waste === 0); i++) {
+        g.tick();
+        dumped = Math.max(dumped, g.S.waste);
+        if (dumped && g.S.waste < 60 && !sawTruck) g.S.waste = 60; // fill the yard to call the truck
+        if (g.S.trucks.some((t) => t.type === 'garbage')) sawTruck = true;
+      }
+      return (dumped >= 6 && sawTruck && g.S.waste === 0) || `dumped ${dumped}, truck ${sawTruck}, waste ${g.S.waste}`;
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

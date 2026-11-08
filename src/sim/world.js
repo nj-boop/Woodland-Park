@@ -118,6 +118,8 @@ function newZoo(w, h) {
     feed: 0,
     crates: [],
     trucks: [],
+    stock: {},
+    waste: 0,
     prices: { ...BASE_PRICE },
     ledger: [],
     tiles: blankTiles(),
@@ -303,6 +305,7 @@ function rebuild() {
   F.bench = bfs(src('bench'));
   F.view = new Array(N);
   F.shops = new Array(N);
+  F.shopAt = new Array(N); // path tile -> { kind: anchor tile of that shop }
   F.bin = new Uint8Array(N);
   F.scen = new Uint8Array(N);
   // things that affect nearby path tiles are "stamped" onto a grid around themselves, which costs
@@ -349,10 +352,15 @@ function rebuild() {
           if (e) v.add(e);
         }
       }
+    let at = null;
     for (const n of nbr4(i)) {
       const o = S.tiles[n].o;
-      if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(o)) sh.push(o);
+      if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(o)) {
+        sh.push(o);
+        if (STOCK[o]) (at ||= {})[o] = anchorOf(n);
+      }
     }
+    F.shopAt[i] = at;
     F.view[i] = [...v];
     F.shops[i] = sh;
     F.scen[i] = Math.min(8, scen[i]);

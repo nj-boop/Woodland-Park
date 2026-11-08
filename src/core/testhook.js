@@ -49,6 +49,8 @@ window.__wg = {
     rebuild();
   },
   resizeMap,
+  stockOf,
+  stockedShops,
   feedByTruck,
   guestPath,
   get carBody() {

@@ -30,6 +30,8 @@ function serialize() {
       raised: s.raised,
       mood: s.mood,
       carry: s.carry || 0,
+      carryKind: s.carryKind || null,
+      bag: s.bag || 0,
       carryFeed: s.carryFeed || 0,
       x: s.x,
       y: s.y,
@@ -37,6 +39,8 @@ function serialize() {
     cands: S.cands,
     feed: Math.round(S.feed * 10) / 10,
     crates: S.crates,
+    stock: S.stock,
+    waste: S.waste,
     // trucks on the road are saved as already unloaded
     trucks: [],
     prices: S.prices,
@@ -262,6 +266,8 @@ function load(str) {
   if (!S.cands || !S.cands.length) refreshCandidates();
   S.feed = d.feed || 0;
   S.crates = d.crates || [];
+  S.stock = d.stock || {};
+  S.waste = d.waste || 0;
   S.trucks = [];
   dirty = true;
 }

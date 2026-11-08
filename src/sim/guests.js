@@ -114,12 +114,29 @@ function arrive(g) {
     g.exc += v;
   }
   const atmB = F.atm && F.atm[i] ? 1.18 : 1;
+  const at = F.shopAt[i];
+  // stocked shops can sell out; `sell` uses one unit and says whether there was any
+  const sell = (s) => {
+    if (!at || at[s] == null) return true;
+    if (stockOf(at[s]) <= 0) {
+      g.gripe = 'soldout';
+      return false;
+    }
+    S.stock[at[s]] = stockOf(at[s]) - 1;
+    return true;
+  };
   for (const s of F.shops[i] || []) {
     if (s === 'restroom' && g.bath > 45) {
       g.bath = 0;
       continue;
     }
-    if (s === 'restaurant' && g.hunger > 40 && g.mode !== 'leave' && Math.random() < willing('food') * atmB) {
+    if (
+      s === 'restaurant' &&
+      g.hunger > 40 &&
+      g.mode !== 'leave' &&
+      Math.random() < willing('food') * atmB &&
+      sell(s)
+    ) {
       g.hunger = 0;
       g.thirst = Math.max(0, g.thirst - 40);
       earn(ITEMS.restaurant.price, 'shop');
@@ -133,7 +150,8 @@ function arrive(g) {
       s === 'gift' &&
       (g.mode === 'leave' || g.t > g.stay * 0.6) &&
       !g.gift &&
-      Math.random() < (0.15 + g.h / 150) * atmB
+      Math.random() < (0.15 + g.h / 150) * atmB &&
+      sell(s)
     ) {
       g.gift = 1;
       earn(ITEMS.gift.price, 'shop');
@@ -164,21 +182,21 @@ function arrive(g) {
       continue;
     }
     if (s === 'food' && g.hunger > 45 && g.mode !== 'leave') {
-      if (Math.random() < willing('food') * atmB) {
+      if (Math.random() < willing('food') * atmB && sell(s)) {
         g.hunger = Math.max(0, g.hunger - 75);
         earn(S.prices.food, 'shop');
         g.spent += S.prices.food;
         g.trash = rnd(160, 320) | 0;
         g.gripe = 0;
-      } else g.gripe = 'food';
+      } else if (g.gripe !== 'soldout') g.gripe = 'food';
     } else if (s === 'drink' && g.thirst > 40 && g.mode !== 'leave') {
-      if (Math.random() < willing('drink') * atmB) {
+      if (Math.random() < willing('drink') * atmB && sell(s)) {
         g.thirst = 0;
         earn(S.prices.drink, 'shop');
         g.spent += S.prices.drink;
         g.trash = rnd(140, 260) | 0;
         g.gripe = 0;
-      } else g.gripe = 'drink';
+      } else if (g.gripe !== 'soldout') g.gripe = 'drink';
     } else if (s === 'bench' && g.energy < 55 && g.mode === 'walk') {
       g.mode = 'rest';
       g.rest = 70;
@@ -207,9 +225,11 @@ function guestMood(g) {
     th = g.best ? `Heading home. The ${g.best.toLowerCase()} made my day.` : 'Heading home now.';
   else if (g.gripe && (g.hunger > 60 || g.thirst > 60))
     th =
-      g.gripe === 'food'
-        ? `${money(S.prices.food)} for a snack? No thanks.`
-        : `${money(S.prices.drink)} for a drink? That's a rip-off.`;
+      g.gripe === 'soldout'
+        ? 'The stand was sold out. Restock your shops!'
+        : g.gripe === 'food'
+          ? `${money(S.prices.food)} for a snack? No thanks.`
+          : `${money(S.prices.drink)} for a drink? That's a rip-off.`;
   else if (g.scared && g.t - g.scared < 300) th = "There's a loose animal! I'm getting out of here.";
   else if (g.bath > 85)
     th =
