@@ -17,6 +17,7 @@ const STOCK = {
   restaurant: { max: 60, unit: 3 },
 };
 const GOODS_CRATE = 40;
+const supplyRate = () => (researched('logistics') ? 0.8 : 1); // research cuts supply prices
 const stockOf = (a) => S.stock[a] ?? (STOCK[S.tiles[a] && S.tiles[a].o] || { max: 0 }).max;
 function stockedShops() {
   const out = [];
@@ -36,7 +37,7 @@ function courierRestock() {
   for (const a of stockedShops()) {
     const k = STOCK[S.tiles[a].o];
     if (stockOf(a) >= k.max * 0.25) continue;
-    const cost = Math.round((k.max - stockOf(a)) * k.unit);
+    const cost = Math.round((k.max - stockOf(a)) * k.unit * supplyRate());
     if (S.money < cost) continue;
     S.money -= cost;
     S.today.run += cost;
@@ -150,7 +151,9 @@ function orderDeliveries() {
   if (!feedCrates && !goodsCrates) return;
   const a = dockTiles().find((d) => dockBay(d).size);
   if (a == null) return;
-  const cost = Math.round(feedCrates * CRATE_UNITS * FEED_UNIT + goodsCrates * GOODS_CRATE * 1.5 * 0.6);
+  const cost = Math.round(
+    (feedCrates * CRATE_UNITS * FEED_UNIT + goodsCrates * GOODS_CRATE * 1.5 * 0.6) * supplyRate()
+  );
   if (S.money < cost) return warnOnce(`Not enough money for the next delivery (${money(cost)}).`);
   if (!sendTruck('delivery', dockBay(a), Array(feedCrates).fill(CRATE_UNITS), Array(goodsCrates).fill(GOODS_CRATE), a))
     return warnOnce(

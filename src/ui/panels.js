@@ -616,6 +616,7 @@ function renderZoo() {
     refreshStaffPanel();
     $('#zLed').innerHTML = ledgerHTML();
     $('#zAw').innerHTML = awardsHTML();
+    renderResearch();
     $('#zStats').innerHTML = statsHTML(ah, gh);
     // only when it changed: replacing buttons under a finger loses the tap
     const nh = newHTML();
@@ -638,6 +639,7 @@ function renderZoo() {
      <div class="adm"><span>Snack</span><b id="zPF">${money(S.prices.food)}</b></div><input type="range" id="zPFR" min="1" max="20" value="${S.prices.food}" aria-label="Snack price">
      <div class="adm" style="margin-top:8px"><span>Drink</span><b id="zPD">${money(S.prices.drink)}</b></div><input type="range" id="zPDR" min="1" max="12" value="${S.prices.drink}" aria-label="Drink price">
      <p class="help">Fair prices are about ${money(BASE_PRICE.food)} and ${money(BASE_PRICE.drink)}. Charge more and fewer hungry guests will buy.</p></div>
+   <div class="sec"><h3>Research</h3><div id="zRes"></div></div>
    <div class="sec"><h3>Zoo awards</h3><div id="zAw">${awardsHTML()}</div></div>
    <div class="sec"><h3>Recent months</h3><div id="zLed">${ledgerHTML()}</div></div>
    <div class="sec"><h3>Tips</h3><p class="help">Run paths alongside every habitat so guests can see in. Match plants and space to each species, keep predators away from prey unless the habitat has a predator barrier, and place snack stands, drink carts, benches and bins along busy paths. Staff need somewhere to work: a recycling yard for janitors, a keeper lodge plus a recycling yard for zookeepers, and a vet clinic for vets. Keepers walk in through a habitat gate to feed and clean, so every land habitat needs a gate on a path edge. Hire more staff as the zoo grows, and keep their pay fair. Dirty or unhappy habitats breed illness, and untreated sick animals can die. Happy pairs may have babies at the end of a month. For aquatic exhibits, build an Aquatic habitat, run a glass tunnel through it, and put a show stadium beside it so dolphins, sea lions and orcas can perform.</p></div>
@@ -659,6 +661,7 @@ function renderZoo() {
   bindStaffPanel();
   bindNew();
   refreshSlots();
+  renderResearch();
 }
 /* save slots: tap Save or Load, then tap again to confirm when it would overwrite something */
 let slotArm = null; // 'save1', 'load2', …
@@ -763,6 +766,46 @@ function statsHTML(ah, gh) {
     <span>Animal happiness</span><span>${S.animals.length ? ah + '%' : '–'}</span>
     <span>Guest happiness</span><span>${S.guests.length ? gh + '%' : '–'}</span>
     <span>Expected guests/month</span><span>${Math.round((spawnRate() * DAY) / TPS)}</span>`;
+}
+/* research: the project in progress with its progress bar, then the choices */
+let resHTML = '';
+function renderResearch() {
+  const box = $('#zRes');
+  if (!box) return;
+  const cur = S.res && RESEARCH[S.res.id];
+  const rows = Object.entries(RESEARCH)
+    .map(([id, r]) => {
+      const done = researched(id),
+        running = S.res && S.res.id === id;
+      const btn = done
+        ? '<span class="resDone">✓ Done</span>'
+        : running
+          ? ''
+          : `<button class="btn small" data-res="${id}" ${S.res ? 'disabled' : ''}>${money(r.cost)} · ${r.months} mo</button>`;
+      return `<div class="resRow${done ? ' done' : ''}"><div><b>${r.name}</b><br><small>${r.does}</small></div>${btn}</div>`;
+    })
+    .join('');
+  const h =
+    (cur
+      ? `<div class="resNow"><div><b>Researching ${cur.name}</b> · ${Math.round(researchShare() * 100)}%</div>${meter(researchShare() * 100, 'var(--good)')}<button class="btn small" id="resStop">Stop</button></div>`
+      : '<p class="help" style="margin-top:0">Fund one project at a time. Each takes a few months and lasts for good.</p>') +
+    `<div class="resList">${rows}</div>`;
+  if (h === resHTML) return; // unchanged: keep buttons steady under the player's finger
+  resHTML = h;
+  box.innerHTML = h;
+  box.querySelectorAll('[data-res]').forEach((b) => {
+    b.onclick = () => {
+      if (startResearch(b.dataset.res)) toast(`Research started: ${RESEARCH[b.dataset.res].name}.`, 'good');
+      renderResearch();
+    };
+  });
+  const st = $('#resStop');
+  if (st)
+    st.onclick = () => {
+      cancelResearch();
+      toast('Research stopped. The money already spent is not refunded.');
+      renderResearch();
+    };
 }
 // this year's standing against each award, and the trophies won so far
 function awardsHTML() {

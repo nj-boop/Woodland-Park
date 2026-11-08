@@ -77,6 +77,8 @@ function serialize() {
     mode: S.mode,
     challenge: S.challenge,
     tut: S.tut,
+    res: S.res,
+    done: S.done,
     yr: S.yr,
     awards: S.awards,
     fame: S.fame,

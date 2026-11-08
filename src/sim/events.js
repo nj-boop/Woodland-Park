@@ -13,7 +13,7 @@ function monthlyUpkeep() {
     const e = F.emap[a.e];
     if (!e || e.biome === 'pool') continue;
     const c = care(a.sp),
-      fs = fenceStrength(e) * ((e.cond ?? 100) >= 40 ? 1 : 0.6);
+      fs = (fenceStrength(e) + (researched('fences') ? 1 : 0)) * ((e.cond ?? 100) >= 40 ? 1 : 0.6);
     if (c.str > fs && a.happy < 55 && Math.random() < 0.35) {
       escape(a, e);
     }
@@ -66,7 +66,7 @@ function endDay() {
       const g = list.filter((a) => a.sp === k),
         sp = SPECIES[k];
       const avg = g.reduce((s, a) => s + a.happy, 0) / g.length;
-      if (g.length >= 2 && avg > 75 && area >= need + sp.space && Math.random() < 0.3) {
+      if (g.length >= 2 && avg > 75 && area >= need + sp.space && Math.random() < (researched('breed') ? 0.5 : 0.3)) {
         const b = addAnimal(k, e, g[0].x, g[0].y);
         b.parents = [g[0].name, g[1].name];
         b.happy = avg;
@@ -80,7 +80,9 @@ function endDay() {
   for (const a of S.animals) {
     if (a.sick) continue;
     const e = F.emap[a.e];
-    const p = 0.02 + (a.happy < 40 ? 0.05 : 0) + (e && e.dirt > 60 ? 0.07 : 0) + (a.hunger > 80 ? 0.04 : 0);
+    const p =
+      (0.02 + (a.happy < 40 ? 0.05 : 0) + (e && e.dirt > 60 ? 0.07 : 0) + (a.hunger > 80 ? 0.04 : 0)) *
+      (researched('vet') ? 0.6 : 1);
     if (Math.random() < p) {
       a.sick = true;
       toast(
@@ -184,6 +186,7 @@ function tick() {
   tickStaff();
   tickLogistics();
   tickFarms();
+  tickResearch();
   tickGuests();
   if (S.clock % TPS === 0) {
     const ex = S.exits.length ? S.exits.reduce((a, b) => a + b, 0) / S.exits.length : 60;

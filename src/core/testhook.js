@@ -23,6 +23,8 @@ window.__wg = {
   monthlyUpkeep,
   checkTier,
   checkChallenge,
+  startResearch,
+  researched,
   renderTutorial,
   judgeYear,
   spawnRate,

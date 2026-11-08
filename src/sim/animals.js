@@ -102,9 +102,9 @@ function evalEncl(e) {
     }
     if (c.toy) {
       if (!st.has[c.toy]) {
-        t -= st.toys.length ? 5 : 11;
+        t -= (st.toys.length ? 5 : 11) * (researched('enrich') ? 0.5 : 1);
         why.push(`bored, wants a ${ITEMS[c.toy].name.toLowerCase()}`);
-      } else t += 3;
+      } else t += researched('enrich') ? 8 : 3;
     }
     if (c.shelter) {
       if (!st.has[c.shelter]) {
@@ -145,7 +145,7 @@ function tickAnimals() {
       if (a.showDelay > 0) a.showDelay--;
       else a.show--;
     }
-    a.hunger = Math.min(100, a.hunger + 0.04);
+    a.hunger = Math.min(100, a.hunger + (researched('feed') ? 0.03 : 0.04));
     if (a.sick) a.health -= 0.015;
     else a.health = Math.min(100, a.health + 0.004);
     a.happy += (a.target - a.happy) * 0.004;

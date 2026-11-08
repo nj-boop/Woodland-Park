@@ -14,6 +14,7 @@
   "sim/farms.js",
   "sim/safari.js",
   "sim/awards.js",
+  "sim/research.js",
   "sim/events.js",
   "sim/terrain.js",
   "sim/building.js",

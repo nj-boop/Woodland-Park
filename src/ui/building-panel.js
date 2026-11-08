@@ -74,7 +74,7 @@ function renderBuildingInspector(box, a) {
     { rows, note } = buildingFacts(a),
     refund = Math.round(it.cost / 2),
     k = STOCK[t.o],
-    restock = k ? Math.round((k.max - Math.max(0, stockOf(a))) * k.unit) : 0;
+    restock = k ? Math.round((k.max - Math.max(0, stockOf(a))) * k.unit * supplyRate()) : 0;
   const kindName = { shop: 'Guest building', staff: 'Service building', farm: 'Farm' }[it.kind];
   box.innerHTML = `<button class="x" aria-label="Close" id="ix">×</button>
     <h2>${it.name}</h2>

@@ -149,6 +149,13 @@ the top tier within 5 years, or lost at the deadline, after which play simply co
 December closes: every award in `AWARDS` whose `won(y)` test passes pays its prize, and the count
 sets `S.fame`, which raises `spawnRate()` by 4% per award for the next year.
 
+### Research
+
+`sim/research.js`: projects in `RESEARCH` are paid up front and finish after their months of
+ticks (`tickResearch()`); one runs at a time. Rules check `researched(id)`: feed (hunger), market
+(`spawnRate`), logistics (`supplyRate()`), enrich (toys), vet (sickness), fences (escapes) and
+breed (births).
+
 ### Sound
 
 `ui/sound.js` synthesizes everything with Web Audio, so there are no audio files: wind and

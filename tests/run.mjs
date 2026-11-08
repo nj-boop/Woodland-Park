@@ -762,6 +762,16 @@ const tests = {
       document.querySelector('#tutX').click();
       return (box.hidden && g.S.tut === 'off') || 'could not hide';
     }),
+  'research takes months, then cuts sickness for good': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const m0 = g.S.money;
+      if (!g.startResearch('vet')) return 'could not start';
+      if (g.S.money !== m0 - 25000) return 'not charged';
+      if (g.startResearch('feed')) return 'two projects at once';
+      for (let i = 0; i < 3 * 1200 + 5 && !g.researched('vet'); i++) g.tick();
+      return g.researched('vet') || 'not done after 3 months';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

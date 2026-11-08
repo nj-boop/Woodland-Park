@@ -26,7 +26,7 @@ function spawnRate() {
   const base = S.animals.length ? 0.12 + A * 0.02 : 0.04;
   const rf = 0.35 + S.rating / 100;
   const pf = S.admission === 0 ? 1.7 : clamp(1.55 - S.admission / 30, 0.12, 1.6);
-  return base * rf * pf * (1 + AWARD_FAME * (S.fame || 0));
+  return base * rf * pf * (1 + AWARD_FAME * (S.fame || 0)) * (researched('market') ? 1.15 : 1);
 }
 function spawnGuest() {
   const gi = idx(GATE.x, GATE.y);
