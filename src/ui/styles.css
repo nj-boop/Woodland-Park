@@ -919,3 +919,29 @@ td.pos {
   display: block;
   opacity: 0.75;
 }
+
+/* game mode picker when starting a new zoo */
+.modes {
+  display: grid;
+  gap: 8px;
+}
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.45);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.mode:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
+.mode span {
+  font-size: 13px;
+  opacity: 0.8;
+}

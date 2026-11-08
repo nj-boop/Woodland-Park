@@ -100,16 +100,17 @@ function resizeMap(w, h, ox, oy) {
 }
 let mapResized = true; // tells the renderer to rebuild everything sized to the map
 // a new zoo; on a bigger map the starting layout sits at the bottom middle, by the entrance
-function newZoo(w, h) {
+function newZoo(w, h, mode = 'standard') {
   setMapSize(36, 26);
   GATE.x = 18;
   GATE.y = 25;
   S = {
     v: 1,
     hgt: new Float32Array((W + 1) * (H + 1)),
-    tier: 1,
+    mode,
+    tier: mode === 'sandbox' ? TIERS.length : 1,
     totalVis: 0,
-    money: 1000000, // a big starting budget, to try everything
+    money: MODES[mode].money,
     day: 1,
     clock: 0,
     admission: 15,

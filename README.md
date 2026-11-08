@@ -136,6 +136,13 @@ ride (`mode: 'ride'`) and come back with the tour's excitement. Trucks are drawn
 (`syncSafari()`). A track crossing a fence is a vehicle gate: `fenceStrength()` is one lower there
 unless the fence is a moat.
 
+### Game modes
+
+Chosen under Office → Start a new zoo (`MODES` in `data/rules.js`). Standard starts with
+$1,000,000 and unlocks animals through the tiers. Sandbox keeps money topped up (`tick()`) and
+starts at the top tier. Challenge starts with $75,000; `checkChallenge()` marks it won on reaching
+the top tier within 5 years, or lost at the deadline, after which play simply continues.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, about 1,000 guests, 18 staff): a

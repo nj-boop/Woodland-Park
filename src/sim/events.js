@@ -95,6 +95,7 @@ function endDay() {
   S.ledger.push({ day: S.day, vis: t.vis, adm: t.adm || 0, shop: t.shop || 0, run: t.run });
   if (S.ledger.length > 7) S.ledger.shift();
   S.day++;
+  checkChallenge();
   S.today = { inc: 0, run: 0, vis: 0, adm: 0, shop: 0 };
   save();
 }
@@ -115,6 +116,25 @@ function checkTier() {
       'good'
     );
     if (tool === 'animal') renderTray();
+    checkChallenge();
+  }
+}
+// challenge mode: reaching the top tier before the deadline wins; afterwards play simply continues
+function challengeLeft() {
+  return MODES.challenge.years * 12 - (S.day - 1);
+}
+function checkChallenge() {
+  if (S.mode !== 'challenge' || S.challenge) return;
+  if (S.tier >= TIERS.length) {
+    S.challenge = 'won';
+    const m = S.day - 1;
+    toast(
+      `Challenge complete! A world-class zoo in ${Math.floor(m / 12)} years and ${m % 12} months. Keep building as long as you like.`,
+      'good'
+    );
+  } else if (challengeLeft() <= 0) {
+    S.challenge = 'lost';
+    toast('Time is up: the zoo didn’t reach world class within 5 years. You can keep playing freely.', 'bad');
   }
 }
 function countWatchers() {
@@ -155,6 +175,7 @@ function runShows() {
 function tick() {
   if (dirty) rebuild();
   S.clock++;
+  if (S.mode === 'sandbox' && S.money < SANDBOX_FLOOR) S.money = MODES.sandbox.money;
   tickAnimals();
   tickStaff();
   tickLogistics();

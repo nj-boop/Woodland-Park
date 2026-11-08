@@ -77,6 +77,21 @@ const TIERS = [
   },
   { n: 4, name: 'World-class zoo', rating: 76, vis: 1200, need: 'stage', sp: ['elephant', 'orca'] },
 ];
+/* Game modes, chosen when starting a zoo:
+   - standard: $1,000,000 to start, animals unlock as the zoo grows through the tiers
+   - sandbox: money never runs out and every animal is available
+   - challenge: a tight budget and a deadline: become a world-class zoo within 5 years */
+const MODES = {
+  standard: { name: 'Standard', money: 1000000, blurb: '$1,000,000 to start. Animals unlock as your zoo grows.' },
+  sandbox: { name: 'Sandbox', money: 1e9, blurb: 'Unlimited money and every animal unlocked. Build anything.' },
+  challenge: {
+    name: 'Challenge',
+    money: 75000,
+    years: 5,
+    blurb: '$75,000 to start. Become a world-class zoo within 5 years.',
+  },
+};
+const SANDBOX_FLOOR = 5e8; // sandbox money is topped back up whenever it drops below this
 const tierOf = (sp) => TIERS.find((t) => t.sp.includes(sp)).n;
 const unlocked = (sp) => tierOf(sp) <= (S.tier || 1);
 const BARRIER_COST = 1500;

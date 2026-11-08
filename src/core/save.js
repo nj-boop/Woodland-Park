@@ -74,6 +74,8 @@ function serialize() {
     hg16: L.hg16,
     wt: L.wt,
     er: L.er,
+    mode: S.mode,
+    challenge: S.challenge,
     tier: S.tier,
     totalVis: S.totalVis,
     money: S.money,
@@ -249,6 +251,7 @@ function load(str) {
   mapResized = true;
   S = { ...d, tiles: blankTiles(), guests: [] };
   S.prices = S.prices || { ...BASE_PRICE };
+  if (!MODES[S.mode]) S.mode = 'standard';
   S.ledger = S.ledger || [];
   S.totalVis = S.totalVis || 0;
   if (!S.tier) {
@@ -421,6 +424,7 @@ const dateOf = (day) => `${MO_SHORT[(day - 1) % 12]}, Year ${Math.floor((day - 1
 function slotSummary() {
   return {
     date: dateOf(S.day),
+    mode: S.mode,
     money: S.money,
     animals: S.animals.length,
     guests: S.guests.length,

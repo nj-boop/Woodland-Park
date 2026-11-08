@@ -22,6 +22,8 @@ window.__wg = {
   recapture,
   monthlyUpkeep,
   checkTier,
+  checkChallenge,
+  unlocked,
   serialize,
   isAnchor,
   load,
@@ -52,8 +54,8 @@ window.__wg = {
     staticDirty = true;
     groundDirty = true;
   },
-  newZoo(w, h) {
-    newZoo(w, h);
+  newZoo(w, h, mode) {
+    newZoo(w, h, mode);
     rebuild();
   },
   resizeMap,

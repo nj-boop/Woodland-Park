@@ -715,6 +715,24 @@ const tests = {
       const s3 = g.serialize();
       return s3 === s1 || 'old form differs at ' + [...s1].findIndex((c, i) => c !== s3[i]);
     }),
+  'sandbox never runs out of money and unlocks everything; challenge has a deadline': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.newZoo(undefined, undefined, 'sandbox');
+      if (!g.unlocked('orca')) return 'orca locked in sandbox';
+      g.S.money = 10;
+      g.tick();
+      if (g.S.money < 5e8) return 'sandbox money not topped up: ' + g.S.money;
+      g.newZoo(undefined, undefined, 'challenge');
+      if (g.S.money !== 75000 || g.unlocked('lion')) return 'challenge start wrong';
+      g.S.day = 61;
+      g.checkChallenge();
+      if (g.S.challenge !== 'lost') return 'deadline missed but challenge is ' + g.S.challenge;
+      g.newZoo(undefined, undefined, 'challenge');
+      g.S.tier = 4;
+      g.checkChallenge();
+      return g.S.challenge === 'won' || 'top tier reached but challenge is ' + g.S.challenge;
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

@@ -614,8 +614,12 @@ function renderZoo() {
     refreshStaffPanel();
     $('#zLed').innerHTML = ledgerHTML();
     $('#zStats').innerHTML = statsHTML(ah, gh);
-    $('#zNew').innerHTML = newHTML();
-    bindNew();
+    // only when it changed: replacing buttons under a finger loses the tap
+    const nh = newHTML();
+    if ($('#zNew').dataset.html !== nh) {
+      $('#zNew').innerHTML = $('#zNew').dataset.html = nh;
+      bindNew();
+    }
     return;
   }
   p.dataset.built = '1';
@@ -661,7 +665,7 @@ async function refreshSlots() {
   box.innerHTML = list
     .map(({ n, t, info }) => {
       const desc = info
-        ? `<b>${info.date}</b> · ${money(info.money)} · ${info.animals} animals · ${info.size}<br><span class="help">Saved ${new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>`
+        ? `<b>${info.date}</b> · ${MODES[info.mode] ? MODES[info.mode].name : 'Standard'} · ${info.mode === 'sandbox' ? 'unlimited money' : money(info.money)} · ${info.animals} animals · ${info.size}<br><span class="help">Saved ${new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>`
         : '<span class="help">Empty</span>';
       const sv = slotArm === 'save' + n ? 'Tap again to overwrite' : 'Save here';
       const ld = slotArm === 'load' + n ? 'Tap again · current zoo is replaced' : 'Load';
@@ -706,7 +710,16 @@ async function refreshSlots() {
 function tierHTML() {
   const cur = TIERS[(S.tier || 1) - 1],
     next = TIERS[S.tier || 1];
-  let h = `<div class="tierNow">Tier ${cur.n}: <b>${cur.name}</b></div>`;
+  let h = `<div class="tierNow">Tier ${cur.n}: <b>${cur.name}</b> · ${MODES[S.mode || 'standard'].name} mode</div>`;
+  if (S.mode === 'challenge') {
+    const left = challengeLeft();
+    h +=
+      S.challenge === 'won'
+        ? '<div class="help" style="color:var(--good)"><b>Challenge complete.</b></div>'
+        : S.challenge === 'lost'
+          ? '<div class="help">The 5-year deadline has passed. Play on freely.</div>'
+          : `<div class="help"><b>Goal:</b> reach World-class zoo · ${Math.floor(left / 12)} years ${left % 12} months left</div>`;
+  }
   if (next) {
     h +=
       `<div class="help" style="margin:6px 0 4px">To reach <b>${next.name}</b> and unlock ${next.sp.map((k) => SPECIES[k].pl.toLowerCase()).join(', ')}:</div><ul class="req">` +
@@ -761,7 +774,11 @@ function ledgerHTML() {
 }
 function newHTML() {
   return confirmNew
-    ? `<h3>Start over?</h3><p class="help">This erases your current zoo.</p><div class="btns"><button class="btn danger" id="zYes">Erase and start over</button><button class="btn" id="zNo">Keep my zoo</button></div>`
+    ? `<h3>Start a new zoo</h3><p class="help">This replaces your current zoo. Save it to a slot above first if you want to keep it.</p>
+       <div class="modes">${Object.entries(MODES)
+         .map(([k, m]) => `<button class="mode" data-mode="${k}"><b>${m.name}</b><span>${m.blurb}</span></button>`)
+         .join('')}</div>
+       <div class="btns"><button class="btn" id="zNo">Keep my zoo</button></div>`
     : `<div class="btns" style="margin-top:0"><button class="btn danger" id="zReset">Start a new zoo</button></div>`;
 }
 function bindNew() {
@@ -769,27 +786,36 @@ function bindNew() {
   if (r)
     r.onclick = () => {
       confirmNew = true;
-      $('#zNew').innerHTML = newHTML();
+      $('#zNew').innerHTML = $('#zNew').dataset.html = newHTML();
       bindNew();
     };
-  const y = $('#zYes');
-  if (y)
+  document.querySelectorAll('#zNew [data-mode]').forEach((y) => {
     y.onclick = () => {
+      const mode = y.dataset.mode;
       confirmNew = false;
       delete $('#zooPanel').dataset.built;
-      newZoo();
+      newZoo(undefined, undefined, mode);
       rebuild();
       closeInspector();
       centerCam();
       save();
       renderZoo();
-      toast('A fresh plot of land. Good luck!', 'good');
+      toast(
+        mode === 'challenge'
+          ? 'Challenge accepted: $75,000 and five years to build a world-class zoo. Good luck!'
+          : mode === 'sandbox'
+            ? 'Sandbox: money is no object, and every animal is available.'
+            : 'A fresh plot of land. Good luck!',
+        'good'
+      );
+      if (tool === 'animal') renderTray();
     };
+  });
   const n = $('#zNo');
   if (n)
     n.onclick = () => {
       confirmNew = false;
-      $('#zNew').innerHTML = newHTML();
+      $('#zNew').innerHTML = $('#zNew').dataset.html = newHTML();
       bindNew();
     };
 }
@@ -801,7 +827,7 @@ function stars(r) {
 }
 function hud() {
   const m = $('#sMoney');
-  m.textContent = money(S.money);
+  m.textContent = S.mode === 'sandbox' ? 'Unlimited' : money(S.money);
   m.classList.toggle('neg', S.money < 0);
   const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   $('#sGuests').textContent = S.guests.length;
