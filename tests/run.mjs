@@ -157,6 +157,12 @@ const tests = {
   'painted habitats can be any shape': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;
+      // clear the starter animal house and its road, so the old test layout fits
+      g.clearBuilding(g.S.tiles.findIndex((k) => k.o === 'animalhouse'));
+      for (let x = 20; x <= 31; x++)
+        Object.assign(g.S.tiles[10 * g.W + x], x === 27 ? { pm: 'stone' } : { t: 'g', pm: undefined });
+      for (let y = 11; y < 15; y++) Object.assign(g.S.tiles[y * g.W + 31], { t: 'g', pm: undefined });
+      g.refresh();
       g.setTool('habitat');
       g.set('habMode', 'paint');
       g.set('sub', 'savanna');
@@ -312,7 +318,7 @@ const tests = {
       return (!!k && g.staffCount('keeper') === 1) || 'could not hire after building a lodge and yard';
     }),
 
-  'a keeper walks in through the gate to feed animals, and cannot without one': async ({ page }) =>
+  'a keeper walks in through the animal house to feed animals, and cannot without one': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg,
         e = g.S.encl[0];
@@ -328,11 +334,11 @@ const tests = {
       }
       if (zebras.some((a) => a.hunger > 20)) return 'keeper never fed the zebras';
       if (!inside) return 'keeper fed them without going in';
-      e.gates = [];
+      g.clearBuilding(g.S.tiles.findIndex((t) => t.o === 'animalhouse'));
       g.refresh();
       zebras.forEach((a) => (a.hunger = 80));
       for (let i = 0; i < 1500; i++) g.tick();
-      return (g.unreachable(e) && zebras.every((a) => a.hunger >= 80)) || 'keeper got in with no gate';
+      return (g.unreachable(e) && zebras.every((a) => a.hunger >= 80)) || 'keeper got in with no animal house';
     }),
 
   'a vet walks to a sick animal and treats it': async ({ page }) =>
@@ -458,7 +464,7 @@ const tests = {
         g.S.tiles.filter((t) => t.o === 'lodge').length === 6 &&
         g.S.tiles[(lodge[1] + 40) * 100 + lodge[0] + 30].a === (lodge[1] + 40) * 100 + lodge[0] + 30 &&
         g.S.gate.x === gate0.x + 30 &&
-        g.S.encl[0].gates.length === 1;
+        g.S.tiles.filter((t) => t.o === 'animalhouse').length === 6;
       if (!ok)
         return JSON.stringify({
           W: g.W,
@@ -468,7 +474,7 @@ const tests = {
           at: g.S.tiles[(lodge[1] + 40) * 100 + lodge[0] + 30].o,
           lodge,
           gate: [g.S.gate.x - gate0.x],
-          gates: g.S.encl[0].gates,
+          houses: g.S.tiles.filter((t) => t.o === 'animalhouse').length,
         });
       g.load(g.serialize());
       g.refresh();
@@ -640,6 +646,12 @@ const tests = {
       const g = window.__wg,
         e = g.S.encl[0];
       const fs0 = g.fenceStrength(e);
+      // clear the starter animal house and its road, so the old test layout fits
+      g.clearBuilding(g.S.tiles.findIndex((k) => k.o === 'animalhouse'));
+      for (let x = 20; x <= 31; x++)
+        Object.assign(g.S.tiles[10 * g.W + x], x === 27 ? { pm: 'stone' } : { t: 'g', pm: undefined });
+      for (let y = 11; y < 15; y++) Object.assign(g.S.tiles[y * g.W + 31], { t: 'g', pm: undefined });
+      g.refresh();
       // a track along row 11: through the habitat (x 12-17) and out east over open ground
       g.setTool('path');
       g.set('pathSub', 'track');
@@ -757,7 +769,7 @@ const tests = {
       if (box.hidden || !/recycling yard/.test(box.textContent)) return 'first step not shown';
       g.build('recycle');
       g.renderTutorial();
-      if (!/keeper lodge/.test(box.textContent) || !/1 of 8/.test(box.textContent))
+      if (!/keeper lodge/.test(box.textContent) || !/1 of 9/.test(box.textContent))
         return 'did not advance: ' + box.textContent;
       document.querySelector('#tutX').click();
       return (box.hidden && g.S.tut === 'off') || 'could not hide';
@@ -795,9 +807,9 @@ const tests = {
       for (let i = 0; i < 1000 && (g.S.clock < 0.06 * DAY || g.S.clock > 0.5 * DAY); i++) g.tick();
       for (let i = 0; i < 600 && zs.some((a) => a.inside != null); i++) g.tick();
       if (zs.some((a) => a.inside != null)) return 'still inside in the morning';
-      // without a night shelter they sleep outside and mind it
-      const t = g.S.tiles.findIndex((k) => k.o === 'nighthouse');
-      g.S.tiles[t].o = null;
+      // without an animal house they sleep outside and mind it
+      const t = g.S.tiles.findIndex((k) => k.o === 'animalhouse');
+      g.clearBuilding(t);
       g.refresh();
       g.evalEncl(g.S.encl[0]);
       return zs[0].why.some((w) => /sleep/.test(w)) || 'no complaint: ' + zs[0].why;
@@ -807,10 +819,9 @@ const tests = {
       const g = window.__wg;
       g.S.nightOff = true;
       if (!g.build('vetclinic')) return 'no room for the clinic';
-      // a habitat right beside the road, so the ambulance can pull up at its fence
-      const e = g.makeEncl(32, 15, 4, 5, 'savanna');
-      g.refresh();
-      const a = g.addAnimal('zebra', e, 33.5, 17.5);
+      // the starter zebras' animal house has a road out to the service road, where the clinic goes
+      const e = g.S.encl[0];
+      const a = g.S.animals.find((k) => k.e === e.id);
       a.sick = a.serious = true;
       if (!g.callAmbulance(a)) return 'no route for the ambulance';
       let saw = {};
@@ -821,6 +832,35 @@ const tests = {
       if (!saw.transit || !saw.clinic) return 'never left: ' + JSON.stringify(saw);
       if (a.sick || a.away) return 'not home and well: ' + a.away;
       return g.S.tiles[Math.floor(a.y) * g.W + Math.floor(a.x)].e === e.id || 'released outside the habitat';
+    }),
+  'keepers get into a habitat only through its animal house': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        e = g.S.encl[0];
+      if ((e.gates || []).length) return 'the starter habitat still has a fence gate';
+      if (g.unreachable(e)) return 'unreachable with an animal house';
+      const from = 20 * g.W + 27; // on the footpath south of the zoo
+      const r = g.staffRoute(from, g.serviceTiles(e));
+      if (!r) return 'no route in';
+      if (!r.some((i) => g.S.tiles[i].o === 'animalhouse')) return 'route did not pass through the animal house';
+      const t = g.S.tiles.findIndex((k) => k.o === 'animalhouse');
+      g.clearBuilding(t);
+      g.refresh();
+      return (g.unreachable(e) && !g.staffRoute(from, g.serviceTiles(e))) || 'still reachable without the house';
+    }),
+  'a road laid over a footpath makes a crossing for both': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        i = 10 * g.W + 27;
+      if (g.S.tiles[i].pm !== 'crossing') return 'starter has no crossing: ' + g.S.tiles[i].pm;
+      if (!g.isRoad(i) || !g.guestPath(i)) return 'crossing is not both road and footpath';
+      // lay a new one: road over the footpath at x 27, y 8
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      const c = g.check(27, 8);
+      if (!c.ok) return 'cannot lay a road over the footpath: ' + c.msg;
+      g.act(27, 8);
+      return g.S.tiles[8 * g.W + 27].pm === 'crossing' || 'got ' + g.S.tiles[8 * g.W + 27].pm;
     }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {

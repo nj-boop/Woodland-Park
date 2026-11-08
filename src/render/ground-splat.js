@@ -323,7 +323,10 @@ function paintGround() {
         layer = LAYER.waterbed;
         gm = 0;
       } else if (t.t === 'p') {
-        layer = e && e.biome === 'pool' ? LAYER.tunnel : (LAYER[t.pm || 'stone'] ?? LAYER.stone);
+        layer =
+          e && e.biome === 'pool'
+            ? LAYER.tunnel
+            : (LAYER[t.pm === 'crossing' ? 'service' : t.pm || 'stone'] ?? LAYER.stone);
         if (t.pm !== 'dirt' && t.pm !== 'sand') {
           if (!isP(x, y - 1)) edges |= 1;
           if (!isP(x, y + 1)) edges |= 2;

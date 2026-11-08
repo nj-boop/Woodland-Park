@@ -39,8 +39,7 @@ function careList(e) {
   if (list.some((a) => sleepsInside(a.sp)))
     items.push({
       ok: !!(F.nightIn && F.nightIn[e.id] && F.nightIn[e.id].length),
-      txt: 'Night shelter to sleep in (night house, stable or rock cave)',
-      item: 'nighthouse',
+      txt: 'Animal house on the fence: night quarters, and the way keepers get in',
     });
   const need = Math.max(...list.map((a) => care(a.sp).str));
   const fs = fenceStrength(e);

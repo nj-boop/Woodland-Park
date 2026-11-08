@@ -100,6 +100,36 @@ function resizeMap(w, h, ox, oy) {
 }
 let mapResized = true; // tells the renderer to rebuild everything sized to the map
 // a new zoo; on a bigger map the starting layout sits at the bottom middle, by the entrance
+/* Animal houses: each serves the habitat behind it. F.houses[anchor] = { e, hatch, front };
+   F.hatch maps each hatch tile (inside the habitat, against the back wall) to its house;
+   F.houseOf[habitat] lists its houses; F.houseView maps footpath tiles within 2 to a house. */
+function linkAnimalHouses() {
+  F.houses = {};
+  F.hatch = new Map();
+  F.houseOf = {};
+  F.houseView = new Map();
+  for (const a of F.anchors.animalhouse || []) {
+    const p = planOf(a),
+      e = houseHabitat(p);
+    if (e == null) continue;
+    const hatch = frontTiles(p.x0, p.y0, p.fw, p.fh, (p.r + 2) % 4).filter((i) => {
+      const t = S.tiles[i];
+      return (
+        t.e === e && !t.w && t.o !== 'pond' && !(t.o && (ITEMS[t.o].form === 'rock' || ITEMS[t.o].kind === 'shelter'))
+      );
+    });
+    if (!hatch.length) continue;
+    const front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r).filter(isRoad);
+    F.houses[a] = { e, hatch, front };
+    for (const i of hatch) F.hatch.set(i, a);
+    (F.houseOf[e] ||= []).push(a);
+    (F.nightIn[e] ||= []).push(...hatch);
+    for (const i of front) (F.encRoad[e] ||= new Set()).add(i);
+    for (let y = p.y0 - 2; y < p.y0 + p.fh + 2; y++)
+      for (let x = p.x0 - 2; x < p.x0 + p.fw + 2; x++)
+        if (inB(x, y) && isFootpath(idx(x, y)) && !F.houseView.has(idx(x, y))) F.houseView.set(idx(x, y), a);
+  }
+}
 function newZoo(w, h, mode = 'standard') {
   setMapSize(36, 26);
   GATE.x = 18;
@@ -145,14 +175,12 @@ function newZoo(w, h, mode = 'standard') {
     setPath(27, y);
   }
   const e = makeEncl(11, 7, 7, 7, 'savanna');
-  e.gates = [[idx(14, 13), 1]]; // a keeper gate onto the path below
   [
     [12, 8, 'tree'],
     [16, 9, 'tree'],
     [13, 12, 'bush'],
     [16, 12, 'rock'],
     [13, 10, 'pond'],
-    [17, 12, 'nighthouse'],
   ].forEach(([x, y, o]) => (tileAt(x, y).o = o));
   addAnimal('zebra', e, 13.5, 10.5);
   addAnimal('zebra', e, 15.2, 11);
@@ -188,6 +216,11 @@ function newZoo(w, h, mode = 'standard') {
     setPath(27, y);
     setPath(31, y, 'service');
   }
+  // the zebras' animal house on the habitat's east fence, with a road out to the service road
+  // (it crosses the footpath at x 27)
+  for (let x = 20; x <= 31; x++) setPath(x, 10, x === 27 ? 'crossing' : 'service');
+  for (let y = 11; y < 15; y++) setPath(31, y, 'service');
+  stampBuilding('animalhouse', { r: 1, x0: 18, y0: 9, fw: 2, fh: 3, tiles: fpTiles(18, 9, 2, 3) });
   placeEntrance(entrancePlan(18));
   S.mapW = 36;
   S.mapH = 26;
@@ -310,8 +343,8 @@ function rebuild() {
   F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
   F.anchors = {}; // building kind -> anchor tiles, so nothing has to scan the whole map for buildings
   F.trackIn = new Set(); // habitats a safari track runs into
-  F.nightIn = {}; // habitat id -> night shelter tiles
-  F.encRoad = {}; // habitat id -> road tiles beside its fence, where the animal ambulance pulls up
+  F.nightIn = {}; // habitat id -> hatch tiles: where animals go into their animal house for the night
+  F.encRoad = {}; // habitat id -> road tiles at its animal house's door, where the ambulance pulls up
   const SERVICE = { restroom: [], food: [], restaurant: [], drink: [], bench: [] };
   const scen = new Float32Array(N),
     base = new Float32Array(N); // plants and water, summed over a 5×5 box after the pass
@@ -331,15 +364,12 @@ function rebuild() {
       F.paths.push(i);
       if (t.l > 0) F.litter.add(i);
       if (t.e && t.pm === 'track') F.trackIn.add(t.e);
-      if (t.pm === 'service' && !t.e)
-        for (const n of nbr4(i)) if (S.tiles[n].e) (F.encRoad[S.tiles[n].e] ||= new Set()).add(i);
     }
     if (t.w) base[i] += 0.3;
     if (!o) continue;
     if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
     if (o in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[o].push(n);
     if (ITEMS[o].kind === 'plant') base[i] += 1;
-    if (ITEMS[o].night && t.e) (F.nightIn[t.e] ||= []).push(i);
     if (!isAnchor(i)) continue; // count each building once, at its anchor tile
     (F.anchors[o] ||= []).push(i);
     if (ITEMS[o].kind === 'decor') stamp(i, 2, false, (k) => (scen[k] += ITEMS[o].scen));
@@ -362,6 +392,7 @@ function rebuild() {
       scen[y * W + x] += s;
     }
   F.gallery = galleryTiles();
+  linkAnimalHouses();
   const src = (type) => SERVICE[type];
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);

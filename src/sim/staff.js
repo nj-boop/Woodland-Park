@@ -228,10 +228,16 @@ function staffStep(a, b, dr) {
   const ta = S.tiles[a],
     tb = S.tiles[b];
   if (tb.e !== ta.e) {
-    // crossing a habitat fence: only through a gate
-    if (tb.e && !hasGate(F.emap[tb.e], b, dr ^ 1)) return false;
-    if (ta.e && !hasGate(F.emap[ta.e], a, dr)) return false;
+    // crossing a habitat fence: through its animal house (or an old-style keeper gate)
+    const viaHouse =
+      (ta.o === 'animalhouse' && F.hatch && F.hatch.get(b) === anchorOf(a)) ||
+      (tb.o === 'animalhouse' && F.hatch && F.hatch.get(a) === anchorOf(b));
+    if (!viaHouse) {
+      if (tb.e && !hasGate(F.emap[tb.e], b, dr ^ 1)) return false;
+      if (ta.e && !hasGate(F.emap[ta.e], a, dr)) return false;
+    }
   }
+  if (tb.o === 'animalhouse') return true; // staff walk through the animal house
   if (tb.e) {
     if (F.emap[tb.e] && F.emap[tb.e].biome === 'pool') return false;
     if (tb.w || tb.o === 'pond') return false;
@@ -393,9 +399,9 @@ function around(x, y) {
 }
 const near = (s, ti) => Math.max(Math.abs(s.x - ((ti % W) + 0.5)), Math.abs(s.y - (((ti / W) | 0) + 0.5))) < 1.6;
 const servesHabitat = (s, e) => !s.assign.length || s.assign.includes(e.id);
-// habitats keepers cannot reach (no gate); the habitat panel warns about these
+// habitats keepers cannot reach (no animal house, and no old keeper gate); the habitat panel warns about these
 function unreachable(e) {
-  return e.biome !== 'pool' && !(e.gates || []).length;
+  return e.biome !== 'pool' && !(e.gates || []).length && !(F.houseOf && F.houseOf[e.id]);
 }
 
 // choose the next job for an idle worker; returns { kind, goals, ...target } or null
@@ -577,7 +583,7 @@ function finishJob(s) {
         S.today.run += TREAT_COST * 2;
         warnOnce(
           F.cnt.vetclinic
-            ? `${s.name} patched up ${nm} in the habitat, but serious cases recover far better after surgery. Lay a road from the vet clinic to the habitat’s fence so the ambulance can reach it.`
+            ? `${s.name} patched up ${nm} in the habitat, but serious cases recover far better after surgery. The ambulance loads at the habitat’s animal house: connect its door to the vet clinic by road.`
             : `${s.name} patched up ${nm} in the habitat, but serious cases need surgery. Build a vet clinic, with a road to your habitats.`
         );
       } else {

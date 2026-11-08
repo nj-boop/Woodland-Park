@@ -63,7 +63,7 @@ Order matters: a file can use anything defined in an earlier file, and functions
 - **Staff** (`sim/staff.js`) are individual people hired from a monthly board, each with a skill
   (1–5), a trait, a wage, morale and energy. Each one picks a job (feed and clean a habitat, treat a
   sick animal, catch an escapee, sweep litter, repair a fence), walks there with `staffRoute()`
-  (paths are cheapest, open ground is allowed, habitat fences can only be crossed at gates), does
+  (paths are cheapest, open ground is allowed, habitat fences can only be crossed through the habitat's animal house (or an old keeper gate)), does
   the work, and rests at their building when tired. Wages, morale changes and quitting happen at
   month end in `staffMonth()`. The staff list, hiring board and staff inspector are in
   `ui/staff-panel.js`; staff are drawn with the guest meshes, in uniform.
@@ -153,15 +153,26 @@ sets `S.fame`, which raises `spawnRate()` by 4% per award for the next year.
 
 `sim/daynight.js`: each month of game time is one day, with dusk at 74% of the month's clock and
 night across the turn of the month. At bedtime land animals walk to the nearest night shelter in
-their habitat (`F.nightIn`: night house, stable or rock cave), are hidden while inside
+their habitat's animal house (`F.nightIn`: its hatch tiles), are hidden while inside
 (`a.inside`), and come out one by one after dawn. Without a shelter they sleep in the open and are
 less happy. Arrivals drop to 30% at night. The Office can switch the cycle off (`S.nightOff`).
+
+### Animal houses and crossings
+
+An animal house (`animalhouse`, 3 × 2) stands outside a land habitat with its back wall on the fence
+(`houseHabitat()`); its door needs a road and it needs a footpath nearby. `linkAnimalHouses()` in
+`rebuild()` records, per house, the habitat, the hatch tiles inside the fence and the road at the
+door. It is the only way staff cross into a new habitat (`staffStep`; keeper gates from older saves
+still work but can't be built), the animals' night quarters (`F.nightIn` = hatch tiles), and where
+the animal ambulance loads (`F.encRoad` = door roads). Guests on footpaths within 2 tiles get a
+look at keepers at work (`keeperAtHouse()`). Laying a road over a footpath, or the reverse, makes a
+crossing (`pm: 'crossing'`) that counts as both.
 
 ### Vet care and the animal ambulance
 
 `sim/vetcare.js`: about a third of illnesses are serious (`a.serious`). The vet examines the animal,
-then `callAmbulance()` sends a truck from the clinic's road front to a road tile beside the
-habitat's fence (`F.encRoad`). The animal leaves the habitat (`a.away`: 'transit', then 'clinic'),
+then `callAmbulance()` sends a truck from the clinic's road front to the door of the
+habitat's animal house (`F.encRoad`). The animal leaves the habitat (`a.away`: 'transit', then 'clinic'),
 has surgery (`tickVetCare()`), and is driven back. Guests on footpaths within 2 tiles of a busy
 clinic stop to watch from the viewing gallery (`F.gallery`, guest mode 'watch'). With no clinic or
 no road, the vet patches the animal up on the spot for less benefit.

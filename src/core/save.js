@@ -15,7 +15,17 @@ function int16B64(str) {
   for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
   return new Int16Array(u8.buffer);
 }
-const PM_CODE = { stone: 's', brick: 'b', asphalt: 'a', dirt: 'd', sand: 'n', tunnel: 't', service: 'v', track: 'k' };
+const PM_CODE = {
+  stone: 's',
+  brick: 'b',
+  asphalt: 'a',
+  dirt: 'd',
+  sand: 'n',
+  tunnel: 't',
+  service: 'v',
+  track: 'k',
+  crossing: 'x',
+};
 function tileLayers() {
   const N = W * H,
     t = new Array(N),
@@ -49,6 +59,7 @@ function tileLayers() {
 // turn the compact layers back into the long forms the loader below reads
 function unpackLayers(d) {
   const N = (d.mapW || 36) * (d.mapH || 26);
+  if (d.os) d.os = d.os.filter(([, k]) => ITEMS[k]); // items that no longer exist (the old 1-tile night house)
   if (d.er) {
     d.ee = new Array(N);
     let k = 0;
@@ -270,9 +281,17 @@ function load(str) {
     if (t.t === 'p')
       t.pm =
         (d.pm &&
-          { s: 'stone', b: 'brick', a: 'asphalt', d: 'dirt', n: 'sand', t: 'tunnel', v: 'service', k: 'track' }[
-            d.pm[i]
-          ]) ||
+          {
+            s: 'stone',
+            b: 'brick',
+            a: 'asphalt',
+            d: 'dirt',
+            n: 'sand',
+            t: 'tunnel',
+            v: 'service',
+            k: 'track',
+            x: 'crossing',
+          }[d.pm[i]]) ||
         'stone';
     t.o =
       typeof d.o[i] === 'string' ? (ITEMS[d.o[i]] ? d.o[i] : null) : d.o[i] ? LEGACY_ITEMS[d.o[i] - 1] || null : null;

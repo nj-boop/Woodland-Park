@@ -180,7 +180,6 @@ function renderTray() {
         ['rect', 'Rectangle'],
         ['paint', 'Paint'],
         ['erase', 'Erase'],
-        ['gate', 'Gate'],
       ]
         .map(
           ([k, n]) =>
@@ -206,8 +205,8 @@ function renderTray() {
         rect: 'Drag a rectangle, 3×3 or larger.',
         paint: 'Drag to paint any shape. Painting next to a habitat of the same biome grows it.',
         erase: 'Drag across habitat tiles to remove them.',
-        gate: 'Tap a habitat edge that touches a path to add or remove a gate.',
       }[habMode] +
+      ' Staff get in through an animal house on the fence (Shops → Staff).' +
       (sub === 'pool' ? ' Aquatic habitats are glass tanks.' : '') +
       (fenceSub === 'moat' ? ' A dry moat is a sunken wall: nothing gets out and guests get a clear view.' : '') +
       '</span>';
@@ -274,7 +273,7 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">For staff</span>' +
-      ['entrance', 'recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
+      ['entrance', 'animalhouse', 'recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )
@@ -435,7 +434,7 @@ function renderInspector() {
           ? `<ul class="req" style="margin-top:10px">${cl.map((c) => `<li class="${c.ok ? 'ok' : ''}">${c.ok ? '✓' : '○'} ${c.txt}</li>`).join('')}</ul>`
           : '';
       })()}
-      ${unreachable(e) ? `<div class="thought" style="border-color:var(--bad)"><b style="color:var(--bad)">No gate.</b> Keepers and vets cannot get in. Choose Habitat, then Gate, and tap an edge beside a path.</div>` : ''}
+      ${unreachable(e) ? `<div class="thought" style="border-color:var(--bad)"><b style="color:var(--bad)">No animal house.</b> Keepers and vets cannot get in, and the animals have nowhere to sleep. Build an Animal house (Shops → Staff) with its back wall on this fence, its door on a road and a footpath nearby.</div>` : ''}
       ${keeperLine(e)}
       ${e.biome !== 'pool' ? `<div class="need"><span>Fence</span>${meter(e.cond ?? 100)}</div>` : ''}
       <div class="need"><span>Cleanliness</span>${meter(100 - (e.dirt || 0))}</div>
@@ -643,7 +642,7 @@ function renderZoo() {
    <div class="sec"><h3>Research</h3><div id="zRes"></div></div>
    <div class="sec"><h3>Zoo awards</h3><div id="zAw">${awardsHTML()}</div></div>
    <div class="sec"><h3>Recent months</h3><div id="zLed">${ledgerHTML()}</div></div>
-   <div class="sec"><h3>Tips</h3><p class="help">Run paths alongside every habitat so guests can see in. Match plants and space to each species, keep predators away from prey unless the habitat has a predator barrier, and place snack stands, drink carts, benches and bins along busy paths. Staff need somewhere to work: a recycling yard for janitors, a keeper lodge plus a recycling yard for zookeepers, and a vet clinic for vets. Keepers walk in through a habitat gate to feed and clean, so every land habitat needs a gate on a path edge. Hire more staff as the zoo grows, and keep their pay fair. Dirty or unhappy habitats breed illness, and untreated sick animals can die. Happy pairs may have babies at the end of a month. For aquatic exhibits, build an Aquatic habitat, run a glass tunnel through it, and put a show stadium beside it so dolphins, sea lions and orcas can perform.</p></div>
+   <div class="sec"><h3>Tips</h3><p class="help">Run paths alongside every habitat so guests can see in. Match plants and space to each species, keep predators away from prey unless the habitat has a predator barrier, and place snack stands, drink carts, benches and bins along busy paths. Staff need somewhere to work: a recycling yard for janitors, a keeper lodge plus a recycling yard for zookeepers, and a vet clinic for vets. Every land habitat needs an animal house on its fence: the animals sleep there at night, keepers and vets go in through it, and the animal ambulance loads at its door, so give it a road. Where a road meets a footpath, lay one over the other to make a crossing. Hire more staff as the zoo grows, and keep their pay fair. Dirty or unhappy habitats breed illness, and untreated sick animals can die. Happy pairs may have babies at the end of a month. For aquatic exhibits, build an Aquatic habitat, run a glass tunnel through it, and put a show stadium beside it so dolphins, sea lions and orcas can perform.</p></div>
    <div class="sec"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="zNight" ${S.nightOff ? '' : 'checked'}> Day and night <span class="help">Animals sleep in their night shelters after dark, and fewer visitors come.</span></label></div>
    <div class="sec"><h3>Saved zoos</h3><p class="help" style="margin-top:0">Your zoo also saves itself every few seconds. Keep extra copies here to try ideas or run more than one zoo.</p><div id="zSlots" class="slots">Loading…</div></div>
    <div class="sec" id="zNew">${newHTML()}</div>`;

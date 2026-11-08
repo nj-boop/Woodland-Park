@@ -231,20 +231,6 @@ function makeItem(par, o, x, y) {
     P(g, 'box', '#2a1d14', 0, 0.18, 0.305, 0.32, 0.36, 0.02);
     return;
   }
-  if (o === 'nighthouse') {
-    // a small red barn with white trim and a half-open door
-    P(g, 'box', '#9c3b2e', 0, 0.32, 0, 0.86, 0.64, 0.72);
-    for (const s of [-1, 1]) {
-      const r = P(g, 'box', '#4a4440', 0, 0.74, s * 0.2, 0.94, 0.05, 0.48);
-      r.rotation.x = s * 0.62;
-    }
-    P(g, 'box', '#9c3b2e', 0, 0.66, 0, 0.84, 0.22, 0.36, false);
-    P(g, 'box', '#f1ece2', 0, 0.22, 0.362, 0.36, 0.44, 0.02, false);
-    P(g, 'box', '#2a1d14', 0.06, 0.2, 0.37, 0.22, 0.38, 0.02, false);
-    P(g, 'box', '#f1ece2', 0, 0.55, 0.362, 0.86, 0.04, 0.02, false);
-    P(g, 'box', '#d8c48a', 0.3, 0.06, 0.42, 0.2, 0.12, 0.14);
-    return;
-  }
   if (o === 'lamp') {
     P(g, 'cyl', '#2a2a2a', 0, 0.45, 0, 0.025, 0.9);
     P(g, 'sph', LAMP_MAT, 0, 0.92, 0, 0.07);
@@ -715,7 +701,7 @@ function chunkSig(cx, cy) {
       // trees pick their kind from the habitat's biome
       const b = t.e && F.emap[t.e] ? F.emap[t.e].biome : '';
       h = hashMix(h, b ? (BIOME_CODE[b] ??= strCode(b)) : 0);
-      h = hashMix(h, (t.w ? 2 : 0) + (t.t === 'p' ? 1 : 0));
+      h = hashMix(h, (t.w ? 2 : 0) + (t.t === 'p' ? 1 : 0) + (t.pm === 'crossing' ? 4 : 0));
       h = hashMix(h, Math.round(hC(x, y) * 100) + 1000);
     }
   return h;
@@ -739,11 +725,34 @@ function fenceSig(e) {
   }
   return h;
 }
+// zebra stripes on a crossing, laid along the road's direction
+function crossingStripes(grp, x, y) {
+  const road = (i, j) => inB(i, j) && isRoad(idx(i, j)) && tileAt(i, j).pm !== 'crossing';
+  const alongX = road(x - 1, y) || road(x + 1, y) || !(road(x, y - 1) || road(x, y + 1));
+  const h = heightAt(x + 0.5, y + 0.5) + 0.012;
+  for (let k = 0; k < 4; k++) {
+    const off = -0.375 + k * 0.25;
+    const m = P(
+      grp,
+      'box',
+      '#f4f2ea',
+      x + 0.5 + (alongX ? 0 : off),
+      h,
+      y + 0.5 + (alongX ? off : 0),
+      alongX ? 0.92 : 0.13,
+      0.01,
+      alongX ? 0.13 : 0.92,
+      false
+    );
+    m.receiveShadow = true;
+  }
+}
 function buildChunk(grp, cx, cy) {
   seeded(() => {
     for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)
       for (let x = cx * CHUNK; x < Math.min(W, (cx + 1) * CHUNK); x++) {
         const o = tileAt(x, y).o;
+        if (tileAt(x, y).pm === 'crossing') crossingStripes(grp, x, y);
         if (o && isAnchor(idx(x, y))) {
           seedRand(idx(x, y) * 7 + 3);
           makeItem(grp, o, x, y);

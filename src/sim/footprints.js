@@ -30,7 +30,8 @@ function frontTiles(x0, y0, fw, fh, r) {
   return out.filter(([i, j]) => inB(i, j)).map(([i, j]) => idx(i, j));
 }
 const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => S.tiles[i].t === 'p');
-const isRoad = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'service';
+// a crossing is a road tile guests may walk over too (where a road meets a footpath)
+const isRoad = (i) => S.tiles[i].t === 'p' && (S.tiles[i].pm === 'service' || S.tiles[i].pm === 'crossing');
 const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 const isTrack = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'track';
 // a footpath within 3 tiles, for staff on foot (buildings that need both a road and a footpath)
@@ -186,10 +187,23 @@ function checkPlan(kind, p) {
     return fail('Guests need a path to reach the stadium.');
   if (kind === 'station' && !p.tiles.some((i) => nbr4(i).some((n) => isTrack(n))))
     return fail('Lay a safari track beside the station first (behind or at the side).');
+  if (kind === 'animalhouse' && houseHabitat(p) == null)
+    return fail('The animal house’s back wall has to sit against a land habitat’s fence, with its door onto a road.');
   if (ITEMS[kind].needsFootpath && !footpathBeside(p))
     return fail(`The ${nm} also needs a footpath within 3 tiles, for staff on foot.`);
   const clears = p.tiles.filter((i) => S.tiles[i].o).length;
   return { ok: true, cost: it.cost, plan: p, clears };
+}
+// the land habitat behind an animal house (the side opposite its door), or null
+function houseHabitat(p) {
+  const back = frontTiles(p.x0, p.y0, p.fw, p.fh, (p.r + 2) % 4);
+  const counts = {};
+  for (const i of back) {
+    const e = S.tiles[i].e;
+    if (e && F.emap[e] && F.emap[e].biome !== 'pool') counts[e] = (counts[e] || 0) + 1;
+  }
+  const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  return best == null ? null : +best;
 }
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';

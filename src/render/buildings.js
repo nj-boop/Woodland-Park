@@ -152,6 +152,30 @@ const BUILDINGS = {
     fencePanel(g, -1.42, -1.4, -1.42, 1.4, '#8c9399');
     fencePanel(g, 1.42, -1.4, 1.42, 1.4, '#8c9399');
   },
+  // 3 × 2: the animal house. Back wall (−z) on the habitat fence with a slatted hatch the animals use;
+  // the front (+z) has the staff door, a viewing window and a sign, and opens onto the road
+  animalhouse(g) {
+    P(g, 'box', '#b8b2a4', 0, 0.03, 0, 2.9, 0.06, 1.9, false).receiveShadow = true;
+    P(g, 'box', '#8a7d6a', 0, 0.22, 0, 2.7, 0.44, 1.6); // stone footing
+    P(g, 'box', '#7a5536', 0, 0.78, 0, 2.66, 0.7, 1.56); // timber walls
+    for (let k = -6; k <= 6; k++) P(g, 'box', '#6a4830', k * 0.2, 0.78, 0.785, 0.03, 0.68, 0.02, false); // boards
+    for (const s of [-1, 1]) {
+      const r = P(g, 'box', '#4b5a4a', 0, 1.3, s * 0.42, 2.86, 0.06, 0.98);
+      r.rotation.x = s * 0.5;
+    }
+    P(g, 'box', '#7a5536', 0, 1.22, 0, 2.6, 0.3, 0.6, false);
+    // back: the animals' hatch, a wide slatted door against the fence
+    P(g, 'box', '#3a2a1c', 0, 0.5, -0.79, 1.2, 0.9, 0.02, false);
+    for (let k = 0; k < 5; k++) P(g, 'box', '#9a7a52', 0, 0.12 + k * 0.2, -0.8, 1.24, 0.06, 0.02, false);
+    // front: staff door, viewing window, sign, lamp
+    P(g, 'box', '#2f4f3e', -0.8, 0.5, 0.8, 0.42, 0.8, 0.02, false);
+    P(g, 'box', '#d8c48a', -0.66, 0.5, 0.815, 0.04, 0.04, 0.02, false);
+    P(g, 'box', '#bfe0ea', 0.45, 0.72, 0.8, 1.1, 0.42, 0.02, false);
+    P(g, 'box', '#5a4030', 0.45, 0.48, 0.82, 1.2, 0.06, 0.08, false);
+    signBoard(g, 'ANIMAL HOUSE', '#f1ece2', '#5a3a22', 0.45, 1.06, 0.82, 1.1);
+    P(g, 'box', '#d8c48a', 1.15, 0.1, -0.95, 0.3, 0.2, 0.22); // hay bales
+    P(g, 'box', '#d8c48a', 1.15, 0.28, -0.95, 0.3, 0.16, 0.2);
+  },
   // 4 × 3: a white clinic with a glass entrance, a green-cross sign and a shaded holding pen
   vetclinic(g) {
     P(g, 'box', '#c9c4b8', 0, 0.03, 0, 3.9, 0.06, 2.9, false).receiveShadow = true;

@@ -1,7 +1,7 @@
 /* Day and night. Each month of game time is one day: the month's clock (S.clock, 0..DAY) starts at
    dawn, the sun sets about three quarters of the way through, and night runs across the turn of the
-   month. In the evening, land animals head for a night shelter in their habitat (a night house,
-   stable or rock cave) and sleep inside until morning; with no shelter they sleep in the open and
+   month. In the evening, land animals walk to the hatch of their habitat's animal house (a building
+   on the fence) and sleep inside until morning; with no animal house they sleep in the open and
    are less happy. Fewer visitors arrive after dark. The Office can switch the cycle off (S.nightOff). */
 const NIGHT = { dusk: 0.74, dark: 0.8, dawn: 0.05 };
 const tod = () => S.clock / DAY; // 0 = dawn, 1 = the next dawn
@@ -17,7 +17,7 @@ function darkness() {
   if (t < 0.08) return clamp(1 - t / 0.08, 0, 1);
   return 0;
 }
-// the night shelter nearest an animal, as a tile index, or null
+// the animal-house hatch nearest an animal, as a tile index, or null
 function nightShelterFor(a) {
   const list = F.nightIn && F.nightIn[a.e];
   if (!list || !list.length) return null;
@@ -62,19 +62,14 @@ function nightStep(a, e) {
   }
   a.sleep = false;
   if (a.inside != null) {
-    // morning: come out one by one
+    // morning: come out one by one, through the hatch they went in by
     if (Math.random() > 0.015) return true;
     const sh = a.inside;
     a.inside = null;
-    if (!S.tiles[sh] || !ITEMS[S.tiles[sh].o] || !ITEMS[S.tiles[sh].o].night) return false; // shelter removed overnight
-    for (const n of nbr4(sh)) {
-      const t = S.tiles[n];
-      if (t.e === a.e && !t.w && !t.o) {
-        a.x = a.ox = a.tx = (n % W) + 0.5;
-        a.y = a.oy = a.ty = ((n / W) | 0) + 0.5;
-        break;
-      }
-    }
+    if (S.tiles[sh] && S.tiles[sh].e === a.e) {
+      a.x = a.ox = a.tx = (sh % W) + 0.5;
+      a.y = a.oy = a.ty = ((sh / W) | 0) + 0.5;
+    } else if (e) [a.x, a.y] = [a.tx, a.ty] = randPointIn(e, a);
   }
   return false;
 }

@@ -128,6 +128,13 @@ function arrive(g) {
     }
     return;
   }
+  // keepers at work at an animal house: guests nearby stop for a look
+  const hv = F.houseView && F.houseView.get(i);
+  if (hv != null && !(g.kt || []).includes(hv) && keeperAtHouse(hv)) {
+    (g.kt ||= []).push(hv);
+    g.exc += 5;
+    g.keeper = g.t;
+  }
   const atmB = F.atm && F.atm[i] ? 1.18 : 1;
   const at = F.shopAt[i];
   // stocked shops can sell out; `sell` uses one unit and says whether there was any
@@ -285,6 +292,7 @@ function guestMood(g) {
   else if (g.safari && g.t - g.safari < 600) th = 'That safari drive was the best thing here!';
   else if (g.show && g.t - g.show < 500) th = 'That show was incredible!';
   else if (g.mode === 'watch') th = 'Watching the vets operate. Fascinating!';
+  else if (g.keeper && g.t - g.keeper < 400) th = 'We watched a keeper at work at the animal house!';
   else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the vet clinic!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
   else if (g.exc > 18) th = `The ${g.best.toLowerCase()} were amazing!`;

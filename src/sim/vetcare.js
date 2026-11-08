@@ -1,10 +1,10 @@
 /* Veterinary care in two levels.
    - Minor illness: a vet walks to the animal and treats it in its habitat (staff.js, 'treat').
    - Serious illness (a.serious): the vet examines the animal, then calls the animal ambulance. It
-     drives from the vet clinic along roads to a road tile beside the habitat's fence, loads the
+     drives from the vet clinic along roads to the door of the habitat's animal house, loads the
      animal (which then isn't in the habitat at all), and drives back. The animal has surgery at the
      clinic, which guests can watch from the viewing gallery, then the ambulance takes it home.
-   If there is no clinic, or no road from it to the habitat, the vet does what they can on the spot:
+   If there is no clinic, or no road from it to the habitat's animal house, the vet does what they can on the spot:
    it costs more and the animal recovers less.
 
    Animal fields: a.transport ('called' while an ambulance is involved), a.away ('transit' on the
@@ -82,7 +82,11 @@ function releaseAnimal(a, near) {
     return releaseAnimal(a, null);
   }
   let spot = null;
-  if (near != null) for (const n of nbr4(near)) if (S.tiles[n].e === a.e && !S.tiles[n].w && !S.tiles[n].o) spot = n;
+  // dropped at an animal house's door: out through its hatch into the habitat
+  for (const h of (F.houseOf[a.e] || []).map((k) => F.houses[k]))
+    if (near != null && h.front.includes(near)) spot = h.hatch[(Math.random() * h.hatch.length) | 0];
+  if (near != null && spot == null)
+    for (const n of nbr4(near)) if (S.tiles[n].e === a.e && !S.tiles[n].w && !S.tiles[n].o) spot = n;
   if (spot != null) {
     a.x = a.tx = (spot % W) + 0.5;
     a.y = a.ty = ((spot / W) | 0) + 0.5;
@@ -172,6 +176,16 @@ function tickVetCare() {
     if (r) newAmbulance(bay.bay[0], r, { animal: a.id, clinic: a.clinic, bay: bay.bay[0], phase: 'return' });
     else releaseAnimal(a, a.pickup);
   }
+}
+// a keeper or vet inside an animal house, or working in the habitat behind it
+function keeperAtHouse(a) {
+  const h = F.houses && F.houses[a];
+  if (!h) return false;
+  return S.staff.some((s) => {
+    if (s.role !== 'keeper' && s.role !== 'vet') return false;
+    const t = S.tiles[sTile(s)];
+    return (t.o === 'animalhouse' && anchorOf(sTile(s)) === a) || t.e === h.e;
+  });
 }
 // guests on a footpath within 2 tiles of a clinic can watch from the viewing gallery
 function galleryTiles() {

@@ -23,6 +23,11 @@ const TUT_STEPS = [
     show: () => setTool('habitat'),
   },
   {
+    txt: 'Build an animal house with its back on the new habitat’s fence, its door on a road and a footpath nearby. Keepers go in through it, and the animals sleep there.',
+    ok: () => S.encl.slice(1).some((e) => F.houseOf && F.houseOf[e.id]),
+    show: () => setTool('shop', 'animalhouse'),
+  },
+  {
     txt: 'Put at least two animals of one species into your new habitat.',
     ok: () => S.encl.slice(1).some((e) => animalsIn(e.id).length >= 2),
     show: () => setTool('animal'),

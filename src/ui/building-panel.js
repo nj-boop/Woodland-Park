@@ -35,6 +35,27 @@ function buildingFacts(a) {
     rows.push(['Trash bags', `${S.waste} of ${wasteCapacity()} (the garbage truck comes when it fills up)`]);
     rows.push(['Janitors', `${staffCount('janitor')} of ${staffRoom('janitor')} places filled`]);
   }
+  if (o === 'animalhouse') {
+    const h = F.houses && F.houses[a];
+    if (!h) note = 'This house isn’t against a habitat’s fence any more.';
+    else {
+      const e = F.emap[h.e];
+      rows.push(['Habitat', `${BIOMES[e.biome].name} habitat`]);
+      rows.push([
+        'Asleep inside',
+        String(S.animals.filter((k) => k.inside != null && h.hatch.includes(k.inside)).length),
+      ]);
+      rows.push(['Keeper access', 'Staff go in and out through here']);
+      rows.push([
+        'Ambulance bay',
+        h.front.length
+          ? ambulanceRoute(new Set(h.front))
+            ? 'Connected to the vet clinic'
+            : 'No road to a vet clinic yet'
+          : 'No road at the door',
+      ]);
+    }
+  }
   if (o === 'lodge') rows.push(['Keepers', `${staffCount('keeper')} of ${staffRoom('keeper')} places filled`]);
   if (o === 'vetclinic') {
     rows.push(['Vets', `${staffCount('vet')} of ${staffRoom('vet')} places filled`]);

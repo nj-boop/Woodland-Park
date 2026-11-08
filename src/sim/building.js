@@ -3,6 +3,10 @@ function check(x, y) {
   if (!inB(x, y)) return { ok: false, quiet: true };
   const t = tileAt(x, y);
   if (tool === 'path') {
+    // a road over a footpath, or a footpath over a road, makes a crossing both can use
+    if (t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && pathSub !== 'track' && pathSub !== 'tunnel')
+      if ((pathSub === 'service') !== (t.pm === 'service'))
+        return { ok: true, cost: PATHS.service.cost, crossing: true };
     if (t.t === 'p') return { ok: false, quiet: true };
     if (t.w) return { ok: false, msg: "You can't build a path over water." };
     if (t.e && pathSub === 'track' && F.emap[t.e].biome !== 'pool') {
@@ -119,7 +123,8 @@ function act(x, y) {
   if (tool === 'path') {
     const c2 = PATHS[pathSub].cost;
     if (!spend(c2, 'a path')) return false;
-    setPath(x, y, pathSub);
+    setPath(x, y, c.crossing ? 'crossing' : pathSub);
+    if (c.crossing) t.pm = 'crossing';
     dirty = true;
     return true;
   }
