@@ -135,7 +135,10 @@ const clouds = [];
       b.scale.set(rnd(1.6, 2.8), rnd(1, 1.6), rnd(1.3, 2));
       g.add(b);
     }
-    g.position.set(rnd(-60, W + 60), rnd(24, 34), rnd(-60, H + 60));
+    // high above the camera's highest point (about 45), so they never sit between you and the zoo;
+    // they show toward the horizon when the view is tilted low
+    g.scale.setScalar(rnd(2.5, 3.5));
+    g.position.set(rnd(-160, W + 160), rnd(70, 90), rnd(-160, H + 160));
     g.userData.v = rnd(0.6, 1.2);
     scene.add(g);
     clouds.push(g);

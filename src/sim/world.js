@@ -109,7 +109,7 @@ function newZoo(w, h) {
     hgt: new Float32Array((W + 1) * (H + 1)),
     tier: 1,
     totalVis: 0,
-    money: 25000,
+    money: 1000000, // a big starting budget, to try everything
     day: 1,
     clock: 0,
     admission: 15,

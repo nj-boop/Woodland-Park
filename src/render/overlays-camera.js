@@ -245,7 +245,7 @@ function render3D(alpha, dt) {
   ripT.offset.set(sec * 0.02, sec * 0.013);
   for (const c of clouds) {
     c.position.x += (c.userData.v * dt) / 1000;
-    if (c.position.x > W + 70) c.position.x = -70;
+    if (c.position.x > W + 170) c.position.x = -170;
   }
   for (const b of birds) {
     const u = b.userData,
