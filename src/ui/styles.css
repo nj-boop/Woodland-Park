@@ -965,3 +965,13 @@ td.pos {
 .req small {
   opacity: 0.7;
 }
+
+/* the sound toggle sits with the speed buttons; struck through when muted */
+#snd[aria-pressed='false'] {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+#snd[aria-pressed='true'] {
+  background: linear-gradient(var(--panel-hi), var(--panel-2));
+  color: var(--ink);
+}

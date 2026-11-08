@@ -33,6 +33,7 @@
   "ui/panels.js",
   "ui/staff-panel.js",
   "ui/building-panel.js",
+  "ui/sound.js",
   "core/save.js",
   "core/boot.js"
 ]

@@ -17,6 +17,7 @@ function frame(now) {
   }
   if (dirty) rebuild();
   render3D(speed > 0 ? clamp(acc / (1000 / TPS), 0, 1) : 1, dt);
+  syncSound(dt);
   uiT += dt;
   if (uiT > 300) {
     uiT = 0;

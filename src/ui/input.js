@@ -1,3 +1,9 @@
+// place, paint or remove at a tile, with a sound when it works
+function doAct(x, y) {
+  const ok = act(x, y);
+  if (ok) sfx(tool === 'bulldoze' ? 'remove' : 'place');
+  return ok;
+}
 /* Mouse, touch, pinch, wheel and keyboard input; picking tiles and animals in 3D. */
 /* ---------- input ---------- */
 const ptrs = new Map();
@@ -59,7 +65,7 @@ cv.addEventListener('pointerdown', (e) => {
   const pan = !orbit && (tool === 'look' || e.button === 1 || spaceDown);
   drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, moved: false, pan, orbit, start: tt, last: null, rect: null };
   if (!pan && !orbit && tool === 'path') {
-    act(tt.x, tt.y);
+    doAct(tt.x, tt.y);
     drag.last = tt;
   }
   if (!pan && !orbit && tool === 'habitat' && inB(tt.x, tt.y)) {
@@ -123,7 +129,7 @@ cv.addEventListener('pointermove', (e) => {
     while ((cx !== tt.x || cy !== tt.y) && guard++ < 80) {
       if (Math.abs(tt.x - cx) >= Math.abs(tt.y - cy)) cx += Math.sign(tt.x - cx);
       else cy += Math.sign(tt.y - cy);
-      act(cx, cy);
+      doAct(cx, cy);
     }
     drag.last = tt;
   }
@@ -184,7 +190,7 @@ function endPtr(e) {
     // touch: the first tap (or a drag) shows where the building would go; tapping inside it builds
     const at = d.moved ? hover : d.start;
     if (!d.moved && pendingBuild && pendingBuild.tiles.includes(idx(d.start.x, d.start.y))) {
-      if (act(pendingBuild.x, pendingBuild.y)) pendingBuild = null;
+      if (doAct(pendingBuild.x, pendingBuild.y)) pendingBuild = null;
       return;
     }
     if (at && inB(at.x, at.y)) {
@@ -194,7 +200,7 @@ function endPtr(e) {
     }
     return;
   }
-  if (['animal', 'plant', 'shop', 'bulldoze'].includes(tool) && !d.moved) act(d.start.x, d.start.y);
+  if (['animal', 'plant', 'shop', 'bulldoze'].includes(tool) && !d.moved) doAct(d.start.x, d.start.y);
 }
 let pendingBuild = null; // touch placement waiting for its confirming tap
 cv.addEventListener('pointerup', endPtr);
@@ -245,6 +251,10 @@ window.addEventListener('keydown', (e) => {
   }
   if (k === 'z') {
     toggleZoo();
+    return;
+  }
+  if (k === 'm') {
+    setSound(!soundOn);
     return;
   }
   if (k === 'escape') {

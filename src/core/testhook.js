@@ -34,6 +34,9 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  get audio() {
+    return AC ? { state: AC.state, crowd: crowdGain.gain.value } : null;
+  },
   get traffic() {
     return { movers: movers.map((m) => [m.d, m.len]), drawn: movBody.count, last: lastLotCars };
   },

@@ -5,6 +5,7 @@ function setSpeed(s) {
   [0, 1, 3].forEach((v) => $('#sp' + v).setAttribute('aria-pressed', String(v === s)));
 }
 [0, 1, 3].forEach((v) => ($('#sp' + v).onclick = () => setSpeed(v)));
+$('#snd').onclick = () => setSound(!soundOn);
 const DEF = { habitat: 'savanna', animal: 'zebra', plant: 'tree', shop: 'food' };
 // R or the Turn button: auto-facing first, then the four facings in turn
 let landArm = null; // land purchase waiting for its confirming tap
@@ -321,6 +322,7 @@ function renderTray() {
 }
 let toastT = [];
 function toast(msg, kind) {
+  if (kind) sfx(kind);
   const tk = $('#ticker');
   if (tk) tk.textContent = msg;
   const el = document.createElement('div');

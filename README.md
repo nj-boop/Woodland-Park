@@ -149,6 +149,13 @@ the top tier within 5 years, or lost at the deadline, after which play simply co
 December closes: every award in `AWARDS` whose `won(y)` test passes pays its prize, and the count
 sets `S.fame`, which raises `spawnRate()` by 4% per award for the next year.
 
+### Sound
+
+`ui/sound.js` synthesizes everything with Web Audio, so there are no audio files: wind and
+birdsong, a crowd murmur that follows the guests near the middle of the view, animal calls by type
+(`CALLS`), and short cues through `sfx()`. It starts on the first tap (browsers require one); the
+♪ button or M mutes it, remembered per device.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, about 1,000 guests, 18 staff): a
