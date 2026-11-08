@@ -1010,6 +1010,9 @@ function syncAnimals(alpha, time, dt) {
       dz = a.y - a.oy,
       mv = Math.hypot(dx, dz) > 0.001;
     const u = m.userData;
+    // asleep inside a night shelter, or away at the vet: not in the habitat at all
+    m.visible = !a.away && a.inside == null;
+    if (!m.visible) continue;
     if (mv) {
       const tgt = -Math.atan2(dz, dx);
       let d = tgt - u.yaw;
@@ -1025,7 +1028,7 @@ function syncAnimals(alpha, time, dt) {
         ? 'walk'
         : a.show > 0 && !a.showDelay
           ? 'jump'
-          : a.sick || a.happy < 30
+          : a.sick || a.happy < 30 || a.sleep
             ? 'lie'
             : (mv || swim) && !(swim && !mv && hsh(a.id, Math.floor(time / 7000)) < 0.3)
               ? 'walk'

@@ -237,13 +237,25 @@ function render3D(alpha, dt) {
   syncAnimals(alpha, time, dt);
   syncGuests(alpha, time);
   overlays(alpha);
-  const ev = clamp((S.clock / DAY - 0.72) / 0.28, 0, 1);
-  skyU.hor.value.copy(HOR).lerp(HOR_D, ev * 0.8);
-  skyU.top.value.copy(TOP).lerp(TOP_D, ev * 0.6);
+  syncClinics(time);
+  // daylight: a warm evening, then moonlit night (darkness() is 0 by day, 1 at night)
+  const dk = darkness(),
+    t = S.clock / DAY,
+    ev = dayNightOn() ? clamp((t - 0.6) / 0.12, 0, 1) * (t < 0.5 ? 0 : 1) : clamp((t - 0.72) / 0.28, 0, 1);
+  skyU.hor.value
+    .copy(HOR)
+    .lerp(HOR_D, ev * 0.8)
+    .lerp(HOR_N, dk);
+  skyU.top.value
+    .copy(TOP)
+    .lerp(TOP_D, ev * 0.6)
+    .lerp(TOP_N, dk);
   scene.fog.color.copy(skyU.hor.value).convertSRGBToLinear();
-  sun.intensity = 1.55 - ev * 0.55;
-  sun.color.setHSL(0.1, 0.75 + ev * 0.2, 0.9 - ev * 0.1).convertSRGBToLinear();
-  hemi.intensity = 0.85 - ev * 0.25;
+  SUN_DAY.setHSL(0.1, 0.75 + ev * 0.2, 0.9 - ev * 0.1).convertSRGBToLinear();
+  sun.color.copy(SUN_DAY).lerp(MOON, dk);
+  sun.intensity = (1.55 - ev * 0.55) * (1 - dk) + 0.24 * dk;
+  hemi.intensity = (0.85 - ev * 0.25) * (1 - dk) + 0.32 * dk;
+  LAMP_MAT.emissiveIntensity = 0.6 + dk * 2.4;
   const sec = time / 1000;
   ripT.offset.set(sec * 0.02, sec * 0.013);
   for (const c of clouds) {

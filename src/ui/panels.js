@@ -372,6 +372,7 @@ function inspectAt(tt) {
   let an = null,
     ad = 0.65 * T;
   for (const a of S.animals) {
+    if (a.away || a.inside != null) continue; // not out in the habitat
     const d = Math.hypot(a.x * T - tt.wx, a.y * T - tt.wy);
     if (d < ad) {
       ad = d;
@@ -521,14 +522,14 @@ function renderInspector() {
     box.innerHTML = `<button class="x" aria-label="Close" id="ix">×</button>
       <h2>${sp.e} ${a.name}</h2>
       <div class="sub">${sp.name} · ${age < 1 ? 'arrived this month' : age + ' month' + (age > 1 ? 's' : '') + ' at the zoo'} · ${BIOMES[e.biome].name.toLowerCase()} habitat</div>
-      <div class="thought">${a.sick ? `<span style="color:var(--bad)">Sick.</span> ${staffCount('vet') ? 'A vet will treat them soon.' : 'No vet on staff.'} ` : ''}${a.why.length ? cap(a.why.join(', ')) + '.' : 'Healthy and content.'}</div>
+      <div class="thought">${animalStatus(a)}${a.sick && !a.away && !a.transport ? `<span style="color:var(--bad)">${a.serious ? 'Seriously ill.' : 'Sick.'}</span> ${staffCount('vet') ? (a.serious ? 'A vet will examine them, then call the ambulance.' : 'A vet will treat them soon.') : 'No vet on staff.'} ` : ''}${a.why.length ? cap(a.why.join(', ')) + '.' : 'Healthy and content.'}</div>
       <div class="need"><span>Happiness</span>${meter(a.happy)}<span>Health</span>${meter(a.health)}<span>Fullness</span>${meter(100 - a.hunger)}</div>
       ${a.escaped ? `<div class="thought" style="border-color:var(--bad)"><b style="color:var(--bad)">Escaped!</b> ${a.name} is loose in the park and scaring guests.</div>` : ''}
       <div class="kv"><span>Diet</span><span>${DIET[care(a.sp).diet].name}</span><span>Favourite toy</span><span>${care(a.sp).toy ? ITEMS[care(a.sp).toy].name : 'None'}</span><span>Shelter</span><span>${care(a.sp).shelter ? ITEMS[care(a.sp).shelter].name : 'None needed'}</span>
         <span>In the wild</span><span>${GUIDE[a.sp] ? GUIDE[a.sp][0] : '–'}</span>${a.parents ? `<span>Parents</span><span>${a.parents.join(' & ')}</span>` : ''}</div>
       ${GUIDE[a.sp] ? `<p class="help">${GUIDE[a.sp][1]}</p>` : ''}
       <div class="kv"><span>Needs</span><span>${sp.space} tiles · ${Math.round(sp.fol * 100)}% plants</span><span>Guest appeal</span><span>${sp.appeal}/10</span><span>Temperament</span><span>${sp.pred ? 'Predator' : 'Prey'} · ${sp.social ? 'social' : 'solitary'}</span></div>
-      <div class="btns">${a.escaped ? `<button class="btn primary" id="aCatch">Recapture · $250</button>` : ''}<button class="btn" id="aFeed" ${a.hunger > 5 ? '' : 'disabled'}>Feed · ${money(DIET[care(a.sp).diet].cost)}</button>${a.sick ? `<button class="btn primary" id="aTreat">Call a vet · ${money(TREAT_COST * 2)}</button>` : ''}<button class="btn" id="aHab">View habitat</button><button class="btn danger" id="aSell">${sellArm === a.id ? 'Tap again to sell' : 'Sell · ' + money(sp.cost / 2)}</button></div>`;
+      <div class="btns">${a.escaped ? `<button class="btn primary" id="aCatch">Recapture · $250</button>` : ''}<button class="btn" id="aFeed" ${a.hunger > 5 ? '' : 'disabled'}>Feed · ${money(DIET[care(a.sp).diet].cost)}</button>${a.sick && !a.away && !a.transport ? `<button class="btn primary" id="aTreat">Call a vet · ${money(TREAT_COST * 2)}</button>` : ''}<button class="btn" id="aHab">View habitat</button><button class="btn danger" id="aSell">${sellArm === a.id ? 'Tap again to sell' : 'Sell · ' + money(sp.cost / 2)}</button></div>`;
     $('#aFeed').onclick = () => {
       const fc = DIET[care(a.sp).diet].cost;
       if (spend(fc, 'feeding')) {
@@ -552,7 +553,7 @@ function renderInspector() {
     if (tb)
       tb.onclick = () => {
         if (spend(TREAT_COST * 2, 'a vet visit')) {
-          a.sick = false;
+          a.sick = a.serious = false;
           a.health = Math.min(100, a.health + 30);
           S.today.run += TREAT_COST * 2;
           evalEncl(e);
@@ -643,6 +644,7 @@ function renderZoo() {
    <div class="sec"><h3>Zoo awards</h3><div id="zAw">${awardsHTML()}</div></div>
    <div class="sec"><h3>Recent months</h3><div id="zLed">${ledgerHTML()}</div></div>
    <div class="sec"><h3>Tips</h3><p class="help">Run paths alongside every habitat so guests can see in. Match plants and space to each species, keep predators away from prey unless the habitat has a predator barrier, and place snack stands, drink carts, benches and bins along busy paths. Staff need somewhere to work: a recycling yard for janitors, a keeper lodge plus a recycling yard for zookeepers, and a vet clinic for vets. Keepers walk in through a habitat gate to feed and clean, so every land habitat needs a gate on a path edge. Hire more staff as the zoo grows, and keep their pay fair. Dirty or unhappy habitats breed illness, and untreated sick animals can die. Happy pairs may have babies at the end of a month. For aquatic exhibits, build an Aquatic habitat, run a glass tunnel through it, and put a show stadium beside it so dolphins, sea lions and orcas can perform.</p></div>
+   <div class="sec"><h3>Settings</h3><label class="toggle"><input type="checkbox" id="zNight" ${S.nightOff ? '' : 'checked'}> Day and night <span class="help">Animals sleep in their night shelters after dark, and fewer visitors come.</span></label></div>
    <div class="sec"><h3>Saved zoos</h3><p class="help" style="margin-top:0">Your zoo also saves itself every few seconds. Keep extra copies here to try ideas or run more than one zoo.</p><div id="zSlots" class="slots">Loading…</div></div>
    <div class="sec" id="zNew">${newHTML()}</div>`;
   $('#zx').onclick = toggleZoo;
@@ -661,6 +663,11 @@ function renderZoo() {
   bindStaffPanel();
   bindNew();
   refreshSlots();
+  $('#zNight').onchange = (ev) => {
+    S.nightOff = !ev.target.checked;
+    if (S.nightOff) for (const a of S.animals) (a.inside = null), (a.sleep = false);
+    toast(S.nightOff ? 'Day and night is off: it stays daytime.' : 'Day and night is on.');
+  };
   renderResearch();
 }
 /* save slots: tap Save or Load, then tap again to confirm when it would overwrite something */
@@ -806,6 +813,16 @@ function renderResearch() {
       toast('Research stopped. The money already spent is not refunded.');
       renderResearch();
     };
+}
+// where an animal is when it isn't simply out in its habitat
+function animalStatus(a) {
+  if (a.away === 'clinic')
+    return `<b>In surgery at the vet clinic</b> (${Math.max(0, Math.round((1 - a.surg / SURGERY_TICKS) * 100))}% done). `;
+  if (a.away === 'transit') return '<b>On the animal ambulance.</b> ';
+  if (a.transport) return '<b>Waiting for the animal ambulance.</b> ';
+  if (a.inside != null) return '<b>Asleep in the night shelter.</b> ';
+  if (a.sleep) return '<b>Asleep.</b> ';
+  return '';
 }
 // this year's standing against each award, and the trophies won so far
 function awardsHTML() {

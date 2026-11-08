@@ -428,7 +428,7 @@ function pickJob(s) {
   }
   if (s.role === 'vet') {
     const sick = S.animals
-      .filter((a) => a.sick && !taken('treat', a.id))
+      .filter((a) => a.sick && !a.transport && !a.away && !taken('treat', a.id))
       .sort((a, b) => a.health - b.health)
       .find((a) => a.escaped || !unreachable(F.emap[a.e]));
     if (sick) {
@@ -565,12 +565,28 @@ function finishJob(s) {
     }
   } else if (j.kind === 'treat') {
     const a = S.animals.find((k) => k.id === j.id);
-    if (a && a.sick) {
-      a.sick = false;
-      a.health = Math.min(100, a.health + (gentle ? 40 : 30));
-      S.money -= TREAT_COST;
-      S.today.run += TREAT_COST;
-      toast(`${s.name} treated ${a.name} the ${SPECIES[a.sp].name.toLowerCase()}.`, 'good');
+    if (a && a.sick && !a.transport && !a.away) {
+      const nm = `${a.name} the ${SPECIES[a.sp].name.toLowerCase()}`;
+      if (a.serious && callAmbulance(a)) {
+        toast(`${s.name} examined ${nm}: they need surgery. The animal ambulance is on its way.`);
+      } else if (a.serious) {
+        // no clinic, or no road to this habitat: the best the vet can do on the spot
+        a.sick = a.serious = false;
+        a.health = Math.min(100, a.health + 15);
+        S.money -= TREAT_COST * 2;
+        S.today.run += TREAT_COST * 2;
+        warnOnce(
+          F.cnt.vetclinic
+            ? `${s.name} patched up ${nm} in the habitat, but serious cases recover far better after surgery. Lay a road from the vet clinic to the habitat’s fence so the ambulance can reach it.`
+            : `${s.name} patched up ${nm} in the habitat, but serious cases need surgery. Build a vet clinic, with a road to your habitats.`
+        );
+      } else {
+        a.sick = false;
+        a.health = Math.min(100, a.health + (gentle ? 40 : 30));
+        S.money -= TREAT_COST;
+        S.today.run += TREAT_COST;
+        toast(`${s.name} treated ${nm}.`, 'good');
+      }
       ok = true;
     }
   } else if (j.kind === 'catch') {

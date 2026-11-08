@@ -34,8 +34,15 @@ const ITEMS = {
   floater: { name: 'Floating toy', cost: 90, kind: 'toy' },
   // shelters (inside habitats)
   shade: { name: 'Shade shelter', cost: 300, kind: 'shelter' },
-  cave: { name: 'Rock cave', cost: 600, kind: 'shelter' },
-  stable: { name: 'Stable', cost: 500, kind: 'shelter' },
+  cave: { name: 'Rock cave', cost: 600, kind: 'shelter', night: true },
+  stable: { name: 'Stable', cost: 500, kind: 'shelter', night: true },
+  nighthouse: {
+    name: 'Night house',
+    cost: 900,
+    kind: 'shelter',
+    night: true,
+    help: 'A barn any land animal can sleep in. Animals go inside at dusk and come out in the morning.',
+  },
   // decorations (outside habitats)
   lamp: { name: 'Lamp post', cost: 40, kind: 'decor', scen: 1 },
   flowers: { name: 'Flower bed', cost: 25, kind: 'decor', scen: 1 },
@@ -184,7 +191,7 @@ const ITEMS = {
     cost: 3000,
     kind: 'staff',
     size: [4, 3],
-    help: 'Houses 2 vets.',
+    help: 'Houses 2 vets. Serious cases come here by ambulance for surgery, which guests can watch from the viewing gallery on a nearby footpath. Needs a road to each habitat’s fence.',
   },
   bin: { name: 'Trash bin', cost: 50, kind: 'shop' },
 };

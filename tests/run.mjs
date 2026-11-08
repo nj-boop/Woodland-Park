@@ -782,6 +782,46 @@ const tests = {
       g.S.tier = 3;
       return !g.unlocked('mammoth') || 'mammoth unlocked below world class';
     }),
+  'animals sleep in their night house and come out at dawn': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        DAY = 1200;
+      const zs = g.S.animals.filter((a) => a.sp === 'zebra');
+      if (!zs.length) return 'no zebras';
+      g.S.clock = Math.round(0.745 * DAY);
+      for (let i = 0; i < 360 && zs.some((a) => a.inside == null); i++) g.tick();
+      if (zs.some((a) => a.inside == null))
+        return 'not all inside by night: ' + zs.map((a) => [a.x.toFixed(1), a.y.toFixed(1)]);
+      for (let i = 0; i < 1000 && (g.S.clock < 0.06 * DAY || g.S.clock > 0.5 * DAY); i++) g.tick();
+      for (let i = 0; i < 600 && zs.some((a) => a.inside != null); i++) g.tick();
+      if (zs.some((a) => a.inside != null)) return 'still inside in the morning';
+      // without a night shelter they sleep outside and mind it
+      const t = g.S.tiles.findIndex((k) => k.o === 'nighthouse');
+      g.S.tiles[t].o = null;
+      g.refresh();
+      g.evalEncl(g.S.encl[0]);
+      return zs[0].why.some((w) => /sleep/.test(w)) || 'no complaint: ' + zs[0].why;
+    }),
+  'a serious case rides the ambulance to surgery and back': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.nightOff = true;
+      if (!g.build('vetclinic')) return 'no room for the clinic';
+      // a habitat right beside the road, so the ambulance can pull up at its fence
+      const e = g.makeEncl(32, 15, 4, 5, 'savanna');
+      g.refresh();
+      const a = g.addAnimal('zebra', e, 33.5, 17.5);
+      a.sick = a.serious = true;
+      if (!g.callAmbulance(a)) return 'no route for the ambulance';
+      let saw = {};
+      for (let i = 0; i < 3000 && (a.sick || a.away); i++) {
+        g.tick();
+        if (a.away) saw[a.away] = 1;
+      }
+      if (!saw.transit || !saw.clinic) return 'never left: ' + JSON.stringify(saw);
+      if (a.sick || a.away) return 'not home and well: ' + a.away;
+      return g.S.tiles[Math.floor(a.y) * g.W + Math.floor(a.x)].e === e.id || 'released outside the habitat';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

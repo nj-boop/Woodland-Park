@@ -36,7 +36,26 @@ function buildingFacts(a) {
     rows.push(['Janitors', `${staffCount('janitor')} of ${staffRoom('janitor')} places filled`]);
   }
   if (o === 'lodge') rows.push(['Keepers', `${staffCount('keeper')} of ${staffRoom('keeper')} places filled`]);
-  if (o === 'vetclinic') rows.push(['Vets', `${staffCount('vet')} of ${staffRoom('vet')} places filled`]);
+  if (o === 'vetclinic') {
+    rows.push(['Vets', `${staffCount('vet')} of ${staffRoom('vet')} places filled`]);
+    const pts = S.animals.filter((k) => k.away === 'clinic' && k.clinic === a);
+    rows.push([
+      'In surgery',
+      pts.length ? pts.map((k) => `${k.name} the ${SPECIES[k.sp].name.toLowerCase()}`).join(', ') : 'Nobody right now',
+    ]);
+    rows.push(['Gallery watchers', String(S.guests.filter((g) => g.mode === 'watch' && g.watchAt === a).length)]);
+    const bay = clinicBays().some((c) => c.a === a);
+    if (!bay) note = 'The ambulance needs a road in front of the clinic.';
+    else {
+      const cut = S.encl.filter(
+        (e) => S.animals.some((k) => k.e === e.id) && !(F.encRoad[e.id] && F.encRoad[e.id].size)
+      );
+      if (cut.length)
+        note = `${cut.length} habitat${cut.length > 1 ? 's have' : ' has'} no road beside the fence, so the ambulance can’t collect from ${cut.length > 1 ? 'them' : 'it'}.`;
+    }
+    if (![...F.gallery.values()].includes(a))
+      note = (note ? note + ' ' : '') + 'Guests can’t watch: run a footpath within 2 tiles of it.';
+  }
   if (o === 'dock') {
     rows.push(['Crates waiting', String(S.crates.length)]);
     rows.push(['Haulers', `${staffCount('hauler')} of ${staffRoom('hauler')} places filled`]);

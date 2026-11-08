@@ -36,6 +36,12 @@ function careList(e) {
         item: c.shelter,
       });
   }
+  if (list.some((a) => sleepsInside(a.sp)))
+    items.push({
+      ok: !!(F.nightIn && F.nightIn[e.id] && F.nightIn[e.id].length),
+      txt: 'Night shelter to sleep in (night house, stable or rock cave)',
+      item: 'nighthouse',
+    });
   const need = Math.max(...list.map((a) => care(a.sp).str));
   const fs = fenceStrength(e);
   if (need > fs)
@@ -112,6 +118,10 @@ function evalEncl(e) {
         why.push(`needs a ${ITEMS[c.shelter].name.toLowerCase()}`);
       }
     }
+    if (sleepsInside(a.sp) && !(F.nightIn && F.nightIn[a.e] && F.nightIn[a.e].length)) {
+      t -= bedtime() ? 8 : 3;
+      why.push('nowhere sheltered to sleep at night');
+    }
     if (c.privacy && !st.shelters.length && watchers > 8) {
       t -= 8;
       why.push('wants privacy from crowds');
@@ -141,6 +151,7 @@ function tickAnimals() {
   for (const a of S.animals) {
     a.ox = a.x;
     a.oy = a.y;
+    if (a.away) continue; // on the ambulance or at the vet clinic
     if (a.show > 0) {
       if (a.showDelay > 0) a.showDelay--;
       else a.show--;
@@ -184,12 +195,14 @@ function tickAnimals() {
           }
       continue;
     }
-    // predators and prey sharing an open pen: hunt and flee
-    if (!e.barrier && !a.show) {
+    if (nightStep(a, e)) continue; // asleep, or inside the night shelter
+    // predators and prey sharing an open pen: hunt and flee (not at bedtime)
+    if (!e.barrier && !a.show && !(bedtime() && sleepsInside(a.sp))) {
       let near = null,
         nd = 1e9;
       for (const o of animalsIn(a.e)) {
-        if (o === a || o.e !== a.e || o.killed || !!SPECIES[o.sp].pred === !!sp.pred) continue;
+        if (o === a || o.e !== a.e || o.killed || o.away || o.inside != null || !!SPECIES[o.sp].pred === !!sp.pred)
+          continue;
         const dd = Math.hypot(o.x - a.x, o.y - a.y);
         if (dd < nd) {
           nd = dd;

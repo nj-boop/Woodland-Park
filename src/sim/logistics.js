@@ -189,6 +189,10 @@ function tickTrucks() {
       continue;
     }
     if (!t.path.length) {
+      if (t.type === 'ambulance') {
+        ambulanceArrive(t);
+        continue;
+      }
       if (t.st === 'in') {
         t.st = 'unload';
         t.wt = 80;

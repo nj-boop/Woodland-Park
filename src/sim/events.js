@@ -9,7 +9,7 @@ function monthlyUpkeep() {
     e.cond = Math.max(0, (e.cond ?? 100) - rnd(3, 7));
   }
   for (const a of S.animals) {
-    if (a.escaped) continue;
+    if (a.escaped || a.away || a.inside != null) continue;
     const e = F.emap[a.e];
     if (!e || e.biome === 'pool') continue;
     const c = care(a.sp),
@@ -85,8 +85,9 @@ function endDay() {
       (researched('vet') ? 0.6 : 1);
     if (Math.random() < p) {
       a.sick = true;
+      a.serious = a.health < 30 || Math.random() < seriousChance();
       toast(
-        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is sick.${staffCount('vet') ? ' A vet is on the way.' : ' Hire a vet or treat them yourself.'}`,
+        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is ${a.serious ? 'seriously ill and may need surgery at the vet clinic' : 'sick'}.${staffCount('vet') ? ' A vet is on the way.' : ' Hire a vet or treat them yourself.'}`,
         'bad'
       );
     }
@@ -187,6 +188,7 @@ function tick() {
   tickLogistics();
   tickFarms();
   tickResearch();
+  tickVetCare();
   tickGuests();
   if (S.clock % TPS === 0) {
     const ex = S.exits.length ? S.exits.reduce((a, b) => a + b, 0) / S.exits.length : 60;

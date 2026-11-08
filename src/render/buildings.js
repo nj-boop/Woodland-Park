@@ -152,7 +152,7 @@ const BUILDINGS = {
     fencePanel(g, -1.42, -1.4, -1.42, 1.4, '#8c9399');
     fencePanel(g, 1.42, -1.4, 1.42, 1.4, '#8c9399');
   },
-  // 4 × 3: a white clinic with a glass entrance, a red-cross sign and a shaded holding pen
+  // 4 × 3: a white clinic with a glass entrance, a green-cross sign and a shaded holding pen
   vetclinic(g) {
     P(g, 'box', '#c9c4b8', 0, 0.03, 0, 3.9, 0.06, 2.9, false).receiveShadow = true;
     const bx = -0.55;
@@ -164,11 +164,11 @@ const BUILDINGS = {
     P(g, 'box', '#9fb0b8', bx - 0.55, 0.88, 0.76, 1.05, 0.06, 0.32);
     P(g, 'box', '#5a6a72', bx - 0.55, 0.36, 0.81, 0.36, 0.7, 0.02, false);
     windowRow(g, bx + 0.05, bx + 1.25, 0.66, 0.65, 3, 1, '#d8d4cc');
-    // red cross
+    // green cross
     P(g, 'box', '#ffffff', bx + 0.3, 1.0, 0.66, 0.42, 0.24, 0.02, false);
-    P(g, 'box', '#d8382a', bx + 0.3, 1.0, 0.68, 0.24, 0.07, 0.02, false);
-    P(g, 'box', '#d8382a', bx + 0.3, 1.0, 0.68, 0.07, 0.2, 0.02, false);
-    signBoard(g, 'ANIMAL HOSPITAL', '#ffffff', '#b2281c', bx - 0.55, 1.05, 0.93, 0.95);
+    P(g, 'box', '#2f8f5a', bx + 0.3, 1.0, 0.68, 0.24, 0.07, 0.02, false);
+    P(g, 'box', '#2f8f5a', bx + 0.3, 1.0, 0.68, 0.07, 0.2, 0.02, false);
+    signBoard(g, 'ANIMAL HOSPITAL', '#ffffff', '#2f8f5a', bx - 0.55, 1.05, 0.93, 0.95);
     // holding pen with a shade roof and hay
     fencePanel(g, 0.95, -1.3, 1.85, -1.3, '#9a7550');
     fencePanel(g, 1.85, -1.3, 1.85, 0.55, '#9a7550');
@@ -526,6 +526,7 @@ bagMesh.count = 0;
 scene.add(bagMesh);
 const truckGroups = new Map();
 function makeTruck(type) {
+  if (type === 'ambulance') return makeAmbulance();
   const g = new THREE.Group(),
     garbage = type === 'garbage';
   P(g, 'box', garbage ? '#2f7a46' : '#f4f1ea', 0, 0.42, -0.25, 0.62, 0.62, 1.3); // body
@@ -552,6 +553,83 @@ function makeTruck(type) {
   ).rotation.y = Math.PI / 2;
   scene.add(g);
   return g;
+}
+// the animal ambulance: a white box truck with a green stripe, a green cross and a roof light
+function makeAmbulance() {
+  const g = new THREE.Group();
+  P(g, 'box', '#f6f6f2', 0, 0.44, -0.22, 0.64, 0.66, 1.34);
+  P(g, 'box', '#2f8f5a', 0, 0.3, -0.22, 0.66, 0.1, 1.36, false);
+  P(g, 'box', '#f6f6f2', 0, 0.36, 0.62, 0.6, 0.5, 0.44);
+  P(g, 'box', '#2a3a44', 0, 0.48, 0.85, 0.52, 0.2, 0.02, false);
+  P(g, 'box', '#2f8f5a', 0.33, 0.6, -0.22, 0.02, 0.26, 0.08, false);
+  P(g, 'box', '#2f8f5a', 0.33, 0.6, -0.22, 0.02, 0.08, 0.26, false);
+  P(g, 'box', '#2f8f5a', -0.33, 0.6, -0.22, 0.02, 0.26, 0.08, false);
+  P(g, 'box', '#2f8f5a', -0.33, 0.6, -0.22, 0.02, 0.08, 0.26, false);
+  const lamp = P(
+    g,
+    'box',
+    new THREE.MeshStandardMaterial({ color: LIN('#ffb347'), emissive: LIN('#ff9a1f'), emissiveIntensity: 1 }),
+    0,
+    0.8,
+    0.5,
+    0.3,
+    0.06,
+    0.1,
+    false
+  );
+  g.userData.lamp = lamp;
+  for (const [x, z] of [
+    [-0.3, -0.6],
+    [0.3, -0.6],
+    [-0.3, 0.55],
+    [0.3, 0.55],
+  ]) {
+    const w = P(g, 'cyl', '#1d1f21', x, 0.11, z, 0.11, 0.08);
+    w.rotation.z = Math.PI / 2;
+  }
+  signBoard(g, 'ANIMAL AMBULANCE', '#f6f6f2', '#2f8f5a', 0.0, 0.88, -0.86, 0.6);
+  scene.add(g);
+  return g;
+}
+// a light over the door of each clinic while an operation is under way
+const surgeryLights = new Map();
+const SURGERY_MAT = new THREE.MeshStandardMaterial({
+  color: LIN('#7dffb0'),
+  emissive: LIN('#3de07f'),
+  emissiveIntensity: 1.4,
+});
+function syncClinics(time) {
+  const busy = new Set(S.animals.filter((a) => a.away === 'clinic').map((a) => a.clinic));
+  for (const a of busy)
+    if (!surgeryLights.has(a) && S.tiles[a] && S.tiles[a].o === 'vetclinic') {
+      const p = planOf(a),
+        g = new THREE.Group();
+      P(g, 'box', '#2b2f33', 0, 0, 0, 0.62, 0.2, 0.1, false);
+      signBoard(g, 'SURGERY', '#2b2f33', '#7dffb0', 0, 0, 0.06, 0.55);
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), SURGERY_MAT);
+      m.position.set(0, 0.17, 0);
+      g.add(m);
+      // above the clinic's door, which faces the way the building does
+      const cx = p.x0 + p.fw / 2,
+        cz = p.y0 + p.fh / 2,
+        [dx, dz] = [
+          [0, 1],
+          [1, 0],
+          [0, -1],
+          [-1, 0],
+        ][p.r];
+      const half = (p.r % 2 ? p.fw : p.fh) / 2 + 0.05;
+      g.position.set(cx + dx * half, heightAt(cx, cz) + 1.45, cz + dz * half);
+      g.rotation.y = [0, Math.PI / 2, Math.PI, -Math.PI / 2][p.r];
+      scene.add(g);
+      surgeryLights.set(a, g);
+    }
+  for (const [a, g] of surgeryLights)
+    if (!busy.has(a) || !S.tiles[a] || S.tiles[a].o !== 'vetclinic') {
+      scene.remove(g);
+      surgeryLights.delete(a);
+    }
+  SURGERY_MAT.emissiveIntensity = 0.8 + 0.7 * Math.abs(Math.sin(time / 400));
 }
 function syncDeliveries(alpha) {
   // crates: stacked in rows on the dock platform
@@ -614,6 +692,7 @@ function syncDeliveries(alpha) {
       z = t.oy + (t.y - t.oy) * alpha;
     g.position.set(x, heightAt(x, z), z);
     g.rotation.y = t.dir || 0;
+    if (g.userData.lamp) g.userData.lamp.visible = (performance.now() / 300) % 2 < 1; // flashing roof light
   }
   for (const [id, g] of truckGroups)
     if (!live.has(id)) {

@@ -77,6 +77,7 @@ function serialize() {
     mode: S.mode,
     challenge: S.challenge,
     tut: S.tut,
+    nightOff: S.nightOff,
     res: S.res,
     done: S.done,
     yr: S.yr,

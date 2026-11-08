@@ -152,6 +152,7 @@ function newZoo(w, h, mode = 'standard') {
     [13, 12, 'bush'],
     [16, 12, 'rock'],
     [13, 10, 'pond'],
+    [17, 12, 'nighthouse'],
   ].forEach(([x, y, o]) => (tileAt(x, y).o = o));
   addAnimal('zebra', e, 13.5, 10.5);
   addAnimal('zebra', e, 15.2, 11);
@@ -309,6 +310,8 @@ function rebuild() {
   F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
   F.anchors = {}; // building kind -> anchor tiles, so nothing has to scan the whole map for buildings
   F.trackIn = new Set(); // habitats a safari track runs into
+  F.nightIn = {}; // habitat id -> night shelter tiles
+  F.encRoad = {}; // habitat id -> road tiles beside its fence, where the animal ambulance pulls up
   const SERVICE = { restroom: [], food: [], restaurant: [], drink: [], bench: [] };
   const scen = new Float32Array(N),
     base = new Float32Array(N); // plants and water, summed over a 5×5 box after the pass
@@ -328,12 +331,15 @@ function rebuild() {
       F.paths.push(i);
       if (t.l > 0) F.litter.add(i);
       if (t.e && t.pm === 'track') F.trackIn.add(t.e);
+      if (t.pm === 'service' && !t.e)
+        for (const n of nbr4(i)) if (S.tiles[n].e) (F.encRoad[S.tiles[n].e] ||= new Set()).add(i);
     }
     if (t.w) base[i] += 0.3;
     if (!o) continue;
     if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
     if (o in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[o].push(n);
     if (ITEMS[o].kind === 'plant') base[i] += 1;
+    if (ITEMS[o].night && t.e) (F.nightIn[t.e] ||= []).push(i);
     if (!isAnchor(i)) continue; // count each building once, at its anchor tile
     (F.anchors[o] ||= []).push(i);
     if (ITEMS[o].kind === 'decor') stamp(i, 2, false, (k) => (scen[k] += ITEMS[o].scen));
@@ -355,6 +361,7 @@ function rebuild() {
       for (let d = Math.max(0, y - 2); d <= Math.min(H - 1, y + 2); d++) s += row[d * W + x];
       scen[y * W + x] += s;
     }
+  F.gallery = galleryTiles();
   const src = (type) => SERVICE[type];
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);

@@ -22,6 +22,12 @@ function faceDir(x, y) {
     if (inB(x + dx, y + dy) && tileAt(x + dx, y + dy).t === 'p') return Math.atan2(dx, dy);
   return 0;
 }
+// one shared material for every lamp, so they can all glow brighter at night
+const LAMP_MAT = new THREE.MeshStandardMaterial({
+  color: LIN('#fff6d0'),
+  emissive: LIN('#ffe9a0'),
+  emissiveIntensity: 0.6,
+});
 function makeItem(par, o, x, y) {
   const t = tileAt(x, y),
     g = new THREE.Group();
@@ -225,17 +231,23 @@ function makeItem(par, o, x, y) {
     P(g, 'box', '#2a1d14', 0, 0.18, 0.305, 0.32, 0.36, 0.02);
     return;
   }
+  if (o === 'nighthouse') {
+    // a small red barn with white trim and a half-open door
+    P(g, 'box', '#9c3b2e', 0, 0.32, 0, 0.86, 0.64, 0.72);
+    for (const s of [-1, 1]) {
+      const r = P(g, 'box', '#4a4440', 0, 0.74, s * 0.2, 0.94, 0.05, 0.48);
+      r.rotation.x = s * 0.62;
+    }
+    P(g, 'box', '#9c3b2e', 0, 0.66, 0, 0.84, 0.22, 0.36, false);
+    P(g, 'box', '#f1ece2', 0, 0.22, 0.362, 0.36, 0.44, 0.02, false);
+    P(g, 'box', '#2a1d14', 0.06, 0.2, 0.37, 0.22, 0.38, 0.02, false);
+    P(g, 'box', '#f1ece2', 0, 0.55, 0.362, 0.86, 0.04, 0.02, false);
+    P(g, 'box', '#d8c48a', 0.3, 0.06, 0.42, 0.2, 0.12, 0.14);
+    return;
+  }
   if (o === 'lamp') {
     P(g, 'cyl', '#2a2a2a', 0, 0.45, 0, 0.025, 0.9);
-    P(
-      g,
-      'sph',
-      new THREE.MeshStandardMaterial({ color: LIN('#fff6d0'), emissive: LIN('#ffe9a0'), emissiveIntensity: 0.6 }),
-      0,
-      0.92,
-      0,
-      0.07
-    );
+    P(g, 'sph', LAMP_MAT, 0, 0.92, 0, 0.07);
     return;
   }
   if (o === 'flowers') {

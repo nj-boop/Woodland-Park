@@ -149,6 +149,23 @@ the top tier within 5 years, or lost at the deadline, after which play simply co
 December closes: every award in `AWARDS` whose `won(y)` test passes pays its prize, and the count
 sets `S.fame`, which raises `spawnRate()` by 4% per award for the next year.
 
+### Day and night
+
+`sim/daynight.js`: each month of game time is one day, with dusk at 74% of the month's clock and
+night across the turn of the month. At bedtime land animals walk to the nearest night shelter in
+their habitat (`F.nightIn`: night house, stable or rock cave), are hidden while inside
+(`a.inside`), and come out one by one after dawn. Without a shelter they sleep in the open and are
+less happy. Arrivals drop to 30% at night. The Office can switch the cycle off (`S.nightOff`).
+
+### Vet care and the animal ambulance
+
+`sim/vetcare.js`: about a third of illnesses are serious (`a.serious`). The vet examines the animal,
+then `callAmbulance()` sends a truck from the clinic's road front to a road tile beside the
+habitat's fence (`F.encRoad`). The animal leaves the habitat (`a.away`: 'transit', then 'clinic'),
+has surgery (`tickVetCare()`), and is driven back. Guests on footpaths within 2 tiles of a busy
+clinic stop to watch from the viewing gallery (`F.gallery`, guest mode 'watch'). With no clinic or
+no road, the vet patches the animal up on the spot for less benefit.
+
 ### Research
 
 `sim/research.js`: projects in `RESEARCH` are paid up front and finish after their months of

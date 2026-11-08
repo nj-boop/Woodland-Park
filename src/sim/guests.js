@@ -113,6 +113,21 @@ function arrive(g) {
     if (F.emap[eid] && F.emap[eid].fence === 'moat') v *= 1.2;
     g.exc += v;
   }
+  // the vet clinic's viewing gallery: stop and watch while an operation is going on
+  const gal = F.gallery && F.gallery.get(i);
+  if (gal != null && g.mode === 'walk' && !g.vet && clinicBusy(gal) && Math.random() < 0.6) {
+    g.vet = g.t;
+    g.mode = 'watch';
+    g.rest = 140;
+    g.exc += 9;
+    g.watchAt = gal;
+    if (Math.random() < 0.35) {
+      earn(2, 'shop');
+      const r = S.sold[gal] || (S.sold[gal] = { m: 0, l: 0 });
+      r.m += 2; // donations at the gallery
+    }
+    return;
+  }
   const atmB = F.atm && F.atm[i] ? 1.18 : 1;
   const at = F.shopAt[i];
   // stocked shops can sell out; `sell` uses one unit and says whether there was any
@@ -269,6 +284,8 @@ function guestMood(g) {
   else if (g.mode === 'ride') th = 'On the safari! Look at them all!';
   else if (g.safari && g.t - g.safari < 600) th = 'That safari drive was the best thing here!';
   else if (g.show && g.t - g.show < 500) th = 'That show was incredible!';
+  else if (g.mode === 'watch') th = 'Watching the vets operate. Fascinating!';
+  else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the vet clinic!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
   else if (g.exc > 18) th = `The ${g.best.toLowerCase()} were amazing!`;
   else if (g.exc > 0) th = `I liked the ${g.best.toLowerCase()}. What else is here?`;
@@ -287,7 +304,7 @@ const parkingSpaces = () => STREET_CARS + LOT_CARS * ((F.cnt && F.cnt.parking) |
 const carsParked = () => Math.ceil(S.guests.length / GUESTS_PER_CAR);
 const parkingFull = () => carsParked() >= parkingSpaces();
 // chance per tick that a new visitor turns up: a quarter as likely when they'd have to park off-site
-const arrivalChance = () => (spawnRate() / TPS) * (parkingFull() ? 0.25 : 1);
+const arrivalChance = () => (spawnRate() / TPS) * (parkingFull() ? 0.25 : 1) * (isNight() ? 0.3 : 1);
 // how many guests can be in the zoo at once: grows with the land, up to the most we draw
 const guestCap = () => Math.min(GMAX, Math.round(220 + (W * H - 936) / 30));
 function tickGuests() {
@@ -320,6 +337,11 @@ function tickGuests() {
     g.hunger = Math.min(100, g.hunger + 0.06);
     g.bath = Math.min(100, (g.bath || 0) + 0.05);
     g.thirst = Math.min(100, g.thirst + 0.08);
+    if (g.mode === 'watch') {
+      if (--g.rest <= 0 || !clinicBusy(g.watchAt)) g.mode = 'walk';
+      out.push(g);
+      continue;
+    }
     if (g.mode === 'rest') {
       g.energy = Math.min(100, g.energy + 0.9);
       if (--g.rest <= 0) g.mode = 'walk';

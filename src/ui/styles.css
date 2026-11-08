@@ -1057,3 +1057,17 @@ td.pos {
 .resNow .btn {
   justify-self: start;
 }
+
+/* a checkbox setting with a note under it */
+.toggle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  align-items: center;
+  font-weight: 600;
+}
+.toggle .help {
+  grid-column: 2;
+  font-weight: 400;
+  margin: 0;
+}
