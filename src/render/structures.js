@@ -544,6 +544,38 @@ function makeFence(par, e) {
     const seg = new THREE.Group();
     seg.position.y = yb;
     par.add(seg);
+    // a safari track crossing the fence: a heavy vehicle gate over a cattle grid
+    const ox = x + [0, 0, -1, 1][dr],
+      oy = y + [-1, 1, 0, 0][dr];
+    if (isTrack(idx(x, y)) && inB(ox, oy) && isTrack(idx(ox, oy))) {
+      for (const [px, pz] of [
+        [ax, az],
+        [bx, bz],
+      ]) {
+        P(seg, 'box', '#4a4f54', px, 0.55, pz, 0.14, 1.1, 0.14);
+        P(seg, 'box', '#c9a227', px, 1.12, pz, 0.18, 0.06, 0.18);
+      }
+      // the gate stands open; its two leaves fold back along the fence line
+      for (const sd of [-1, 1]) {
+        const lx = rot ? cx : cx + sd * 0.45,
+          lz = rot ? cz + sd * 0.45 : cz;
+        P(seg, 'box', '#6b7177', lx, 0.45, lz, rot ? 0.05 : 0.08, 0.7, rot ? 0.08 : 0.05);
+      }
+      for (let k = -2; k <= 2; k++)
+        P(
+          seg,
+          'box',
+          '#2d2f31',
+          rot ? cx + k * 0.08 : cx,
+          0.02,
+          rot ? cz : cz + k * 0.08,
+          rot ? 0.03 : 0.9,
+          0.02,
+          rot ? 0.9 : 0.03,
+          false
+        );
+      continue;
+    }
     if (gates.has(idx(x, y) + ':' + dr)) {
       for (const [px, pz] of [
         [ax, az],
@@ -685,7 +717,13 @@ function fenceSig(e) {
   for (const i of F.etiles[e.id] || []) {
     h = hashMix(h, i);
     h = hashMix(h, Math.round(hC(i % W, (i / W) | 0) * 100) + 1000);
-    h = hashMix(h, S.tiles[i].t === 'p' ? 1 : 0);
+    h = hashMix(h, S.tiles[i].t === 'p' ? (S.tiles[i].pm === 'track' ? 2 : 1) : 0);
+  }
+  // track just outside the fence decides where vehicle gates go
+  for (const [x, y, dr] of F.eedges[e.id] || []) {
+    const ox = x + [0, 0, -1, 1][dr],
+      oy = y + [-1, 1, 0, 0][dr];
+    if (inB(ox, oy) && isTrack(idx(ox, oy))) h = hashMix(h, idx(ox, oy) + 7);
   }
   return h;
 }
