@@ -49,6 +49,12 @@ window.__wg = {
     rebuild();
   },
   resizeMap,
+  get carBody() {
+    return carBody;
+  },
+  parkingSpaces,
+  arrivalChance,
+  carsParked,
   buyLand,
   landPrice,
   guestCap,

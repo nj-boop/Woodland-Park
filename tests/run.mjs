@@ -508,6 +508,23 @@ const tests = {
       );
     }),
 
+  'full parking slows arrivals; a lot adds 30 spaces': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const before = g.parkingSpaces();
+      if (!g.build('parking')) return 'no room for a parking lot';
+      g.refresh();
+      if (g.parkingSpaces() !== before + 30) return `spaces ${before} -> ${g.parkingSpaces()}`;
+      // when guests fill every space, new visitors are a quarter as likely to come
+      for (let i = 0; i < 400 && !g.S.guests.length; i++) g.tick();
+      if (!g.S.guests.length) return 'no guest arrived';
+      const open = g.arrivalChance(),
+        spaces = g.parkingSpaces();
+      while (g.carsParked() < spaces) g.S.guests.push({ ...g.S.guests[0] });
+      const full = g.arrivalChance();
+      return Math.abs(full / open - 0.25) < 0.05 || `open ${open}, full ${full}`;
+    }),
+
   'reaching the goals unlocks the next tier': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg;

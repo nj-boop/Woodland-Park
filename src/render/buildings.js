@@ -74,6 +74,9 @@ function fencePanel(g, x0, z0, x1, z1, col) {
 }
 const bush3 = (g, x, z, s) => g.add(leafMesh(BUSH, LEAFMATS[1], LEAF_DEPTH, x, 0.16 * s, z, s));
 
+// slot positions in a parking lot, local to its footprint (front = +z): two rows of 7 bays
+const LOT_SLOTS = [];
+for (const z of [-1.15, 1.15]) for (let k = 0; k < 7; k++) LOT_SLOTS.push([-2.55 + k * 0.85, z]);
 const BUILDINGS = {
   // 3 × 2: a timber cabin with a porch, a feed shed and a woodpile
   lodge(g) {
@@ -168,6 +171,25 @@ const BUILDINGS = {
     P(g, 'box', '#d8c48a', 1.4, 0.065, -0.4, 0.86, 0.01, 1.85, false);
     // ambulance-van parking bay
     P(g, 'box', '#efeadc', 1.4, 0.065, 1.05, 0.9, 0.01, 0.06, false);
+  },
+  // 6 × 4: asphalt with two rows of marked bays; the cars themselves are drawn by syncParkedCars()
+  parking(g) {
+    P(g, 'box', '#3b3d40', 0, 0.035, 0, 5.94, 0.05, 3.94, false).receiveShadow = true;
+    for (const z of [-1.15, 1.15]) {
+      for (let k = 0; k <= 7; k++) P(g, 'box', '#e8e6df', -2.975 + k * 0.85, 0.064, z, 0.03, 0.005, 1.3, false);
+      P(g, 'box', '#e8e6df', 0, 0.064, z + (z < 0 ? -0.66 : 0.66), 5.95, 0.005, 0.03, false);
+    }
+    // arrows down the aisle
+    for (const x of [-1.6, 1.6]) {
+      const a = P(g, 'cone', '#e8e6df', x, 0.066, 0, 0.12, 0.004);
+      a.rotation.z = Math.PI / 2;
+    }
+    for (const x of [-2.9, 2.9]) {
+      P(g, 'cyl', '#5a6066', x, 0.75, 0, 0.03, 1.5);
+      P(g, 'box', '#e9e4d0', x, 1.5, 0, 0.3, 0.05, 0.12);
+    }
+    signBoard(g, 'P', '#2c6fa8', '#ffffff', -2.6, 1.0, 1.95, 0.5);
+    P(g, 'cyl', '#5a6066', -2.6, 0.45, 1.93, 0.025, 0.9);
   },
   // 2 × 2: a small block with two doors and a hedge
   restroom(g) {
@@ -315,4 +337,70 @@ const BUILDINGS = {
 };
 function makeBuilding(g, kind, w, d) {
   BUILDINGS[kind](g, w, d);
+}
+
+/* Parked cars: drawn as one instanced set, filled into lot bays in proportion to how many guests
+   are in the zoo (about 3 per car), after the 15 roadside spaces. */
+const CAR_COLORS = ['#c0392b', '#2c6fa8', '#ecf0f1', '#2d3436', '#7f8c8d', '#27ae60', '#f39c12', '#8e44ad'];
+const CAR_MAX = 600;
+// own materials, not the shared M() cache: batched scenery uses those without per-instance colour
+const carBody = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.62, 0.22, 1.3),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }),
+    CAR_MAX
+  ),
+  carCab = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.56, 0.18, 0.7),
+    new THREE.MeshLambertMaterial({ color: LIN('#2a3a44') }),
+    CAR_MAX
+  );
+carBody.castShadow = true;
+carBody.setColorAt(0, new THREE.Color(1, 1, 1)); // sized from count, so before count is zeroed
+for (const m of [carBody, carCab]) {
+  m.frustumCulled = false;
+  m.count = 0;
+  scene.add(m);
+}
+let carSyncAt = 0;
+function syncParkedCars(time) {
+  if (time - carSyncAt < 1000) return;
+  carSyncAt = time;
+  const lots = [];
+  for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'parking' && isAnchor(i)) lots.push(i);
+  let cars = Math.max(0, carsParked() - STREET_CARS),
+    n = 0;
+  const o = new THREE.Object3D(),
+    c = new THREE.Color();
+  for (const a of lots) {
+    const p = planOf(a),
+      cx = p.x0 + p.fw / 2,
+      cz = p.y0 + p.fh / 2,
+      rot = (p.r * Math.PI) / 2,
+      cs = Math.cos(rot),
+      sn = Math.sin(rot);
+    const fill = Math.min(LOT_SLOTS.length, Math.ceil((cars * LOT_SLOTS.length) / LOT_CARS));
+    cars -= LOT_CARS;
+    for (let k = 0; k < fill && n < CAR_MAX; k++) {
+      // spread cars over the bays rather than packing one end
+      const [lx, lz] = LOT_SLOTS[(k * 5) % LOT_SLOTS.length],
+        wx = cx + lx * cs + lz * sn,
+        wz = cz - lx * sn + lz * cs,
+        y = heightAt(wx, wz);
+      o.position.set(wx, y + 0.16, wz);
+      o.rotation.set(0, rot, 0);
+      o.updateMatrix();
+      carBody.setMatrixAt(n, o.matrix);
+      carBody.setColorAt(n, c.set(CAR_COLORS[(a + k * 7) % CAR_COLORS.length]).convertSRGBToLinear());
+      o.position.y = y + 0.35;
+      o.position.x -= Math.sin(rot) * 0.08;
+      o.position.z -= Math.cos(rot) * 0.08;
+      o.updateMatrix();
+      carCab.setMatrixAt(n, o.matrix);
+      n++;
+    }
+    if (cars <= 0) break;
+  }
+  carBody.count = carCab.count = n;
+  carBody.instanceMatrix.needsUpdate = carCab.instanceMatrix.needsUpdate = true;
+  if (carBody.instanceColor) carBody.instanceColor.needsUpdate = true;
 }

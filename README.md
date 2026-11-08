@@ -88,6 +88,13 @@ Order matters: a file can use anything defined in an earlier file, and functions
 on the south edge), up to 512 × 512. `landPrice()` rises with the zoo's area; new strips arrive as
 woodland. The guest cap (`guestCap()` in `sim/guests.js`) grows with the land, up to 1,500.
 
+### Parking
+
+Guests come by car, about 3 to a car (`sim/guests.js`). The roadside holds 15 cars and each parking
+lot (6 × 4 tiles) 30 more. When every space is taken, visitors park off-site and new arrivals drop
+to a quarter (`arrivalChance()`); the Office shows cars parked and visitors turned away. Parked
+cars are drawn into lot bays by `syncParkedCars()` (`render/buildings.js`).
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, 18 staff): a simulation tick takes

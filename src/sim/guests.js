@@ -232,11 +232,34 @@ function guestMood(g) {
   else th = 'What a lovely day for the zoo.';
   g.thought = th;
 }
+// shop-kind items guests don't buy anything from
+const NOT_SOLD = new Set(['stage', 'bin', 'atm', 'parking']);
+/* Parking: guests come by car, about 3 to a car. The roadside fits 15 cars and each lot 30 more.
+   When the lots are full, people park off-site and far fewer bother to come. */
+const GUESTS_PER_CAR = 3,
+  STREET_CARS = 15,
+  LOT_CARS = 30;
+const parkingSpaces = () => STREET_CARS + LOT_CARS * ((F.cnt && F.cnt.parking) || 0);
+const carsParked = () => Math.ceil(S.guests.length / GUESTS_PER_CAR);
+const parkingFull = () => carsParked() >= parkingSpaces();
+// chance per tick that a new visitor turns up: a quarter as likely when they'd have to park off-site
+const arrivalChance = () => (spawnRate() / TPS) * (parkingFull() ? 0.25 : 1);
 // how many guests can be in the zoo at once: grows with the land, up to the most we draw
 const guestCap = () => Math.min(GMAX, Math.round(220 + (W * H - 936) / 30));
 function tickGuests() {
   const sp = spawnRate() / TPS;
-  if (S.guests.length < guestCap() && Math.random() < sp) spawnGuest();
+  // full car parks turn most visitors away
+  const full = parkingFull();
+  if (full && !S.parkWarned) {
+    S.parkWarned = true;
+    toast(
+      'The car park is full. Visitors are parking off-site and many are giving up. Build a parking lot by the road.',
+      'bad'
+    );
+  }
+  if (!full) S.parkWarned = false;
+  if (S.guests.length < guestCap() && Math.random() < arrivalChance()) spawnGuest();
+  else if (full && Math.random() < sp * 0.75) S.today.turned = (S.today.turned || 0) + 1;
   const out = [];
   for (const g of S.guests) {
     g.t++;

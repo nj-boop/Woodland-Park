@@ -228,6 +228,7 @@ function render3D(alpha, dt) {
   }
   if (staticDirty) rebuildStatic();
   cullChunks();
+  syncParkedCars(performance.now());
   const time = performance.now();
   syncAnimals(alpha, time, dt);
   syncGuests(alpha, time);

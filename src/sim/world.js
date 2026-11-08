@@ -346,13 +346,13 @@ function rebuild() {
       }
     for (const n of nbr4(i)) {
       const o = S.tiles[n].o;
-      if (o && ITEMS[o].kind === 'shop' && o !== 'stage' && o !== 'bin' && o !== 'atm' && !sh.includes(o)) sh.push(o);
+      if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(o)) sh.push(o);
     }
     F.view[i] = [...v];
     F.shops[i] = sh;
     F.scen[i] = Math.min(8, scen[i]);
   }
-  const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0 };
+  const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0 };
   for (let i = 0; i < N; i++) {
     const o = S.tiles[i].o;
     if (o in cnt && isAnchor(i)) cnt[o]++;

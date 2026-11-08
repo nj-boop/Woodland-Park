@@ -64,6 +64,7 @@ Object.assign(IT_ICON, {
   vetclinic: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
 });
 Object.assign(IT_ICON, {
+  parking: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>',
   redwood: '<path d="M12 22V9"/><path d="M12 2l-3 5h6zM12 6l-4 5h8zM12 10l-5 6h10z"/>',
   oak: '<path d="M11 21l1-7 1 7"/><path d="M12 14c-6 0-9-2.4-9-5.3S6.5 3.5 12 3.5s9 2.3 9 5.2S18 14 12 14z"/>',
   birch:
@@ -256,7 +257,7 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">Guest services</span>' +
-      ['restroom', 'gift', 'atm', 'map', 'donation', 'playground', 'stage']
+      ['restroom', 'parking', 'gift', 'atm', 'map', 'donation', 'playground', 'stage']
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )
@@ -642,6 +643,7 @@ function tierHTML() {
 function statsHTML(ah, gh) {
   return `<span>Guests in the zoo</span><span>${S.guests.length}</span>
     <span>Visitors this month</span><span>${S.today.vis}</span>
+    <span>Parking</span><span>${carsParked()} / ${parkingSpaces()} cars${S.today.turned ? ` · <b style="color:var(--bad)">${S.today.turned} turned away</b>` : ''}</span>
     <span>Earned this month</span><span>${money(S.today.inc)}</span>
     <span>Tickets / shops</span><span>${money(S.today.adm || 0)} / ${money(S.today.shop || 0)}</span>
     <span>Running costs this month</span><span>${money(S.today.run)}</span>
