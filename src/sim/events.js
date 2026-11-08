@@ -20,6 +20,7 @@ function monthlyUpkeep() {
   }
 }
 function escape(a, e) {
+  yearRec().escapes++;
   a.escaped = true;
   a.escT = 0;
   const sp = SPECIES[a.sp];
@@ -71,6 +72,7 @@ function endDay() {
         b.happy = avg;
         b.target = avg;
         toast(`A baby ${sp.name.toLowerCase()} was born!`, 'good');
+        yearRec().births++;
         break;
       }
     }
@@ -92,9 +94,11 @@ function endDay() {
     if (!S.tiles[k] || !S.tiles[k].o) delete S.sold[k];
     else S.sold[k] = { m: 0, l: S.sold[k].m };
   }
+  tallyMonth();
   S.ledger.push({ day: S.day, vis: t.vis, adm: t.adm || 0, shop: t.shop || 0, run: t.run });
   if (S.ledger.length > 7) S.ledger.shift();
   S.day++;
+  if ((S.day - 1) % 12 === 0) judgeYear(); // December just closed
   checkChallenge();
   S.today = { inc: 0, run: 0, vis: 0, adm: 0, shop: 0 };
   save();

@@ -143,6 +143,12 @@ $1,000,000 and unlocks animals through the tiers. Sandbox keeps money topped up 
 starts at the top tier. Challenge starts with $75,000; `checkChallenge()` marks it won on reaching
 the top tier within 5 years, or lost at the deadline, after which play simply continues.
 
+### Awards
+
+`sim/awards.js` tallies each month into `S.yr` (`tallyMonth()`), and `judgeYear()` runs when
+December closes: every award in `AWARDS` whose `won(y)` test passes pays its prize, and the count
+sets `S.fame`, which raises `spawnRate()` by 4% per award for the next year.
+
 ### Keeping big maps fast
 
 Measured on a 512 × 512 test zoo (900 habitats, 1,800 animals, about 1,000 guests, 18 staff): a

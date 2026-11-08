@@ -733,6 +733,22 @@ const tests = {
       g.checkChallenge();
       return g.S.challenge === 'won' || 'top tier reached but challenge is ' + g.S.challenge;
     }),
+  'a good year wins awards, prize money and more visitors': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const r0 = g.spawnRate(),
+        m0 = g.S.money;
+      for (const a of g.S.animals) a.happy = 95;
+      for (let k = 0; k < 12; k++) {
+        g.S.today.vis = 400;
+        g.tallyMonth();
+      }
+      g.yearRec().births = 3;
+      const won = g.judgeYear().map((a) => a.id);
+      if (!won.includes('popular') || !won.includes('births')) return 'won ' + won.join(',');
+      if (g.S.money <= m0) return 'no prize money';
+      return g.spawnRate() > r0 || 'no extra visitors';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

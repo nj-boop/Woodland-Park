@@ -203,6 +203,7 @@ function tickAnimals() {
         a.chase = 1;
         if (nd < 0.38) {
           near.killed = true;
+          yearRec().deaths++;
           a.hunger = 0;
           a.wait = 160;
           toast(
@@ -296,6 +297,7 @@ function tickAnimals() {
         'bad'
       );
       S.rating = Math.max(0, S.rating - 5);
+      yearRec().deaths++;
       if (sel && sel.type === 'animal' && sel.id === a.id) closeInspector();
     }
     S.animals = S.animals.filter((a) => a.health > 0);
