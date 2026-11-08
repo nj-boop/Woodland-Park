@@ -88,6 +88,11 @@ function endDay() {
       );
     }
   }
+  // shop takings: this month becomes last month
+  for (const k of Object.keys(S.sold || {})) {
+    if (!S.tiles[k] || !S.tiles[k].o) delete S.sold[k];
+    else S.sold[k] = { m: 0, l: S.sold[k].m };
+  }
   S.ledger.push({ day: S.day, vis: t.vis, adm: t.adm || 0, shop: t.shop || 0, run: t.run });
   if (S.ledger.length > 7) S.ledger.shift();
   S.day++;

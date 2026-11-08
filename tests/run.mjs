@@ -663,6 +663,25 @@ const tests = {
       g.checkTier();
       return g.S.tier === 2 || `tier is ${g.S.tier}`;
     }),
+  'tapping a shop opens its inspector: stock, restock, demolish': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const at = g.build('restaurant');
+      if (!at) return 'no room';
+      const ti = g.S.tiles.findIndex((t) => t.o === 'restaurant');
+      g.inspectAt({ x: ti % g.W, y: Math.floor(ti / g.W), wx: -999, wy: -999 });
+      if (!g.sel || g.sel.type !== 'bld') return 'no building selected: ' + JSON.stringify(g.sel);
+      const a = g.sel.id;
+      g.S.stock[a] = 0;
+      g.renderInspector();
+      const box = document.querySelector('#inspector');
+      if (!/Sold out/.test(box.textContent)) return 'no sold-out note: ' + box.textContent.slice(0, 200);
+      document.querySelector('#bRestock').click();
+      if (g.S.stock[a] !== 60) return 'restock gave ' + g.S.stock[a];
+      document.querySelector('#bDemo').click();
+      document.querySelector('#bDemo').click();
+      return (!g.S.tiles[a].o && box.hidden) || 'still standing';
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

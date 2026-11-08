@@ -119,6 +119,7 @@ function newZoo(w, h) {
     crates: [],
     trucks: [],
     stock: {},
+    sold: {}, // per building anchor: { m: earned this month, l: last month }
     waste: 0,
     farms: {},
     prices: { ...BASE_PRICE },
@@ -331,7 +332,7 @@ function rebuild() {
   F.bench = bfs(src('bench'));
   F.view = new Array(N);
   F.shops = new Array(N);
-  F.shopAt = new Array(N); // path tile -> { kind: anchor tile of that shop }
+  F.shopAt = new Array(N); // path tile -> { kind: anchor tile of the shop of that kind next to it }
   F.bin = new Uint8Array(N);
   F.scen = new Uint8Array(N);
   // things that affect nearby path tiles are "stamped" onto a grid around themselves, which costs
@@ -383,7 +384,7 @@ function rebuild() {
       const o = S.tiles[n].o;
       if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(o)) {
         sh.push(o);
-        if (STOCK[o]) (at ||= {})[o] = anchorOf(n);
+        (at ||= {})[o] = anchorOf(n); // which building of each kind this tile serves
       }
     }
     F.shopAt[i] = at;

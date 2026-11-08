@@ -130,7 +130,7 @@ function renderTray() {
   let h = '';
   if (tool === 'look')
     h =
-      '<span class="note">Drag to move. Pinch or scroll to zoom. Twist two fingers, right-drag, or use ⟲ ⟳ to rotate. Tap an animal, guest or habitat to inspect it.</span>';
+      '<span class="note">Drag to move. Pinch or scroll to zoom. Twist two fingers, right-drag, or use ⟲ ⟳ to rotate. Tap an animal, guest, habitat or building to inspect it.</span>';
   else if (tool === 'path')
     h =
       '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are for trucks and cars (and staff). Service buildings and parking lots open onto a road that runs to the highway on the south edge.</span>' +
@@ -381,6 +381,12 @@ function inspectAt(tt) {
     renderInspector();
     return;
   }
+  if (inB(tt.x, tt.y) && tileAt(tt.x, tt.y).o && BUILDING_KINDS.has(ITEMS[tileAt(tt.x, tt.y).o].kind)) {
+    sel = { type: 'bld', id: anchorOf(idx(tt.x, tt.y)) };
+    bldArm = false;
+    renderInspector();
+    return;
+  }
   if (inB(tt.x, tt.y) && tileAt(tt.x, tt.y).e) {
     sel = { type: 'encl', id: tileAt(tt.x, tt.y).e };
     renderInspector();
@@ -492,6 +498,8 @@ function renderInspector() {
           renderInspector();
         }
       };
+  } else if (sel.type === 'bld') {
+    renderBuildingInspector(box, sel.id);
   } else if (sel.type === 'staff') {
     const st = S.staff.find((o) => o.id === sel.id);
     if (!st) {

@@ -30,6 +30,7 @@
   "ui/input.js",
   "ui/panels.js",
   "ui/staff-panel.js",
+  "ui/building-panel.js",
   "core/save.js",
   "core/boot.js"
 ]

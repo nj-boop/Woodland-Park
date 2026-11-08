@@ -117,13 +117,21 @@ function arrive(g) {
   const at = F.shopAt[i];
   // stocked shops can sell out; `sell` uses one unit and says whether there was any
   const sell = (s) => {
-    if (!at || at[s] == null) return true;
+    if (!at || at[s] == null || !STOCK[s]) return true;
     if (stockOf(at[s]) <= 0) {
       g.gripe = 'soldout';
       return false;
     }
     S.stock[at[s]] = stockOf(at[s]) - 1;
     return true;
+  };
+  // takings, also counted per building for the building inspector
+  const took = (s, n, a = at && at[s]) => {
+    earn(n, 'shop');
+    g.spent += n;
+    if (a == null) return;
+    const r = S.sold[a] || (S.sold[a] = { m: 0, l: 0 });
+    r.m += n;
   };
   for (const s of F.shops[i] || []) {
     if (s === 'restroom' && g.bath > 45) {
@@ -139,8 +147,7 @@ function arrive(g) {
     ) {
       g.hunger = 0;
       g.thirst = Math.max(0, g.thirst - 40);
-      earn(ITEMS.restaurant.price, 'shop');
-      g.spent += ITEMS.restaurant.price;
+      took(s, ITEMS.restaurant.price);
       g.mode = 'rest';
       g.rest = 60;
       g.trash = 0;
@@ -154,8 +161,7 @@ function arrive(g) {
       sell(s)
     ) {
       g.gift = 1;
-      earn(ITEMS.gift.price, 'shop');
-      g.spent += ITEMS.gift.price;
+      took(s, ITEMS.gift.price);
       continue;
     }
     if (s === 'station' && !g.rode && g.mode === 'walk' && g.t > 120 && Math.random() < 0.3 * atmB) {
@@ -168,8 +174,7 @@ function arrive(g) {
         g.mode = 'ride';
         g.rideT = Math.min(1500, tour.walk.length * RIDE_TICKS_PER_TILE);
         g.rideVal = tour.value;
-        earn(ITEMS.station.price, 'shop');
-        g.spent += ITEMS.station.price;
+        took(s, ITEMS.station.price, st);
         continue;
       }
     }
@@ -183,6 +188,10 @@ function arrive(g) {
       g.don = 1;
       const amt = Math.round(1 + g.exc / 8);
       earn(amt, 'shop');
+      if (at && at.donation != null) {
+        const r = S.sold[at.donation] || (S.sold[at.donation] = { m: 0, l: 0 });
+        r.m += amt;
+      }
       continue;
     }
     if (s === 'playground' && !g.play) {
@@ -199,16 +208,14 @@ function arrive(g) {
     if (s === 'food' && g.hunger > 45 && g.mode !== 'leave') {
       if (Math.random() < willing('food') * atmB && sell(s)) {
         g.hunger = Math.max(0, g.hunger - 75);
-        earn(S.prices.food, 'shop');
-        g.spent += S.prices.food;
+        took(s, S.prices.food);
         g.trash = rnd(160, 320) | 0;
         g.gripe = 0;
       } else if (g.gripe !== 'soldout') g.gripe = 'food';
     } else if (s === 'drink' && g.thirst > 40 && g.mode !== 'leave') {
       if (Math.random() < willing('drink') * atmB && sell(s)) {
         g.thirst = 0;
-        earn(S.prices.drink, 'shop');
-        g.spent += S.prices.drink;
+        took(s, S.prices.drink);
         g.trash = rnd(140, 260) | 0;
         g.gripe = 0;
       } else if (g.gripe !== 'soldout') g.gripe = 'drink';

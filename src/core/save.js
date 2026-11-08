@@ -40,6 +40,7 @@ function serialize() {
     feed: Math.round(S.feed * 10) / 10,
     crates: S.crates,
     stock: S.stock,
+    sold: S.sold,
     farms: S.farms,
     waste: S.waste,
     // trucks on the road are saved as already unloaded
@@ -279,6 +280,7 @@ function load(str) {
   S.feed = d.feed || 0;
   S.crates = d.crates || [];
   S.stock = d.stock || {};
+  S.sold = d.sold || {};
   S.farms = d.farms || {};
   S.waste = d.waste || 0;
   S.trucks = [];

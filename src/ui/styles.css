@@ -910,3 +910,12 @@ td.pos {
   flex-direction: column;
   gap: 4px;
 }
+
+/* building inspector: a meter with a caption under it */
+.bkv .meter {
+  margin: 3px 0 2px;
+}
+.bkv small {
+  display: block;
+  opacity: 0.75;
+}

@@ -154,6 +154,11 @@ window.__wg = {
   save,
   readSave,
   saveSlot,
+  inspectAt,
+  renderInspector,
+  get sel() {
+    return sel;
+  },
   loadSlot,
   slotList,
   get renderer() {
