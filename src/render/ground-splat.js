@@ -255,9 +255,15 @@ float roadBand(float d, float fw) { return 1.0 - smoothstep(-fw, fw, d); }
 float roadLine(vec2 f, float arms, float fw) {
   bool n = bit(arms, 1.0) > 0.5, s = bit(arms, 2.0) > 0.5, w = bit(arms, 4.0) > 0.5, e = bit(arms, 8.0) > 0.5;
   float cnt = float(n) + float(s) + float(w) + float(e);
-  if (cnt < 1.0 || cnt > 2.0) return 0.0; // junctions and big paved areas are left plain
+  if (cnt < 1.0 || cnt > 3.0) return 0.0; // junctions and big paved areas are left plain
   vec2 p = f - 0.5;
   float a = 0.0;
+  if (cnt == 3.0) {
+    // one lane of a two-lane road: the line runs along the seam with the other lane
+    if (!n || !s) a = roadBand(abs(p.y - (n ? -0.5 : 0.5)) - 0.03, fw) * roadBand(abs(p.x) - 0.16, fw);
+    else a = roadBand(abs(p.x - (w ? -0.5 : 0.5)) - 0.03, fw) * roadBand(abs(p.y) - 0.16, fw);
+    return a * clamp(0.09 / fw, 0.0, 1.0);
+  }
   if (cnt == 2.0 && (n || s) && (w || e)) {
     vec2 d = p - vec2(e ? 0.5 : -0.5, s ? 0.5 : -0.5);
     float ang = atan(abs(d.y), abs(d.x));
@@ -365,6 +371,11 @@ function paintGround() {
       if (layer === LAYER.service) {
         const rd = (xx, yy) => inB(xx, yy) && isRoad(idx(xx, yy));
         arms = (rd(x, y - 1) ? 1 : 0) | (rd(x, y + 1) ? 2 : 0) | (rd(x - 1, y) ? 4 : 0) | (rd(x + 1, y) ? 8 : 0);
+        // the outer corner of a two-lane bend, and T junctions, get no line
+        const lanes = { 14: [0, 1], 13: [0, -1], 11: [1, 0], 7: [-1, 0] }[arms]; // the side the other lane is on
+        if (lanes && rd(x + lanes[0] * 2, y + lanes[1] * 2)) arms = 15;
+        const dg = { 6: [-1, 1], 10: [1, 1], 5: [-1, -1], 9: [1, -1] }[arms];
+        if (dg && rd(x + dg[0], y + dg[1])) arms = 15;
       }
       d[o] = layer + arms * 16;
       d[o + 1] = edges;

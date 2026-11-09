@@ -115,7 +115,7 @@ function ambulanceArrive(t) {
     a.pickup = here;
     t.phase = 'toClinic';
     t.st = 'in';
-    t.path = staffRoute(here, new Set([t.bay]), truckStep, truckCost) || [];
+    t.path = truckRoute(here, new Set([t.bay])) || [];
     if (!t.path.length && here !== t.bay) {
       // the road was cut behind it: treat as if it arrived
       t.x = (t.bay % W) + 0.5;
@@ -150,7 +150,7 @@ function driveHome(t, here) {
   t.phase = 'home';
   t.st = 'in';
   t.animal = null;
-  t.path = staffRoute(here, new Set([t.bay]), truckStep, truckCost) || [];
+  t.path = truckRoute(here, new Set([t.bay])) || [];
   if (!t.path.length) t.gone = true;
 }
 function tickVetCare() {

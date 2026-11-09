@@ -58,6 +58,7 @@ window.__wg = {
     return groundData;
   },
   bridgeLift,
+  keepRight,
   get vignettes() {
     return [...vigs.keys()];
   },
@@ -164,14 +165,18 @@ window.__wg = {
   build(kind) {
     tool = 'shop';
     sub = kind;
-    for (let y = 15; y < H - 1; y++)
-      for (let x = 2; x < W - 2; x++)
-        if (check(x, y).ok) {
-          act(x, y);
-          dirty = true;
-          rebuild();
-          return [x, y];
-        }
+    for (const [y0, y1] of [
+      [15, H - 1],
+      [2, 15],
+    ])
+      for (let y = y0; y < y1; y++)
+        for (let x = 2; x < W - 2; x++)
+          if (check(x, y).ok) {
+            act(x, y);
+            dirty = true;
+            rebuild();
+            return [x, y];
+          }
     return null;
   },
   hireRole(role) {

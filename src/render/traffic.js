@@ -43,6 +43,7 @@ function lotRoute(a) {
     ];
     for (const t of e.r) pts.push([(t % W) + 0.5, ((t / W) | 0) + 0.5]);
     pts.push([p.x0 + p.fw / 2, p.y0 + p.fh / 2]);
+    pts.tiles = e.r;
   }
   lotRoutes.set(a, pts);
   return pts;
@@ -82,6 +83,13 @@ function spawnMovers(n) {
     if (n < 0) {
       // drive out: reverse the route, and leave along the far lane in the other direction
       path = pts.slice().reverse();
+      // the other lane on the way out
+      if (pts.tiles && pts.tiles.length > 2) {
+        const t0 = pts.tiles[pts.tiles.length - 1],
+          back = keepRight(pts.tiles.slice(0, -1).reverse(), t0);
+        const at = (t) => [(t % W) + 0.5, ((t / W) | 0) + 0.5];
+        path = [path[0], at(t0), ...back.map(at), ...path.slice(pts.tiles.length + 1)];
+      }
       const last = path.length - 1,
         west = path[last][0] < path[last - 1][0]; // came in from the west, so leave heading east
       path[last - 1] = [path[last - 1][0], laneZ(!west)];

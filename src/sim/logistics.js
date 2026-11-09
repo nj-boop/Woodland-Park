@@ -101,12 +101,57 @@ const highwayTiles = () => {
 function truckEntry(goals) {
   let best = null;
   for (const h of highwayTiles()) {
-    const r = staffRoute(h, goals, truckStep, truckCost);
+    const r = truckRoute(h, goals);
     if (r && (!best || r.length < best.r.length)) best = { h, r };
   }
   return best;
 }
 const truckCost = () => 1;
+/* On a two-lane road, drive on the right. Takes a tile route (not including `start`) and moves each
+   step onto the right-hand lane where there is one. The first and last tiles stay put. */
+function keepRight(path, start) {
+  if (path.length < 3) return path;
+  const seq = [start, ...path],
+    last = seq.length - 1,
+    lane = seq.map((t, k) => {
+      if (k === 0 || k === last) return t;
+      const nx = seq[k + 1],
+        dx = (nx % W) - (t % W),
+        dy = ((nx / W) | 0) - ((t / W) | 0),
+        x = t % W,
+        y = (t / W) | 0;
+      const road = (i, j) => inB(i, j) && isRoad(idx(i, j));
+      return road(x - dy, y + dx) && !road(x + dy, y - dx) ? idx(x - dy, y + dx) : t;
+    });
+  const out = [lane[0]];
+  for (let k = 1; k < lane.length; k++) {
+    const a = out[out.length - 1],
+      b = lane[k];
+    if (a === b) continue;
+    const ax = a % W,
+      ay = (a / W) | 0,
+      bx = b % W,
+      by = (b / W) | 0,
+      gap = Math.abs(ax - bx) + Math.abs(ay - by);
+    if (gap === 2 && ax !== bx && ay !== by) {
+      const c1 = idx(ax, by),
+        c2 = idx(bx, ay);
+      if (isRoad(c1)) out.push(c1);
+      else if (isRoad(c2)) out.push(c2);
+      else return path;
+    } else if (gap === 2) {
+      const mid = idx((ax + bx) / 2, (ay + by) / 2);
+      if (!isRoad(mid)) return path;
+      out.push(mid);
+    } else if (gap > 2) return path;
+    out.push(b);
+  }
+  return out.slice(1);
+}
+const truckRoute = (from, goals) => {
+  const r = staffRoute(from, goals, truckStep, truckCost);
+  return r && keepRight(r, from);
+};
 function dockTiles() {
   return anchorsOf('dock');
 }
@@ -191,7 +236,7 @@ function tickTrucks() {
         t.cargo = [];
         t.goods = [];
         t.st = 'out';
-        t.path = staffRoute(idx(Math.floor(t.x), Math.floor(t.y)), new Set(highwayTiles()), truckStep, truckCost) || [];
+        t.path = truckRoute(idx(Math.floor(t.x), Math.floor(t.y)), new Set(highwayTiles())) || [];
       }
       continue;
     }

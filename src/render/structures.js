@@ -764,6 +764,20 @@ function bridgeSegments(grp, x, y, sp) {
     i = idx(x, y),
     overPath = S.tiles[i].pm === 'crossing',
     N = 8;
+  // a bridge alongside this one (the other lane of a road) shares the deck, with no rail between
+  const laneBeside = (s) => {
+    const nx = alongX ? x : x + s,
+      ny = alongX ? y + s : y;
+    if (!inB(nx, ny)) return false;
+    const o = F.bridgeAt.get(idx(nx, ny));
+    return !!o && o.top === sp.top && o.ax === sp.ax;
+  };
+  const lane0 = laneBeside(-1),
+    lane1 = laneBeside(1),
+    v0 = lane0 ? 0 : 0.07,
+    v1 = lane1 ? 1 : 0.93,
+    vm = (v0 + v1) / 2,
+    vw = v1 - v0;
   const groundAt = (u, v) => (alongX ? heightAt(u, sp.line + v) : heightAt(sp.line + v, u));
   const levelAt = (u) => {
     const g = groundAt(u, 0.5);
@@ -785,9 +799,9 @@ function bridgeSegments(grp, x, y, sp) {
       else m.rotation.x = -pitch;
       return m;
     };
-    const [px, py, pz] = pos(um, 0.5, hm);
-    tilt(P(grp, 'box', deck, px, py, pz, alongX ? len : 0.86, 0.07, alongX ? 0.86 : len));
-    for (const v of [0.05, 0.95]) {
+    const [px, py, pz] = pos(um, vm, hm);
+    tilt(P(grp, 'box', deck, px, py, pz, alongX ? len : vw, 0.07, alongX ? vw : len));
+    for (const v of [...(lane0 ? [] : [0.05]), ...(lane1 ? [] : [0.95])]) {
       const [rx, ry, rz] = pos(um, v, hm + 0.22);
       tilt(P(grp, 'box', rail, rx, ry, rz, alongX ? len : 0.04, 0.04, alongX ? 0.04 : len, false));
       if (k % 2 === 0) {
@@ -801,10 +815,10 @@ function bridgeSegments(grp, x, y, sp) {
       rise = hm - g;
     if (rise < 0.03) continue;
     if (road) {
-      const [fx, , fz] = pos(um, 0.5, 0);
-      P(grp, 'box', fill, fx, g + rise / 2, fz, alongX ? 1 / N + 0.005 : 0.8, rise, alongX ? 0.8 : 1 / N + 0.005);
+      const [fx, , fz] = pos(um, vm, 0);
+      P(grp, 'box', fill, fx, g + rise / 2, fz, alongX ? 1 / N + 0.005 : vw, rise, alongX ? vw : 1 / N + 0.005);
     } else if (k % 2 === 0)
-      for (const v of [0.08, 0.92]) {
+      for (const v of [...(lane0 ? [] : [0.08]), ...(lane1 ? [] : [0.92])]) {
         const [qx, , qz] = pos(um, v, 0);
         P(grp, 'cyl', fill, qx, g + rise / 2, qz, 0.03, rise);
       }
@@ -815,7 +829,7 @@ function bridgeSegments(grp, x, y, sp) {
   if (c0 === sp.a) ends.push(c0 + 0.03);
   if (c0 === sp.b) ends.push(c0 + 0.97);
   for (const u of ends)
-    for (const v of [0.06, 0.94]) {
+    for (const v of [...(lane0 ? [] : [0.06]), ...(lane1 ? [] : [0.94])]) {
       const g = groundAt(u, v),
         hh = sp.deckY - g,
         [qx, , qz] = pos(u, v, 0);

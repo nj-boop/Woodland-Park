@@ -1,43 +1,75 @@
 /* Placement rules and actions for every tool: paths, habitats (rectangle, paint, erase, gates), animals, items, terraforming, bulldozing. */
+/* Roads are two tiles wide: the road tool lays a 2 × 2 block at each step of a drag, all or nothing. */
+function checkRoadStamp(x, y) {
+  const stamp = { x0: clamp(x, 0, W - 2), y0: clamp(y, 0, H - 2) },
+    plain = [],
+    deck = new Set(),
+    ramps = new Set();
+  let br = 'road';
+  for (let ty = stamp.y0; ty < stamp.y0 + 2; ty++)
+    for (let tx = stamp.x0; tx < stamp.x0 + 2; tx++) {
+      const t = tileAt(tx, ty);
+      if (t.t === 'p' && (t.pm === 'service' || t.pm === 'crossing')) continue;
+      const c = checkPathTile(tx, ty);
+      if (!c.ok) return { ok: false, msg: c.msg, loud: !!c.msg, quiet: c.quiet, stamp };
+      if (c.crossing) {
+        br = c.br;
+        c.bridge.deck.forEach((i) => deck.add(i));
+        c.bridge.ramps.forEach((i) => ramps.add(i));
+      } else plain.push(idx(tx, ty));
+    }
+  const lay = new Set([...plain, ...ramps].filter((i) => !deck.has(i)));
+  if (!lay.size && !deck.size) return { ok: false, quiet: true, stamp };
+  return {
+    ok: true,
+    cost: BRIDGE_COST * deck.size + PATHS.service.cost * lay.size,
+    crossing: deck.size > 0,
+    br,
+    bridge: { deck: [...deck], ramps: [...lay] },
+    stamp,
+  };
+}
+function checkPathTile(x, y) {
+  const t = tileAt(x, y);
+  // roads and footpaths never meet at grade: laying one over the other builds a bridge, with
+  // whichever is laid second on top (a footbridge over a road, or a road bridge over a footpath)
+  if (t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && pathSub !== 'track' && pathSub !== 'tunnel')
+    if ((pathSub === 'service') !== (t.pm === 'service')) {
+      const br = pathSub === 'service' ? 'road' : 'foot',
+        plan = bridgePlan(x, y, br);
+      if (!plan.ok) return { ok: false, msg: plan.msg, loud: true };
+      return {
+        ok: true,
+        cost: BRIDGE_COST * plan.deck.length + PATHS[pathSub].cost * plan.ramps.length,
+        crossing: true,
+        br,
+        bridge: plan,
+      };
+    }
+  if (t.t === 'p') return { ok: false, quiet: true };
+  if (t.w) return { ok: false, msg: "You can't build a path over water." };
+  if (t.e && pathSub === 'track' && F.emap[t.e].biome !== 'pool') {
+    if (t.o) return { ok: false, msg: 'Something is in the way. Remove it first.' };
+    return { ok: true, cost: PATHS.track.cost };
+  }
+  if (t.e && !(pathSub === 'tunnel' && F.emap[t.e].biome === 'pool'))
+    return {
+      ok: false,
+      msg:
+        pathSub === 'tunnel'
+          ? 'Glass tunnels only run through aquatic habitats.'
+          : "Paths can't run through a habitat. Use a safari track, or a glass tunnel for aquatic ones.",
+    };
+  if (!t.e && pathSub === 'tunnel') return { ok: false, msg: 'Glass tunnels only run through aquatic habitats.' };
+  if (t.o) return { ok: false, msg: 'Something is in the way. Bulldoze it first.' };
+  if (joinsBridgeSide(x, y, pathSub === 'service'))
+    return { ok: false, msg: 'Paths can only join a bridge at its ends.', loud: true };
+  return { ok: true, cost: PATHS[pathSub].cost };
+}
 function check(x, y) {
   if (!inB(x, y)) return { ok: false, quiet: true };
   const t = tileAt(x, y);
-  if (tool === 'path') {
-    // roads and footpaths never meet at grade: laying one over the other builds a bridge, with
-    // whichever is laid second on top (a footbridge over a road, or a road bridge over a footpath)
-    if (t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && pathSub !== 'track' && pathSub !== 'tunnel')
-      if ((pathSub === 'service') !== (t.pm === 'service')) {
-        const br = pathSub === 'service' ? 'road' : 'foot',
-          plan = bridgePlan(x, y, br);
-        if (!plan.ok) return { ok: false, msg: plan.msg, loud: true };
-        return {
-          ok: true,
-          cost: BRIDGE_COST * plan.deck.length + PATHS[pathSub].cost * plan.ramps.length,
-          crossing: true,
-          br,
-          bridge: plan,
-        };
-      }
-    if (t.t === 'p') return { ok: false, quiet: true };
-    if (t.w) return { ok: false, msg: "You can't build a path over water." };
-    if (t.e && pathSub === 'track' && F.emap[t.e].biome !== 'pool') {
-      if (t.o) return { ok: false, msg: 'Something is in the way. Remove it first.' };
-      return { ok: true, cost: PATHS.track.cost };
-    }
-    if (t.e && !(pathSub === 'tunnel' && F.emap[t.e].biome === 'pool'))
-      return {
-        ok: false,
-        msg:
-          pathSub === 'tunnel'
-            ? 'Glass tunnels only run through aquatic habitats.'
-            : "Paths can't run through a habitat. Use a safari track, or a glass tunnel for aquatic ones.",
-      };
-    if (!t.e && pathSub === 'tunnel') return { ok: false, msg: 'Glass tunnels only run through aquatic habitats.' };
-    if (t.o) return { ok: false, msg: 'Something is in the way. Bulldoze it first.' };
-    if (joinsBridgeSide(x, y, pathSub === 'service'))
-      return { ok: false, msg: 'Paths can only join a bridge at its ends.', loud: true };
-    return { ok: true, cost: PATHS[pathSub].cost };
-  }
+  if (tool === 'path') return pathSub === 'service' ? checkRoadStamp(x, y) : checkPathTile(x, y);
   if (tool === 'animal') {
     const sp = SPECIES[sub];
     if (!t.e) return { ok: false, msg: `Place the ${sp.name.toLowerCase()} inside a habitat.` };
@@ -136,13 +168,13 @@ function act(x, y) {
   const t = tileAt(x, y);
   if (tool === 'path') {
     if (!spend(c.cost, c.crossing ? 'a bridge' : 'a path')) return false;
-    if (c.crossing) {
+    if (c.crossing || (c.stamp && c.bridge)) {
       for (const i of c.bridge.deck) {
         setPath(i % W, (i / W) | 0, 'crossing');
         S.tiles[i].pm = 'crossing';
         S.tiles[i].br = c.br;
       }
-      for (const i of c.bridge.ramps) setPath(i % W, (i / W) | 0, pathSub);
+      for (const i of c.bridge.ramps) setPath(i % W, (i / W) | 0, pathSub); // also a road's plain tiles
     } else setPath(x, y, pathSub);
     dirty = true;
     return true;

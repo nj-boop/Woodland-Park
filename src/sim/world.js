@@ -216,11 +216,15 @@ function newZoo(w, h, mode = 'standard') {
   for (let y = 15; y < 26; y++) {
     setPath(27, y);
     setPath(31, y, 'service');
+    setPath(32, y, 'service');
   }
   // the zebras' animal house on the habitat's east fence, with a road out to the service road
   // (passing under a footbridge where it meets the footpath at x 27)
-  for (let x = 20; x <= 31; x++) setPath(x, 10, x === 27 ? 'crossing' : 'service');
-  for (let y = 11; y < 15; y++) setPath(31, y, 'service');
+  for (let x = 20; x <= 32; x++) for (const y of [10, 11]) setPath(x, y, x === 27 ? 'crossing' : 'service');
+  for (let y = 12; y < 15; y++) {
+    setPath(31, y, 'service');
+    setPath(32, y, 'service');
+  }
   stampBuilding('animalhouse', { r: 1, x0: 18, y0: 9, fw: 2, fh: 3, tiles: fpTiles(18, 9, 2, 3) });
   placeEntrance(entrancePlan(18));
   S.mapW = 36;

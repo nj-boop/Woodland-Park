@@ -49,8 +49,8 @@ function zoomBy(f) {
 function lineItemAt(tt) {
   if (tool === 'plant') return !!(ITEMS[sub] && ITEMS[sub].line);
   if (tool !== 'bulldoze' || !inB(tt.x, tt.y)) return false;
-  const o = tileAt(tt.x, tt.y).o;
-  return !!(o && ITEMS[o].line);
+  const t = tileAt(tt.x, tt.y);
+  return !!(t.o ? ITEMS[t.o].line : t.t === 'p' && t.pm === 'service'); // drag along a road to take it up
 }
 cv.addEventListener('pointerdown', (e) => {
   cv.setPointerCapture(e.pointerId);

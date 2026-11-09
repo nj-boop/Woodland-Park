@@ -340,19 +340,42 @@ function bridgePlan(x, y, top) {
   const lowerRun = (i, j) =>
     isLower(i, j) ||
     (inB(i, j) && S.tiles[idx(i, j)].t === 'p' && S.tiles[idx(i, j)].pm === 'crossing' && bridgeTop(idx(i, j)) === top);
-  const lowX = lowerRun(x - 1, y) || lowerRun(x + 1, y),
-    lowY = lowerRun(x, y - 1) || lowerRun(x, y + 1);
-  if (lowX && lowY) return fail('A bridge needs a straight stretch of path to cross, not a corner or junction.');
-  const alongX = lowY
-    ? true
-    : lowX
-      ? false
-      : isUpper(x - 1, y) || isUpper(x + 1, y) || !(isUpper(x, y - 1) || isUpper(x, y + 1));
+  if (isBridgeRamp(idx(x, y))) return fail('That’s a bridge ramp. Cross a little further along.');
+  // how far the lower path runs each way through this tile; the bridge crosses the short way
+  const run = (dx, dy, i = x, j = y) => {
+    let n = 1;
+    for (const s of [-1, 1]) for (let k = 1; k < 12 && lowerRun(i + dx * s * k, j + dy * s * k); k++) n++;
+    return n;
+  };
+  const lenX = run(1, 0),
+    lenY = run(0, 1),
+    short = Math.min(lenX, lenY);
+  if (short > 6) return fail('That path is too wide to bridge.');
+  if (lenX === lenY && short > 2) return fail('A bridge can’t cross a junction. Move along to a straight stretch.');
+  if (short > 1) {
+    // a wide path runs on both sides of this strip; a corner or junction doesn't
+    const sx = lenX < lenY ? 1 : 0,
+      sy = 1 - sx;
+    for (const s of [-1, 1])
+      for (let k = 1; lowerRun(x + sx * s * k, y + sy * s * k); k++) {
+        const i = x + sx * s * k,
+          j = y + sy * s * k;
+        if (!lowerRun(i + sy, j + sx) && !lowerRun(i - sy, j - sx))
+          return fail('A bridge needs a straight stretch of path to cross, not a corner or junction.');
+      }
+  }
+  const alongX =
+    lenX !== lenY ? lenX < lenY : isUpper(x - 1, y) || isUpper(x + 1, y) || !(isUpper(x, y - 1) || isUpper(x, y + 1));
   const dx = alongX ? 1 : 0,
     dy = alongX ? 0 : 1,
     deck = [idx(x, y)],
     ramps = [];
-  const sideClash = (i, j) => isUpper(i + dy, j + dx) || isUpper(i - dy, j - dx);
+  // the approach has to be straight: a two-lane road may be 2 wide there, a footpath 1
+  const sideClash = (i, j) => {
+    let w = 1;
+    for (const t of [-1, 1]) for (let k = 1; k < 4 && isUpper(i + dy * t * k, j + dx * t * k); k++) w++;
+    return w > (top === 'road' ? 2 : 1);
+  };
   for (const s of [-1, 1]) {
     for (let n = 1; ; n++) {
       const cx = x + dx * s * n,

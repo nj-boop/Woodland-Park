@@ -155,6 +155,12 @@ function overlays(alpha) {
           doorMark.visible = true;
         }
       }
+      if (c.stamp) {
+        const cx = c.stamp.x0 + 1,
+          cz = c.stamp.y0 + 1;
+        prev.position.set(cx, 0.04 + heightAt(cx, cz), cz);
+        prev.scale.set(1.96, 0.08, 1.96);
+      }
       if (tool === 'terrain' && terrSub !== 'water' && terrSub !== 'drain') {
         const r = brushR();
         prev.scale.set(r * 2, 0.08, r * 2);

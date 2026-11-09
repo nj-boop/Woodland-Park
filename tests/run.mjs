@@ -159,9 +159,11 @@ const tests = {
       const g = window.__wg;
       // clear the starter animal house and its road, so the old test layout fits
       g.clearBuilding(g.S.tiles.findIndex((k) => k.o === 'animalhouse'));
-      for (let x = 20; x <= 31; x++)
-        Object.assign(g.S.tiles[10 * g.W + x], x === 27 ? { pm: 'stone' } : { t: 'g', pm: undefined });
-      for (let y = 11; y < 15; y++) Object.assign(g.S.tiles[y * g.W + 31], { t: 'g', pm: undefined });
+      for (let x = 20; x <= 32; x++)
+        for (const y of [10, 11])
+          Object.assign(g.S.tiles[y * g.W + x], x === 27 ? { pm: 'stone' } : { t: 'g', pm: undefined });
+      for (let y = 12; y < 15; y++)
+        for (const x of [31, 32]) Object.assign(g.S.tiles[y * g.W + x], { t: 'g', pm: undefined });
       g.refresh();
       g.setTool('habitat');
       g.set('habMode', 'paint');
@@ -854,16 +856,16 @@ const tests = {
         i = 10 * g.W + 27;
       if (g.S.tiles[i].pm !== 'crossing') return 'starter has no footbridge: ' + g.S.tiles[i].pm;
       if (!g.isRoad(i) || !g.guestPath(i)) return 'bridge is not both road and footpath';
-      // lay a new one: road over the footpath at x 27, y 8
+      // lay a new one: road over the footpath at x 27, y 7
       g.setTool('path');
       g.set('pathSub', 'service');
-      const c = g.check(27, 8);
+      const c = g.check(27, 7);
       if (!c.ok) return 'cannot lay a road over the footpath: ' + c.msg;
-      g.act(27, 8);
-      const t = g.S.tiles[8 * g.W + 27];
+      g.act(27, 7);
+      const t = g.S.tiles[7 * g.W + 27];
       if (t.pm !== 'crossing' || t.br !== 'road') return 'got ' + t.pm + ' ' + t.br;
       g.load(g.serialize());
-      return (g.S.tiles[8 * g.W + 27].br === 'road' && !g.S.tiles[i].br) || 'bridge kind lost on save';
+      return (g.S.tiles[7 * g.W + 27].br === 'road' && !g.S.tiles[i].br) || 'bridge kind lost on save';
     }),
   'a guest left off the paths walks back to the nearest one': async ({ page }) =>
     page.evaluate(() => {
@@ -1033,9 +1035,10 @@ const tests = {
       g.act(27, 21);
       g.refresh();
       const t = (x, y) => g.S.tiles[y * W + x];
-      if (t(27, 21).pm !== 'crossing' || t(26, 21).pm !== 'service' || t(28, 21).pm !== 'service')
-        return 'ramps not laid';
-      if (money0 - g.S.money !== 300 + 16) return 'charged ' + (money0 - g.S.money);
+      for (const y of [21, 22])
+        if (t(27, y).pm !== 'crossing' || t(26, y).pm !== 'service' || t(28, y).pm !== 'service')
+          return 'ramps not laid';
+      if (money0 - g.S.money !== 600 + 32) return 'charged ' + (money0 - g.S.money);
       const y = 21.5,
         lift = (x) => g.bridgeLift(x, y, 'road');
       if (Math.abs(lift(27.5) - 0.9) > 0.01) return 'deck height ' + lift(27.5);
@@ -1046,6 +1049,8 @@ const tests = {
       g.act(27, 21);
       g.refresh();
       if (t(27, 21).pm === 'crossing' || !g.guestPath(21 * W + 27)) return 'the footpath should remain';
+      g.act(27, 22);
+      g.refresh();
       return g.bridgeLift(27.5, y, 'road') === 0 || 'still lifted';
     }),
   'a bridge is refused without room for ramps, and paths cannot join its side': async ({ page }) =>
@@ -1077,6 +1082,45 @@ const tests = {
       if (code(5, 3) !== 14 + 16 * 12) return 'east-west road ' + code(5, 3);
       if (code(8, 5) !== 14 + 16 * 3) return 'north-south road ' + code(8, 5);
       return code(8, 3) === 14 + 16 * 6 || 'bend ' + code(8, 3);
+    }),
+  'roads are two lanes: laid in blocks, with a line on the seam, trucks on the right, footbridges across both': async ({
+    page,
+  }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      for (let x = 2; x <= 12; x++) for (const y of [4, 5]) g.tileAt(x, y).o = null;
+      for (let x = 2; x < 12; x++) g.act(x, 4);
+      g.refresh();
+      g.paintGround();
+      const t = (x, y) => g.S.tiles[y * W + x];
+      for (let x = 2; x <= 12; x++)
+        if (t(x, 4).pm !== 'service' || t(x, 5).pm !== 'service') return 'not two wide at ' + x;
+      const code = (x, y) => g.groundData[(y * W + x) * 4];
+      if (code(6, 4) !== 14 + 16 * 14 || code(6, 5) !== 14 + 16 * 13)
+        return 'seam codes ' + code(6, 4) + ' ' + code(6, 5);
+      // keep right: heading east on row 4 moves to the south lane, heading west stays north
+      const east = [];
+      for (let x = 3; x < 11; x++) east.push(4 * W + x);
+      const r = g.keepRight(east, 4 * W + 2);
+      if (Math.floor(r[3] / W) !== 5) return 'eastbound should use the south lane';
+      const west = east
+        .slice()
+        .reverse()
+        .map((i) => i + W);
+      const l = g.keepRight(west, 5 * W + 11);
+      if (Math.floor(l[3] / W) !== 4) return 'westbound should use the north lane';
+      // a footbridge spans both lanes in one level deck
+      g.set('pathSub', 'stone');
+      const c = g.check(7, 4);
+      if (!c.ok) return 'no footbridge: ' + c.msg;
+      g.act(7, 4);
+      g.refresh();
+      if (t(7, 4).pm !== 'crossing' || t(7, 5).pm !== 'crossing') return 'deck should cross both lanes';
+      if (t(7, 3).t !== 'p' || t(7, 6).t !== 'p') return 'ramps missing';
+      return g.F.bridgeAt.get(4 * W + 7) === g.F.bridgeAt.get(5 * W + 7) || 'two separate spans';
     }),
 };
 
