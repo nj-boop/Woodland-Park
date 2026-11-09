@@ -30,7 +30,10 @@ function buildingFacts(a) {
         note = 'The track doesn’t pass any habitats yet, so the ride is dull. Run it through or beside a habitat.';
     } else note = 'No safari track is connected. Lay one beside the station.';
   }
-  if (o === 'parking') rows.push(['Zoo parking', `${carsParked()} of ${parkingSpaces()} spaces used`]);
+  if (o === 'parking') {
+    rows.push(['Zoo parking', `${carsParked()} of ${parkingSpaces()} spaces used`]);
+    rows.push(['Footpath to the gate', F.lotWalk && F.lotWalk.has(a) ? 'Yes' : 'None yet']);
+  }
   if (o === 'recycle') {
     rows.push(['Trash bags', `${S.waste} of ${wasteCapacity()} (the garbage truck comes when it fills up)`]);
     rows.push(['Janitors', `${staffCount('janitor')} of ${staffRoom('janitor')} places filled`]);
@@ -86,6 +89,12 @@ function buildingFacts(a) {
   if (o === 'entrance') {
     rows.push(['Ticket price', money(S.admission)]);
     rows.push(['Visitors this month', String(S.today.vis)]);
+    const linked = F.lotWalk ? F.lotWalk.size : 0;
+    rows.push(['Parking lots joined by footpath', String(linked)]);
+    if (GATE.ox >= 0 && !linked)
+      note =
+        'No parking lot is joined to the outside of this gate by a footpath, so visitors are walking in from off-site.';
+    else if (F.gateBypass) note = 'A footpath runs around this gate, so guests can wander out past it to the car park.';
   }
   if (FARMS[o]) {
     const f = farmOf(a),

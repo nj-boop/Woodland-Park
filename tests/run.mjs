@@ -907,6 +907,70 @@ const tests = {
       g.load(save);
       return (g.tileAt(19, 18).o === 'picket' && g.tileAt(24, 16).o === 'stringlights') || 'lost after load';
     }),
+  'the front gate moves inland, and guests park, walk in, pay and walk back to the car': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.setSpeed(0);
+      g.S.nightOff = true;
+      g.setTool('shop');
+      g.set('sub', 'entrance');
+      const c = g.check(18, 22);
+      if (!c.ok) return 'gate not placeable: ' + c.msg;
+      if (!g.act(18, 22)) return 'gate not placed';
+      g.refresh();
+      const G = g.GATE;
+      if (G.ox < 0 || G.y >= G.oy) return 'gate should open up the map: ' + JSON.stringify(G);
+      if (g.tileAt(G.mx, G.my).o !== 'entrance' || !g.guestPath(G.oy * g.W + G.ox)) return 'gate tiles wrong';
+      // a lot beside the outside footpath, joined by it
+      const a = 23 * g.W + 19;
+      g.stampBuilding('parking', {
+        r: 1,
+        x0: 19,
+        y0: 23,
+        fw: 4,
+        fh: 2,
+        tiles: [0, 1, 2, 3].flatMap((x) => [0, 1].map((y) => (23 + y) * g.W + 19 + x)),
+      });
+      g.refresh();
+      if (!g.F.lotWalk.has(a)) return 'lot not joined to the gate';
+      const money0 = g.S.money;
+      const q = g.spawnGuest();
+      if (q.mode !== 'arrive' || q.paid) return 'guest should start at the car park, unpaid';
+      if (g.F.lotWalk.get(a).tile !== q.y * g.W + q.x) return 'guest did not get out at the lot';
+      if (g.S.money !== money0) return 'paid before reaching the gate';
+      for (let i = 0; i < 400 && q.mode === 'arrive'; i++) g.tick();
+      if (q.mode === 'arrive') return `never reached the gate, stuck at ${q.x},${q.y}`;
+      if (!q.paid || g.S.money <= money0) return 'did not pay at the gate';
+      // wandering guests stay inside
+      q.stay = 1e9;
+      q.h = 100;
+      for (let i = 0; i < 1500; i++) {
+        g.tick();
+        if (q.mode === 'walk' && g.F.outside.has(q.y * g.W + q.x)) return 'wandered out past the gate';
+      }
+      q.mode = 'leave';
+      let sawExit = false;
+      for (let i = 0; i < 2500 && g.S.guests.includes(q); i++) {
+        g.tick();
+        if (q.mode === 'exit') sawExit = true;
+      }
+      if (!sawExit) return 'never headed back to the car';
+      if (g.S.guests.includes(q)) return `still walking at ${q.x},${q.y}`;
+      const k = [G.x, G.y, G.ox, G.oy].join();
+      g.load(g.serialize());
+      return [g.GATE.x, g.GATE.y, g.GATE.ox, g.GATE.oy].join() === k || 'gate moved on load';
+    }),
+  'a gate on the south edge still works for visitors from the street': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.nightOff = true;
+      if (g.GATE.ox !== -1) return 'starter gate should open onto the highway';
+      if (g.parkingSpaces() !== 15) return 'roadside spaces ' + g.parkingSpaces();
+      const q = g.spawnGuest();
+      if (q.x !== g.GATE.mx || q.y !== g.GATE.my) return 'should arrive through the gate';
+      for (let i = 0; i < 100 && q.mode === 'arrive'; i++) g.tick();
+      return (q.mode !== 'arrive' && q.x === g.GATE.x && q.paid) || `stuck ${q.x},${q.y} ${q.mode}`;
+    }),
 };
 
 let failed = 0;

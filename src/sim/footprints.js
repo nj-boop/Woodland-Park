@@ -148,7 +148,7 @@ function planOf(a) {
 
 // placement check for a building bigger than one tile; returns a check() result with the plan attached
 function checkBuilding(kind, x, y) {
-  if (kind === 'entrance') return checkEntrance(x);
+  if (kind === 'entrance') return checkEntrance(x, y);
   let firstFail = null;
   for (const p of fpPlans(kind, x, y)) {
     const c = checkPlan(kind, p);
@@ -212,22 +212,81 @@ function houseHabitat(p) {
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';
 
-/* The park entrance: 3 tiles wide along the south edge, where the highway runs. Guests arrive on
-   the footpath tile just inside it (GATE). Placing a new entrance moves the old one. */
+/* The park entrance: 3 tiles wide, anywhere outside habitats, usually across a footpath. Guests walk
+   from parking to the footpath tile outside its middle, pay, and step through to the tile inside
+   (GATE.x, GATE.y). On the south edge the outside tile is the highway verge, off the map. Its front
+   (the facing `r`) is the zoo side. Placing a new entrance moves the old one. */
+const GATE_DIR = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
 function entrancePlan(x) {
   const x0 = clamp(x - 1, 0, W - 3);
   return { r: 2, x0, y0: H - 1, fw: 3, fh: 1, tiles: fpTiles(x0, H - 1, 3, 1) };
 }
-function checkEntrance(x) {
-  const p = entrancePlan(x);
-  const fail = (msg) => ({ ok: false, msg, plan: p });
-  for (const i of [...p.tiles, idx(p.x0 + 1, H - 2)]) {
+function gateTiles(p) {
+  const [dx, dy] = GATE_DIR[p.r],
+    mx = p.x0 + (p.fw >> 1),
+    my = p.y0 + (p.fh >> 1);
+  return { mx, my, ix: mx + dx, iy: my + dy, ox: mx - dx, oy: my - dy };
+}
+// which way a gate should face at this spot: across the footpath it's on, with the zoo side towards the middle of the map
+function gateFacings(x, y) {
+  if (buildRot != null) return [buildRot];
+  if (y === H - 1) return [2, 1, 3, 0];
+  const onPath = inB(x, y) && S.tiles[idx(x, y)].t === 'p',
+    run = (dx, dy) => inB(x + dx, y + dy) && S.tiles[idx(x + dx, y + dy)].t === 'p',
+    vertical = onPath ? run(0, -1) || run(0, 1) : Math.abs(y - H / 2) > Math.abs(x - W / 2),
+    pair = vertical ? (y > H / 2 ? [2, 0] : [0, 2]) : x < W / 2 ? [1, 3] : [3, 1];
+  const rest = [0, 1, 2, 3].filter((r) => !pair.includes(r));
+  const order = [...pair, ...rest];
+  return lastPlan && lastPlan.kind === 'entrance' ? [lastPlan.r, ...order.filter((r) => r !== lastPlan.r)] : order;
+}
+function checkEntrancePlan(p) {
+  const fail = (msg) => ({ ok: false, msg, plan: p }),
+    g = gateTiles(p);
+  const offSouth = g.oy >= H;
+  if (!inB(g.ix, g.iy) || (!inB(g.ox, g.oy) && !offSouth))
+    return fail('The entrance needs a tile on both sides: only the south edge can open straight onto the highway.');
+  const check = [...p.tiles, idx(g.ix, g.iy)];
+  if (!offSouth) check.push(idx(g.ox, g.oy));
+  for (const i of check) {
+    if (i < 0) return fail('That runs off the edge of the map.');
     const t = S.tiles[i];
     if (t.e) return fail('The entrance can’t go in a habitat.');
     if (t.w) return fail('Part of that spot is under water.');
+    if (t.t === 'p' && (t.pm === 'service' || t.pm === 'crossing' || t.pm === 'track'))
+      return fail('The entrance can’t go across a road, bridge or safari track.');
     if (t.o && t.o !== 'entrance' && !clearable(t.o)) return fail('Something is in the way of the entrance.');
   }
   return { ok: true, cost: ITEMS.entrance.cost, plan: p };
+}
+function checkEntrance(x, y) {
+  let first = null;
+  for (const r of gateFacings(x, y)) {
+    const [fw, fh] = fpDims('entrance', r),
+      [x0, y0] = fpOrigin('entrance', x, y, r),
+      c = checkEntrancePlan({ r, x0, y0, fw, fh, tiles: fpTiles(x0, y0, fw, fh) });
+    if (c.ok) {
+      lastPlan = { kind: 'entrance', r };
+      return c;
+    }
+    first = first || c;
+  }
+  return first;
+}
+// work out GATE from the entrance building on the map
+function syncGate() {
+  const a = S.tiles.findIndex((t, i) => t.o === 'entrance' && isAnchor(i));
+  if (a < 0) return;
+  const g = gateTiles(planOf(a));
+  Object.assign(GATE, { x: g.ix, y: g.iy, mx: g.mx, my: g.my });
+  const out = inB(g.ox, g.oy);
+  GATE.ox = out ? g.ox : -1;
+  GATE.oy = out ? g.oy : -1;
+  S.gate = { ...GATE };
 }
 function placeEntrance(p) {
   for (let i = 0; i < W * H; i++) if (S.tiles[i].o === 'entrance' && isAnchor(i)) clearBuilding(i); // rare: a full scan is fine
@@ -236,11 +295,13 @@ function placeEntrance(p) {
     S.tiles[i].pm = undefined;
   }
   stampBuilding('entrance', p);
-  GATE.x = p.x0 + 1;
-  GATE.y = H - 2;
-  S.gate = { ...GATE };
-  // guests step in onto a footpath
-  const g = S.tiles[idx(GATE.x, GATE.y)];
-  if (g.t !== 'p' || g.pm === 'service') setPath(GATE.x, GATE.y, 'stone');
-  g.o = null;
+  syncGate();
+  // guests step in onto a footpath, and queue on one outside
+  const lay = (x, y) => {
+    const t = S.tiles[idx(x, y)];
+    if (t.t !== 'p' || t.pm === 'service') setPath(x, y, 'stone');
+    t.o = null;
+  };
+  lay(GATE.x, GATE.y);
+  if (GATE.ox >= 0) lay(GATE.ox, GATE.oy);
 }

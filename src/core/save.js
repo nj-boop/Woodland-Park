@@ -319,6 +319,7 @@ function load(str) {
     for (const i of entrancePlan(ex).tiles) if (S.tiles[i].o && S.tiles[i].o !== 'entrance') clearBuilding(i);
     placeEntrance(entrancePlan(ex));
   }
+  syncGate();
   delete S.hg;
   delete S.hg16;
   delete S.er;

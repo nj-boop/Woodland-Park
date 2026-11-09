@@ -490,7 +490,7 @@ function syncParkedCars(time) {
   if (time - carSyncAt < 1000) return;
   carSyncAt = time;
   const lots = anchorsOf('parking');
-  let cars = Math.max(0, carsParked() - STREET_CARS),
+  let cars = carsInLots(),
     n = 0;
   const o = new THREE.Object3D(),
     c = new THREE.Color();

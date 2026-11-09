@@ -616,7 +616,7 @@ function renderInspector() {
       return;
     }
     box.innerHTML = `<button class="x" aria-label="Close" id="ix">×</button>
-      <h2>${g.name}</h2><div class="sub">${g.mode === 'leave' ? 'Heading for the exit' : g.mode === 'rest' ? 'Resting on a bench' : 'Exploring'} · spent ${money(g.spent)} · seen ${g.seen.length} habitat${g.seen.length === 1 ? '' : 's'}</div>
+      <h2>${g.name}</h2><div class="sub">${g.mode === 'arrive' ? 'Walking to the gate' : g.mode === 'exit' ? 'Heading back to the car' : g.mode === 'leave' ? 'Heading for the exit' : g.mode === 'rest' ? 'Resting on a bench' : 'Exploring'} · spent ${money(g.spent)} · seen ${g.seen.length} habitat${g.seen.length === 1 ? '' : 's'}</div>
       <div class="thought">“${g.thought}”</div>
       <div class="need"><span>Happiness</span>${meter(g.h)}<span>Fullness</span>${meter(100 - g.hunger)}<span>Thirst</span>${meter(100 - g.thirst)}<span>Energy</span>${meter(g.energy)}</div>`;
   }

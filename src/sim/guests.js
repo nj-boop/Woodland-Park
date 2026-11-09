@@ -28,17 +28,31 @@ function spawnRate() {
   const pf = S.admission === 0 ? 1.7 : clamp(1.55 - S.admission / 30, 0.12, 1.6);
   return base * rf * pf * (1 + AWARD_FAME * (S.fame || 0)) * (researched('market') ? 1.15 : 1);
 }
+// where a new visitor gets out of the car: { x, y, fx, fy, lot } (lot -1: the street or off-site)
+function arrivalSpot() {
+  const lots = anchorsOf('parking').filter((a) => F.lotWalk && F.lotWalk.has(a));
+  if (lots.length) {
+    const a = lots[Math.min(lots.length - 1, Math.floor(carsInLots() / LOT_CARS))],
+      w = F.lotWalk.get(a);
+    return { x: w.tile % W, y: (w.tile / W) | 0, fx: w.from % W, fy: (w.from / W) | 0, lot: a };
+  }
+  if (GATE.ox < 0) return { x: GATE.mx, y: GATE.my, fx: GATE.mx, fy: GATE.my + 1, lot: -1 }; // from the highway verge
+  return { x: GATE.ox, y: GATE.oy, fx: GATE.ox, fy: GATE.oy, lot: -1 };
+}
 function spawnGuest() {
   const gi = idx(GATE.x, GATE.y);
   if (!nbr4(gi).some(guestPath)) return;
+  const at = arrivalSpot();
   const g = {
     id: S.nextId++,
     name: pick(NAMES),
-    fx: GATE.x,
-    fy: GATE.y,
-    x: GATE.x,
-    y: GATE.y,
-    p: 1,
+    fx: at.fx,
+    fy: at.fy,
+    x: at.x,
+    y: at.y,
+    p: 0,
+    lot: at.lot,
+    paid: false,
     hunger: rnd(5, 35),
     thirst: rnd(5, 35),
     bath: rnd(0, 30),
@@ -48,11 +62,11 @@ function spawnGuest() {
     mem: [],
     t: 0,
     stay: rnd(600, 1400) | 0,
-    mode: 'walk',
+    mode: 'arrive',
     rest: 0,
     trash: 0,
     h: 60,
-    spent: S.admission,
+    spent: 0,
     best: null,
     bestA: 0,
     litter: 0,
@@ -61,10 +75,48 @@ function spawnGuest() {
     thought: 'Excited to see some animals!',
   };
   S.guests.push(g);
+  return g;
+}
+// at the ticket booth
+function admitGuest(g) {
+  g.mode = 'walk';
+  g.t = 0;
+  if (g.paid) return;
+  g.paid = true;
+  g.spent = S.admission;
   earn(S.admission);
   S.today.vis++;
   S.totalVis = (S.totalVis || 0) + 1;
-  return g;
+}
+const downhill = (i, fld) => {
+  const c = nbr4(i).filter((n) => fld[n] >= 0 && fld[n] < fld[i]);
+  return c.length ? pick(c) : null;
+};
+/* the walk between the car and the gate, one tile at a time. Returns the next tile, or null when
+   this step finished the trip (arrive: through the gate; exit: back at the car). */
+function gateTripStep(g) {
+  const i = idx(g.x, g.y),
+    gi = idx(GATE.x, GATE.y),
+    mid = idx(GATE.mx, GATE.my),
+    outer = GATE.ox >= 0 ? idx(GATE.ox, GATE.oy) : -1;
+  if (g.mode === 'arrive') {
+    if (i === gi) {
+      admitGuest(g);
+      return null;
+    }
+    if (i === mid) return gi;
+    if (i === outer) return mid;
+    const fld = outer >= 0 ? F.gateOut : F.gate,
+      n = fld[i] >= 0 ? downhill(i, fld) : null;
+    if (n != null) return n;
+    return outer >= 0 ? outer : mid; // the path was dug up: they find their own way there
+  }
+  // exit: through the gate, then back to the car
+  const w = F.lotWalk && F.lotWalk.get(g.lot);
+  if (i === gi) return outer >= 0 || !w ? mid : downhill(i, w.fld);
+  if (i === mid) return outer >= 0 ? outer : null;
+  if (!w || w.fld[i] <= 0) return null;
+  return downhill(i, w.fld);
 }
 /* A guest whose path was removed from under them walks across open ground to the nearest
    footpath: a breadth-first search around habitats, water and buildings. Returns the first step. */
@@ -93,7 +145,7 @@ function wayBackToPath(i) {
 }
 function chooseNext(g) {
   const i = idx(g.x, g.y),
-    ns = nbr4(i).filter(guestPath);
+    ns = nbr4(i).filter((n) => guestPath(n) && !(F.outside && F.outside.has(n)));
   if (!ns.length) return guestPath(i) ? null : wayBackToPath(i); // stranded off the paths: head back
   let fld = null;
   if (g.mode === 'leave') fld = F.gate;
@@ -339,7 +391,10 @@ const NOT_SOLD = new Set(['stage', 'bin', 'atm', 'parking']);
 const GUESTS_PER_CAR = 3,
   STREET_CARS = 15,
   LOT_CARS = 30;
-const parkingSpaces = () => STREET_CARS + LOT_CARS * ((F.cnt && F.cnt.parking) || 0);
+// the roadside only works for a gate on the highway; lots fill first
+const streetCars = () => (GATE.ox < 0 ? STREET_CARS : 0);
+const parkingSpaces = () => streetCars() + LOT_CARS * ((F.cnt && F.cnt.parking) || 0);
+const carsInLots = () => Math.min(carsParked(), LOT_CARS * ((F.cnt && F.cnt.parking) || 0));
 const carsParked = () => Math.ceil(S.guests.length / GUESTS_PER_CAR);
 const parkingFull = () => carsParked() >= parkingSpaces();
 // chance per tick that a new visitor turns up: a quarter as likely when they'd have to park off-site
@@ -363,6 +418,28 @@ function tickGuests() {
   const out = [];
   for (const g of S.guests) {
     g.t++;
+    if (g.mode === 'arrive' || g.mode === 'exit') {
+      g.p += 0.07;
+      if (g.p >= 1) {
+        g.fx = g.x;
+        g.fy = g.y;
+        const was = g.mode,
+          n = gateTripStep(g);
+        if (n == null) {
+          if (was === 'exit') {
+            if (sel && sel.type === 'guest' && sel.id === g.id) closeInspector();
+            continue;
+          }
+          g.p = 1; // through the gate; off exploring next tick
+        } else {
+          g.x = n % W;
+          g.y = (n / W) | 0;
+          g.p -= 1;
+        }
+      }
+      out.push(g);
+      continue;
+    }
     if (g.mode === 'ride') {
       // out on a safari; back at the station afterwards, thrilled
       if (--g.rideT <= 0) {
@@ -407,8 +484,19 @@ function tickGuests() {
       if (g.mode === 'leave' && ((g.x === GATE.x && g.y === GATE.y) || F.gate[idx(g.x, g.y)] < 0) && g.t > 5) {
         S.exits.push(g.h);
         if (S.exits.length > 40) S.exits.shift();
+        if (g.x === GATE.x && g.y === GATE.y) {
+          g.mode = 'exit'; // out through the gate and back to the car
+          g.p = 1;
+          out.push(g);
+          continue;
+        }
         if (sel && sel.type === 'guest' && sel.id === g.id) closeInspector();
         continue;
+      }
+      // a moved gate can leave a guest on the wrong side: send them round to it (they've already paid)
+      if (g.mode === 'walk' && F.outside && F.outside.has(idx(g.x, g.y))) {
+        g.mode = 'arrive';
+        g.paid = true;
       }
       arrive(g);
       const n = chooseNext(g);

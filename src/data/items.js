@@ -77,7 +77,7 @@ const ITEMS = {
     cost: 500,
     kind: 'staff',
     size: [3, 1],
-    help: 'Where guests come in. Place it on the south edge, by the highway; placing a new one moves it.',
+    help: 'Where guests pay and come in. Put it across a footpath anywhere outside habitats (the arrow points into the zoo; R turns it). Visitors park, then walk the footpaths to the outside of the gate. On the south edge it opens straight onto the highway. Placing a new one moves it.',
   },
   dock: {
     access: 'road',
@@ -151,7 +151,7 @@ const ITEMS = {
     cost: 1200,
     kind: 'shop',
     size: [6, 4],
-    help: 'Room for 30 cars. When parking runs out, guests park off-site and fewer come.',
+    help: 'Room for 30 cars. Run a footpath from it to the front gate so visitors can walk in. When parking runs out, guests park off-site and fewer come.',
   },
   gift: {
     name: 'Gift shop',

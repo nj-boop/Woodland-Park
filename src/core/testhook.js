@@ -54,6 +54,14 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  stampBuilding,
+  checkEntrance,
+  placeEntrance,
+  syncGate,
+  gateTripStep,
+  get GATE() {
+    return GATE;
+  },
   get audio() {
     return AC ? { state: AC.state, crowd: crowdGain.gain.value } : null;
   },

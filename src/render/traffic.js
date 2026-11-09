@@ -73,7 +73,7 @@ function lotsInOrder() {
 function spawnMovers(n) {
   const lots = lotsInOrder();
   if (!lots.length) return;
-  const lotCars = Math.max(0, carsParked() - STREET_CARS),
+  const lotCars = carsInLots(),
     a = lots[Math.min(lots.length - 1, Math.floor(Math.max(0, lotCars - (n < 0 ? 0 : 1)) / LOT_CARS))],
     pts = lotRoute(a);
   if (!pts) return;
@@ -97,7 +97,7 @@ function spawnMovers(n) {
 }
 function syncTraffic(dt) {
   trafficT += (dt / 1000) * speed;
-  const lotCars = Math.max(0, carsParked() - STREET_CARS);
+  const lotCars = carsInLots();
   if (lastLotCars < 0 || Math.abs(lotCars - lastLotCars) > 40) lastLotCars = lotCars; // a load, not traffic
   if (lotCars !== lastLotCars) {
     spawnMovers(lotCars - lastLotCars);

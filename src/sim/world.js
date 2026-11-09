@@ -95,6 +95,7 @@ function resizeMap(w, h, ox, oy) {
   S.mapW = w;
   S.mapH = h;
   S.gate = { ...GATE };
+  syncGate();
   dirty = true;
   mapResized = true;
 }
@@ -262,6 +263,28 @@ function bfs(src) {
   }
   return d;
 }
+/* the footpaths outside the gate, and how each parking lot joins them */
+function linkGate() {
+  const gi = idx(GATE.x, GATE.y),
+    outer = GATE.ox >= 0 ? idx(GATE.ox, GATE.oy) : -1;
+  F.gateOut = outer >= 0 ? bfs([outer]) : null;
+  F.outside = new Set();
+  F.gateBypass = false;
+  if (F.gateOut) {
+    if (F.gateOut[gi] >= 0) F.gateBypass = true;
+    else for (let i = 0; i < F.gateOut.length; i++) if (F.gateOut[i] >= 0) F.outside.add(i);
+  }
+  F.lotWalk = new Map();
+  const target = F.gateOut || F.gate;
+  for (let a = 0; a < S.tiles.length; a++) {
+    if (S.tiles[a].o !== 'parking' || !isAnchor(a)) continue;
+    let best = null;
+    for (const k of buildingTiles(a))
+      for (const n of nbr4(k))
+        if (guestPath(n) && target[n] >= 0 && (!best || target[n] < target[best.tile])) best = { tile: n, from: k };
+    if (best) F.lotWalk.set(a, { ...best, fld: bfs([best.tile]) });
+  }
+}
 function rebuild() {
   const N = W * H;
   F.emap = {};
@@ -397,6 +420,7 @@ function rebuild() {
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);
   F.gate = bfs([idx(GATE.x, GATE.y)]);
+  linkGate();
   // roads connected to the highway along the south edge
   F.roadLinked = new Set();
   const rq = [];
