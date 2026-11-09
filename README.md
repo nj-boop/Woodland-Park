@@ -115,7 +115,7 @@ materials turn see-through so you can look in. Scenes never touch the simulation
 Paths come in two kinds: footpaths (guests and staff) and roads (`pm === 'service'`: trucks, cars and
 staff). A highway runs along the outside of the south edge; road tiles on the bottom row join it.
 `F.roadLinked` is every road reachable from it. Service buildings (`access: 'road'` in `ITEMS`:
-dock, feed store, recycling yard, vet clinic) open onto a road and need a footpath within 3 tiles;
+dock, feed store, recycling yard, vet clinic) open onto a road;
 parking lots open onto a road and only count when road-linked. New zoos start with a footpath and road side by side on the east.
 
 ### Deliveries
@@ -173,7 +173,7 @@ less happy. Arrivals drop to 30% at night. The Office can switch the cycle off (
 ### Animal houses and crossings
 
 An animal house (`animalhouse`, 3 × 2) stands outside a land habitat with its back wall on the fence
-(`houseHabitat()`); its door needs a road and it needs a footpath nearby. `linkAnimalHouses()` in
+(`houseHabitat()`); its door needs a road. `linkAnimalHouses()` in
 `rebuild()` records, per house, the habitat, the hatch tiles inside the fence and the road at the
 door. It is the only way staff cross into a new habitat (`staffStep`; keeper gates from older saves
 still work but can't be built), the animals' night quarters (`F.nightIn` = hatch tiles), and where

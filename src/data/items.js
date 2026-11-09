@@ -81,7 +81,6 @@ const ITEMS = {
   },
   dock: {
     access: 'road',
-    needsFootpath: true,
     name: 'Loading dock',
     cost: 2500,
     kind: 'staff',
@@ -90,7 +89,6 @@ const ITEMS = {
   },
   feedstore: {
     access: 'road',
-    needsFootpath: true,
     name: 'Feed store',
     cost: 1500,
     kind: 'staff',
@@ -194,7 +192,6 @@ const ITEMS = {
   },
   recycle: {
     access: 'road',
-    needsFootpath: true,
     name: 'Recycling yard',
     cost: 1500,
     kind: 'staff',
@@ -202,10 +199,9 @@ const ITEMS = {
     help: 'Houses 3 janitors and handles dung and trash.',
   },
   // stands outside a habitat with its back wall on the fence: the animals' night quarters and the
-  // only way staff get in. Its door opens onto a road; it needs a footpath nearby for staff on foot.
+  // only way staff get in. Its door opens onto a road.
   animalhouse: {
     access: 'road',
-    needsFootpath: true,
     name: 'Animal house',
     cost: 2500,
     kind: 'staff',
@@ -214,7 +210,6 @@ const ITEMS = {
   },
   vetclinic: {
     access: 'road',
-    needsFootpath: true,
     name: 'Vet clinic',
     cost: 3000,
     kind: 'staff',

@@ -45,7 +45,7 @@ const TUT_STEPS = [
     show: () => setTool('habitat'),
   },
   {
-    txt: 'Build an animal house with its back on the new habitat’s fence, its door on a road and a footpath nearby. Keepers go in through it, and the animals sleep there.',
+    txt: 'Build an animal house with its back on the new habitat’s fence, its door on a road. Keepers go in through it, and the animals sleep there.',
     ok: () => newHabs().some((e) => F.houseOf && F.houseOf[e.id]),
     show: () => setTool('shop', 'animalhouse'),
   },

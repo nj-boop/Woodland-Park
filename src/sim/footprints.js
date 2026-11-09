@@ -39,12 +39,6 @@ const bridgeTop = (i) => S.tiles[i].br || 'foot';
 const isRoad = (i) => S.tiles[i].t === 'p' && (S.tiles[i].pm === 'service' || S.tiles[i].pm === 'crossing');
 const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 const isTrack = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'track';
-// a footpath within 3 tiles, for staff on foot (buildings that need both a road and a footpath)
-function footpathBeside(p) {
-  for (let y = p.y0 - 3; y < p.y0 + p.fh + 3; y++)
-    for (let x = p.x0 - 3; x < p.x0 + p.fw + 3; x++) if (inB(x, y) && isFootpath(idx(x, y))) return true;
-  return false;
-}
 // does this facing work? Guest and staff buildings open onto a path; a show stadium faces its tank
 function frontOK(kind, p) {
   if (kind === 'stage')
@@ -56,7 +50,9 @@ function frontOK(kind, p) {
   if (ITEMS[kind].kind === 'farm') return frontTiles(p.x0, p.y0, p.fw, p.fh, p.r).some((i) => S.tiles[i].t === 'p');
   const front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r);
   // service buildings and parking open onto a road; guest buildings onto a footpath
-  return ITEMS[kind].access === 'road' ? front.some(isRoad) : front.some(isFootpath);
+  if (ITEMS[kind].access === 'road') return front.some(isRoad);
+  // staff walk on roads as well as footpaths, so other staff buildings can open onto either
+  return ITEMS[kind].kind === 'staff' ? front.some(isPath) : front.some(isFootpath);
 }
 
 // candidate placements for a building at the cursor, best first:
@@ -186,7 +182,9 @@ function checkPlan(kind, p) {
           ? `The ${nm}'s door has to open onto a path. Press R (or ⟳ in the menu) to turn it.`
           : ITEMS[kind].access === 'road'
             ? `The ${nm}'s door side has to open onto a road (vehicles only), connected to the highway on the south edge.`
-            : `Move closer to a footpath: the ${nm}'s door side has to open onto one.`
+            : it.kind === 'staff'
+              ? `The ${nm}'s door side has to open onto a road or footpath.`
+              : `Move closer to a footpath: the ${nm}'s door side has to open onto one.`
     );
   if (kind === 'stage' && !p.tiles.some((i) => nbr4(i).some((n) => S.tiles[n].t === 'p')))
     return fail('Guests need a path to reach the stadium.');
@@ -194,8 +192,6 @@ function checkPlan(kind, p) {
     return fail('Lay a safari track beside the station first (behind or at the side).');
   if (kind === 'animalhouse' && houseHabitat(p) == null)
     return fail('The animal house’s back wall has to sit against a land habitat’s fence, with its door onto a road.');
-  if (ITEMS[kind].needsFootpath && !footpathBeside(p))
-    return fail(`The ${nm} also needs a footpath within 3 tiles, for staff on foot.`);
   const clears = p.tiles.filter((i) => S.tiles[i].o).length;
   return { ok: true, cost: it.cost, plan: p, clears };
 }

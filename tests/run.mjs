@@ -1254,6 +1254,29 @@ const tests = {
       g.refresh();
       return (g.S.tiles[i].t === 'p' && g.S.tiles[i].pm === 'asphalt' && g.guestPath(i)) || 'the path should remain';
     }),
+  'staff buildings can go on a road with no footpath anywhere': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.newZoo(undefined, undefined, 'standard', 'bare');
+      g.S.nightOff = true;
+      g.refresh();
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      for (let y = 24; y >= 2; y--) g.planAddRoad(18, y);
+      g.planConfirm();
+      g.refresh();
+      if (g.S.tiles.some((t) => t.t === 'p' && t.pm !== 'service')) return 'there should be no footpath';
+      g.setTool('shop');
+      const spots = { recycle: [15, 4], lodge: [15, 9], vetclinic: [15, 14], dock: [15, 20], feedstore: [22, 5] };
+      for (const [k, [x, y]] of Object.entries(spots)) {
+        g.set('sub', k);
+        const c = g.check(x, y);
+        if (!c.ok) return `${k}: ${c.msg}`;
+        if (!g.act(x, y)) return `${k} not built`;
+        g.refresh();
+      }
+      return true;
+    }),
 };
 
 let failed = 0;
