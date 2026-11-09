@@ -714,7 +714,7 @@ function syncDeliveries(alpha) {
     if (!g) truckGroups.set(t.id, (g = makeTruck(t.type)));
     const x = t.ox + (t.x - t.ox) * alpha,
       z = t.oy + (t.y - t.oy) * alpha;
-    g.position.set(x, heightAt(x, z), z);
+    g.position.set(x, heightAt(x, z) + bridgeLift(x, z, 'road'), z); // over road bridges
     g.rotation.y = t.dir || 0;
     if (g.userData.lamp) g.userData.lamp.visible = (performance.now() / 300) % 2 < 1; // flashing roof light
   }

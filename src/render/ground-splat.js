@@ -326,7 +326,7 @@ function paintGround() {
         layer =
           e && e.biome === 'pool'
             ? LAYER.tunnel
-            : (LAYER[t.pm === 'crossing' ? 'service' : t.pm || 'stone'] ?? LAYER.stone);
+            : (LAYER[t.pm === 'crossing' ? (t.br === 'road' ? 'stone' : 'service') : t.pm || 'stone'] ?? LAYER.stone); // under a bridge: the lower path
         if (t.pm !== 'dirt' && t.pm !== 'sand') {
           if (!isP(x, y - 1)) edges |= 1;
           if (!isP(x, y + 1)) edges |= 2;

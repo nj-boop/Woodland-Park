@@ -848,19 +848,22 @@ const tests = {
       g.refresh();
       return (g.unreachable(e) && !g.staffRoute(from, g.serviceTiles(e))) || 'still reachable without the house';
     }),
-  'a road laid over a footpath makes a crossing for both': async ({ page }) =>
+  'a road laid over a footpath builds a road bridge, and the reverse a footbridge': async ({ page }) =>
     page.evaluate(() => {
       const g = window.__wg,
         i = 10 * g.W + 27;
-      if (g.S.tiles[i].pm !== 'crossing') return 'starter has no crossing: ' + g.S.tiles[i].pm;
-      if (!g.isRoad(i) || !g.guestPath(i)) return 'crossing is not both road and footpath';
+      if (g.S.tiles[i].pm !== 'crossing') return 'starter has no footbridge: ' + g.S.tiles[i].pm;
+      if (!g.isRoad(i) || !g.guestPath(i)) return 'bridge is not both road and footpath';
       // lay a new one: road over the footpath at x 27, y 8
       g.setTool('path');
       g.set('pathSub', 'service');
       const c = g.check(27, 8);
       if (!c.ok) return 'cannot lay a road over the footpath: ' + c.msg;
       g.act(27, 8);
-      return g.S.tiles[8 * g.W + 27].pm === 'crossing' || 'got ' + g.S.tiles[8 * g.W + 27].pm;
+      const t = g.S.tiles[8 * g.W + 27];
+      if (t.pm !== 'crossing' || t.br !== 'road') return 'got ' + t.pm + ' ' + t.br;
+      g.load(g.serialize());
+      return (g.S.tiles[8 * g.W + 27].br === 'road' && !g.S.tiles[i].br) || 'bridge kind lost on save';
     }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {

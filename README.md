@@ -165,8 +165,10 @@ An animal house (`animalhouse`, 3 × 2) stands outside a land habitat with its b
 door. It is the only way staff cross into a new habitat (`staffStep`; keeper gates from older saves
 still work but can't be built), the animals' night quarters (`F.nightIn` = hatch tiles), and where
 the animal ambulance loads (`F.encRoad` = door roads). Guests on footpaths within 2 tiles get a
-look at keepers at work (`keeperAtHouse()`). Laying a road over a footpath, or the reverse, makes a
-crossing (`pm: 'crossing'`) that counts as both.
+look at keepers at work (`keeperAtHouse()`). Roads and footpaths never meet at grade:
+laying one over the other builds a bridge (`pm: 'crossing'`, `t.br` = 'foot' or 'road' for which is
+on top). It counts as both; the ramps reach half a tile either side and `bridgeLift()` raises guests
+or vehicles on the upper path as they cross.
 
 ### Vet care and the animal ambulance
 

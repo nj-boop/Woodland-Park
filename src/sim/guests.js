@@ -94,7 +94,7 @@ function arrive(g) {
   if (g.mem.length > 24) g.mem.shift();
   for (const eid of F.view[i] || []) {
     if (g.seen.includes(eid)) continue;
-    const list = S.animals.filter((a) => a.e === eid);
+    const list = S.animals.filter((a) => a.e === eid && !a.away && a.inside == null); // out where guests can see them
     if (!list.length) continue;
     g.seen.push(eid);
     const kinds = [...new Set(list.map((a) => a.sp))];
@@ -111,6 +111,11 @@ function arrive(g) {
     }
     v += (list.length - kinds.length) * 0.6;
     if (F.emap[eid] && F.emap[eid].fence === 'moat') v *= 1.2;
+    // a keeper or vet at work in the habitat is part of the show
+    if (S.staff.some((s) => (s.role === 'keeper' || s.role === 'vet') && S.tiles[sTile(s)].e === eid)) {
+      v += 4;
+      g.keeper = g.t;
+    }
     g.exc += v;
   }
   // the vet clinic's viewing gallery: stop and watch while an operation is going on
@@ -292,7 +297,7 @@ function guestMood(g) {
   else if (g.safari && g.t - g.safari < 600) th = 'That safari drive was the best thing here!';
   else if (g.show && g.t - g.show < 500) th = 'That show was incredible!';
   else if (g.mode === 'watch') th = 'Watching the vets operate. Fascinating!';
-  else if (g.keeper && g.t - g.keeper < 400) th = 'We watched a keeper at work at the animal house!';
+  else if (g.keeper && g.t - g.keeper < 400) th = 'We got to watch a keeper working with the animals!';
   else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the vet clinic!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
   else if (g.exc > 18) th = `The ${g.best.toLowerCase()} were amazing!`;

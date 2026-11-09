@@ -1167,7 +1167,7 @@ function syncGuests(alpha, time) {
     const ry = Math.atan2(g.x - g.fx, g.y - g.fy);
     dummy.rotation.set(0, ry, 0);
     dummy.scale.set(1, 1, 1);
-    const gy = heightAt(q.x, q.z);
+    const gy = heightAt(q.x, q.z) + bridgeLift(q.x, q.z, 'foot'); // up and over footbridges
     dummy.position.set(q.x, gy + 0.07 + bob, q.z);
     dummy.updateMatrix();
     gLegs.setMatrixAt(i, dummy.matrix);
@@ -1211,7 +1211,7 @@ function syncGuests(alpha, time) {
       working = st.st === 'work',
       bob = moving ? Math.abs(Math.sin(time * 0.014 + st.id)) * 0.03 : 0,
       ry = st.dir || 0,
-      gy = heightAt(x, z),
+      gy = heightAt(x, z) + bridgeLift(x, z, 'foot'),
       R = STAFF_ROLES[st.role];
     dummy.rotation.set(0, ry, 0);
     dummy.scale.set(1.05, 1.05, 1.05);

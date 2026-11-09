@@ -108,7 +108,7 @@ function syncTraffic(dt) {
   let n = 0;
   const put = (x, z, rot, col) => {
     const y = heightAt(clamp(x, 0, W - 0.01), clamp(z, 0, H - 0.01));
-    o.position.set(x, (z > H ? 0 : y) + 0.16, z);
+    o.position.set(x, (z > H ? 0 : y + bridgeLift(x, z, 'road')) + 0.16, z);
     o.rotation.set(0, rot, 0);
     o.updateMatrix();
     movBody.setMatrixAt(n, o.matrix);

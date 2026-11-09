@@ -30,7 +30,11 @@ function frontTiles(x0, y0, fw, fh, r) {
   return out.filter(([i, j]) => inB(i, j)).map(([i, j]) => idx(i, j));
 }
 const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => S.tiles[i].t === 'p');
-// a crossing is a road tile guests may walk over too (where a road meets a footpath)
+/* A crossing is a bridge where a road and a footpath meet: one passes over the other, so guests and
+   vehicles never share the ground. t.br says which is on top: 'foot' (a footbridge over the road,
+   the default) or 'road' (a road bridge over the footpath). Both kinds of traffic can use the tile. */
+const BRIDGE_COST = 300;
+const bridgeTop = (i) => S.tiles[i].br || 'foot';
 const isRoad = (i) => S.tiles[i].t === 'p' && (S.tiles[i].pm === 'service' || S.tiles[i].pm === 'crossing');
 const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 const isTrack = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'track';

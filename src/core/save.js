@@ -141,6 +141,7 @@ function serialize() {
     // items are stored on their anchor tile only, with the facing; footprints are re-stamped on load
     fp: 1,
     os: L.os,
+    brs: S.tiles.reduce((o, t, i) => (t.pm === 'crossing' && t.br === 'road' && o.push(i), o), []), // road bridges
     l: L.l,
     encl: S.encl,
     animals: S.animals.map((a) => ({
@@ -310,6 +311,7 @@ function load(str) {
     for (let i = 0; i < S.hgt.length; i++) S.hgt[i] = (+a[i] || 0) / 100;
   }
   if (d.wt) S.tiles.forEach((t, i) => (t.w = d.wt[i] === '1' ? 1 : 0));
+  for (const i of d.brs || []) if (S.tiles[i]) S.tiles[i].br = 'road'; // road bridges over footpaths
   restampBuildings(d); // after paths, habitats and water are known
   if (!S.tiles.some((t) => t.o === 'entrance')) {
     // zoos from before the entrance was a building: put one where the gate was
@@ -321,6 +323,7 @@ function load(str) {
   delete S.hg16;
   delete S.er;
   delete S.os;
+  delete S.brs;
   for (const k of ['o', 'ro', 't', 'pm', 'l']) delete S[k]; // per-tile layers now live in S.tiles
   delete S.wt;
   delete S.ee;
