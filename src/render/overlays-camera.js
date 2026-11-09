@@ -256,6 +256,8 @@ function render3D(alpha, dt) {
   sun.intensity = (1.55 - ev * 0.55) * (1 - dk) + 0.24 * dk;
   hemi.intensity = (0.85 - ev * 0.25) * (1 - dk) + 0.32 * dk;
   LAMP_MAT.emissiveIntensity = 0.6 + dk * 2.4;
+  LIGHT_POOL.opacity = dk * 0.8;
+  LIGHT_POOL.visible = dk > 0.01;
   const sec = time / 1000;
   ripT.offset.set(sec * 0.02, sec * 0.013);
   for (const c of clouds) {

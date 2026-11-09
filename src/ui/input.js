@@ -45,6 +45,13 @@ function zoomBy(f) {
   CAM.dist *= f;
   clampCam();
 }
+// the player is about to lay a garden fence, or is bulldozing one
+function lineItemAt(tt) {
+  if (tool === 'plant') return !!(ITEMS[sub] && ITEMS[sub].line);
+  if (tool !== 'bulldoze' || !inB(tt.x, tt.y)) return false;
+  const o = tileAt(tt.x, tt.y).o;
+  return !!(o && ITEMS[o].line);
+}
 cv.addEventListener('pointerdown', (e) => {
   cv.setPointerCapture(e.pointerId);
   const p = local(e);
@@ -65,6 +72,12 @@ cv.addEventListener('pointerdown', (e) => {
   const pan = !orbit && (tool === 'look' || e.button === 1 || spaceDown);
   drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, moved: false, pan, orbit, start: tt, last: null, rect: null };
   if (!pan && !orbit && tool === 'path') {
+    doAct(tt.x, tt.y);
+    drag.last = tt;
+  }
+  if (!pan && !orbit && lineItemAt(tt)) {
+    // fences are laid (and bulldozed) by dragging, like paths
+    drag.lineDrag = true;
     doAct(tt.x, tt.y);
     drag.last = tt;
   }
@@ -122,14 +135,14 @@ cv.addEventListener('pointermove', (e) => {
   }
   const tt = toTile(p.x, p.y);
   hover = tt;
-  if (tool === 'path' && drag.last && (tt.x !== drag.last.x || tt.y !== drag.last.y)) {
+  if ((tool === 'path' || drag.lineDrag) && drag.last && (tt.x !== drag.last.x || tt.y !== drag.last.y)) {
     let cx = drag.last.x,
       cy = drag.last.y,
       guard = 0;
     while ((cx !== tt.x || cy !== tt.y) && guard++ < 80) {
       if (Math.abs(tt.x - cx) >= Math.abs(tt.y - cy)) cx += Math.sign(tt.x - cx);
       else cy += Math.sign(tt.y - cy);
-      doAct(cx, cy);
+      if (tool !== 'bulldoze' || lineItemAt({ x: cx, y: cy })) doAct(cx, cy);
     }
     drag.last = tt;
   }
@@ -200,6 +213,7 @@ function endPtr(e) {
     }
     return;
   }
+  if (d.lineDrag) return;
   if (['animal', 'plant', 'shop', 'bulldoze'].includes(tool) && !d.moved) doAct(d.start.x, d.start.y);
 }
 let pendingBuild = null; // touch placement waiting for its confirming tap

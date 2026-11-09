@@ -326,8 +326,8 @@ function guestMood(g) {
   else if (g.keeper && g.t - g.keeper < 400) th = 'We got to watch a keeper working with the animals!';
   else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the vet clinic!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
-  else if (g.exc > 18) th = `The ${g.best.toLowerCase()} were amazing!`;
-  else if (g.exc > 0) th = `I liked the ${g.best.toLowerCase()}. What else is here?`;
+  else if (g.exc > 18 && g.best) th = `The ${g.best.toLowerCase()} were amazing!`;
+  else if (g.exc > 0 && g.best) th = `I liked the ${g.best.toLowerCase()}. What else is here?`;
   else if (g.t > 300) th = 'Where are all the animals?';
   else th = 'What a lovely day for the zoo.';
   g.thought = th;

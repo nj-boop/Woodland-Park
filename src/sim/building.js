@@ -117,7 +117,7 @@ function rectCheck(r) {
 function act(x, y) {
   const c = check(x, y);
   if (!c.ok) {
-    if (c.msg && tool !== 'path') toast(c.msg, 'bad');
+    if (c.msg && tool !== 'path' && !(drag && drag.lineDrag && drag.moved)) toast(c.msg, 'bad');
     return false;
   }
   const t = tileAt(x, y);

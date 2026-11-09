@@ -7,6 +7,12 @@ window.__wg = {
   get F() {
     return F;
   },
+  get CAM() {
+    return CAM;
+  },
+  get staticStats() {
+    return staticStats;
+  },
   tileAt,
   addAnimal,
   makeEncl,

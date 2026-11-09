@@ -47,6 +47,10 @@ document
 function chip(label, key, extra) {
   return `<button class="chip" data-sub="${key}" aria-pressed="${sub === key}">${extra || ''}${label}</button>`;
 }
+const itemChips = (keys) =>
+  keys
+    .map((k) => chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k)))
+    .join('');
 const TREE_KEYS = Object.keys(ITEMS).filter((k) => ITEMS[k].form === 'tree');
 const IT_ICON = {
   tree: '<path d="M12 21v-6"/><path d="M12 15c-4.5 0-7-2.6-7-5.8C5 6 8 3 12 3s7 3 7 6.2C19 12.4 16.5 15 12 15z"/>',
@@ -108,6 +112,23 @@ Object.assign(IT_ICON, {
   cave: '<path d="M3 20c0-9 4-14 9-14s9 5 9 14z"/><path d="M9 20c0-4 1.3-6 3-6s3 2 3 6"/>',
   stable: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6M9 14l6 6M15 14l-6 6"/>',
   lamp: '<path d="M12 21V8M9 21h6"/><circle cx="12" cy="6" r="3"/>',
+  lantern: '<path d="M7 21V5c0-2 5-3 7-1v3"/><rect x="11" y="7" width="6" height="8" rx="1"/><path d="M4 21h6"/>',
+  bollard: '<path d="M9 21V9h6v12M8 21h8"/><path d="M9 12h6"/><path d="M10 9c0-2 4-2 4 0"/>',
+  globes:
+    '<path d="M12 21V9M8 21h8M6 9h12"/><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="5" r="2.5"/>',
+  torch: '<path d="M12 21v-11M9 10h6l-1 3h-4z"/><path d="M12 3c2 2 3 3.5 3 5s-1 2-3 2-3-.7-3-2 1-3 3-5z"/>',
+  stringlights:
+    '<path d="M3 21V5M21 21V5M3 6c5 7 13 7 18 0"/><circle cx="8" cy="12" r="1"/><circle cx="12" cy="13" r="1"/><circle cx="16" cy="12" r="1"/>',
+  planter: '<path d="M7 11h10l-2 10H9z"/><path d="M6 11h12"/><circle cx="12" cy="6" r="3"/>',
+  topiary: '<path d="M12 21v-6M8 21h8"/><circle cx="12" cy="11" r="4"/><circle cx="12" cy="5" r="2.5"/>',
+  birdbath: '<path d="M4 9c0 3 3.5 5 8 5s8-2 8-5z"/><path d="M12 14v5M8 21h8"/>',
+  arch: '<path d="M6 21V10a6 6 0 0 1 12 0v11"/><circle cx="8" cy="7" r="1"/><circle cx="12" cy="4" r="1"/><circle cx="16" cy="7" r="1"/>',
+  flagpole: '<path d="M6 21V3"/><path d="M6 4h12l-3 3.5 3 3.5H6"/>',
+  picket: '<path d="M6 21V7l1.5-2L9 7v14M11 21V7l1.5-2L14 7v14M16 21V7l1.5-2L19 7v14M3 11h18M3 17h18"/>',
+  hedge: '<path d="M3 20v-8c0-3 3-4 5-3 1-2 6-2 8 0 2-1 5 0 5 3v8z"/>',
+  railing: '<path d="M3 7h18M3 20h18M6 7v13M10 7v13M14 7v13M18 7v13"/>',
+  rope: '<path d="M5 21V8M19 21V8M3 21h4M17 21h4M5 9c3 6 11 6 14 0"/>',
+  stonewall: '<path d="M3 20V8h18v12zM3 12h18M3 16h18M9 8v4M15 8v4M6 12v4M12 12v4M18 12v4M9 16v4M15 16v4"/>',
   flowers:
     '<circle cx="8" cy="9" r="2.5"/><circle cx="16" cy="9" r="2.5"/><circle cx="12" cy="6" r="2.5"/><path d="M4 18h16M8 12v6M16 12v6M12 9v9"/>',
   statue: '<path d="M7 21h10M8 21v-4h8v4"/><circle cx="12" cy="7" r="3"/><path d="M9 17l1-7h4l1 7"/>',
@@ -244,12 +265,23 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">Decorations</span>' +
-      ['flowers', 'lamp', 'statue', 'fountain', 'gazebo', 'canopy']
-        .map((k) =>
-          chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
-        )
-        .join('') +
-      '<span class="note">Toys, shelters and water holes go inside habitats. Each species has a favourite toy and shelter: tap a habitat to see what is missing. Decorations make paths more pleasant.</span>';
+      itemChips([
+        'flowers',
+        'planter',
+        'topiary',
+        'birdbath',
+        'statue',
+        'arch',
+        'flagpole',
+        'fountain',
+        'gazebo',
+        'canopy',
+      ]) +
+      '<span class="group">Lighting</span>' +
+      itemChips(['lamp', 'lantern', 'globes', 'bollard', 'torch', 'stringlights']) +
+      '<span class="group">Garden fences (drag to lay)</span>' +
+      itemChips(['picket', 'hedge', 'railing', 'rope', 'stonewall']) +
+      '<span class="note">Toys, shelters and water holes go inside habitats. Each species has a favourite toy and shelter: tap a habitat to see what is missing. Decorations make paths more pleasant, and lights glow after dark.</span>';
   } else if (false) {
     h =
       '<span class="note">New habitats start bare. Plants and water holes make them comfortable, and plants along paths please guests.</span>' +

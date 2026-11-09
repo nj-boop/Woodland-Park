@@ -886,6 +886,27 @@ const tests = {
       if (g.S.money !== 4321) return 'money after load ' + g.S.money;
       return (await g.loadSlot(1)) === false || 'empty slot loaded';
     }),
+  'garden fences hug the path, lights and fences survive a save': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.setTool('plant');
+      const put = (k, x, y) => (g.set('sub', k), g.act(x, y));
+      const ok = [
+        put('picket', 19, 18),
+        put('hedge', 19, 23),
+        put('stringlights', 21, 16),
+        put('stringlights', 24, 16),
+        put('bollard', 21, 18),
+      ];
+      if (!ok.every(Boolean)) return 'placement failed ' + JSON.stringify(ok);
+      g.refresh();
+      if (g.F.scen[19 * g.W + 19] === undefined) return 'no scenery map';
+      if (put('picket', 18, 18)) return 'a fence went on the path';
+      const save = g.serialize();
+      g.tileAt(19, 18).o = null;
+      g.load(typeof save === 'string' ? JSON.parse(save) : save);
+      return (g.tileAt(19, 18).o === 'picket' && g.tileAt(24, 16).o === 'stringlights') || 'lost after load';
+    }),
 };
 
 let failed = 0;

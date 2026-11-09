@@ -234,8 +234,10 @@ function makeItem(par, o, x, y) {
   if (o === 'lamp') {
     P(g, 'cyl', '#2a2a2a', 0, 0.45, 0, 0.025, 0.9);
     P(g, 'sph', LAMP_MAT, 0, 0.92, 0, 0.07);
+    lightPool(g, 0, 0, ITEMS.lamp.light);
     return;
   }
+  if (makeDecor(g, o, x, y)) return;
   if (o === 'flowers') {
     P(g, 'box', '#6b4a2e', 0, 0.04, 0, 0.7, 0.08, 0.7);
     for (let k = 0; k < 14; k++)
@@ -698,6 +700,7 @@ function chunkSig(cx, cy) {
       h = hashMix(h, t.o ? strCode(t.o) : 0);
       h = hashMix(h, (t.a ?? -1) + 1);
       h = hashMix(h, t.r || 0);
+      if (t.o && ITEMS[t.o] && (ITEMS[t.o].line || t.o === 'stringlights')) h = hashMix(h, decorSig(x, y, t.o));
       // trees pick their kind from the habitat's biome
       const b = t.e && F.emap[t.e] ? F.emap[t.e].biome : '';
       h = hashMix(h, b ? (BIOME_CODE[b] ??= strCode(b)) : 0);
