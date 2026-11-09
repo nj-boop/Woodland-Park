@@ -865,6 +865,15 @@ const tests = {
       g.load(g.serialize());
       return (g.S.tiles[8 * g.W + 27].br === 'road' && !g.S.tiles[i].br) || 'bridge kind lost on save';
     }),
+  'a guest left off the paths walks back to the nearest one': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      const q = g.spawnGuest();
+      // stand them on open grass, three tiles from the footpath at x 27
+      Object.assign(q, { x: 30, y: 20, fx: 30, fy: 20, p: 0, mode: 'walk' });
+      for (let i = 0; i < 200 && !g.guestPath(q.y * g.W + q.x); i++) g.tick();
+      return g.guestPath(q.y * g.W + q.x) || `stuck at ${q.x},${q.y}`;
+    }),
   'save slots keep separate zoos and load them back': async ({ page }) =>
     page.evaluate(async () => {
       const g = window.__wg;

@@ -64,11 +64,37 @@ function spawnGuest() {
   earn(S.admission);
   S.today.vis++;
   S.totalVis = (S.totalVis || 0) + 1;
+  return g;
+}
+/* A guest whose path was removed from under them walks across open ground to the nearest
+   footpath: a breadth-first search around habitats, water and buildings. Returns the first step. */
+function wayBackToPath(i) {
+  const prev = new Map([[i, -1]]),
+    q = [i];
+  for (let h = 0; h < q.length && h < 6000; h++) {
+    const c = q[h];
+    if (c !== i && guestPath(c)) {
+      let s = c;
+      while (prev.get(s) !== i) s = prev.get(s);
+      return s;
+    }
+    for (const n of nbr4(c)) {
+      if (prev.has(n)) continue;
+      const t = S.tiles[n];
+      const open =
+        guestPath(n) ||
+        (!t.e && !t.w && t.t !== 'p' && !(t.o && ITEMS[t.o].kind !== 'plant' && ITEMS[t.o].kind !== 'decor'));
+      if (!open) continue;
+      prev.set(n, c);
+      q.push(n);
+    }
+  }
+  return null;
 }
 function chooseNext(g) {
   const i = idx(g.x, g.y),
     ns = nbr4(i).filter(guestPath);
-  if (!ns.length) return null;
+  if (!ns.length) return guestPath(i) ? null : wayBackToPath(i); // stranded off the paths: head back
   let fld = null;
   if (g.mode === 'leave') fld = F.gate;
   else if (g.hunger > 65 && F.food2[i] > 0) fld = F.food2;

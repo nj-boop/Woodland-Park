@@ -23,6 +23,7 @@ window.__wg = {
   monthlyUpkeep,
   checkTier,
   checkChallenge,
+  chooseNext,
   clearBuilding,
   staffRoute,
   serviceTiles,
