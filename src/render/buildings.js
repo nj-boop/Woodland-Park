@@ -92,6 +92,53 @@ function shed(g, x, z) {
   r.rotation.x = 0.15;
 }
 const BUILDINGS = {
+  burger(g, w, d) {
+    openShop(g, w, d, {
+      wall: '#c7482c',
+      trim: '#f2c94c',
+      roof: ['#f4ebd4', '#d84a33'],
+      sign: 'BURGERS',
+      sbg: '#3a2405',
+      sfg: '#f2c94c',
+    });
+    P(g, 'box', '#2d2d2d', -0.42, 0.285, 0.3, 0.56, 0.02, 0.2); // the griddle on the counter
+    P(g, 'box', '#5a5f63', 0.45, 0.33, 0.3, 0.2, 0.1, 0.14); // till
+  },
+  cafe(g, w, d) {
+    openShop(g, w, d, {
+      wall: '#8a6a4a',
+      trim: '#e8d8a8',
+      roof: ['#f4ebd4', '#4f7f70'],
+      sign: 'CAFÉ',
+      sbg: '#4f7f70',
+      sfg: '#f4ebd4',
+    });
+    P(g, 'box', '#c9c4bd', -0.4, 0.36, 0.3, 0.32, 0.16, 0.16); // coffee machine
+    P(g, 'cyl', '#f4efe2', 0.5, 0.24, 0.75, 0.16, 0.025);
+    P(g, 'cyl', '#5b3c22', 0.5, 0.12, 0.75, 0.018, 0.22);
+    P(g, 'box', '#7a5230', 0.77, 0.12, 0.75, 0.14, 0.22, 0.14);
+  },
+  pizzeria(g, w, d) {
+    openShop(g, w, d, {
+      wall: '#d9c39a',
+      trim: '#2f6a48',
+      roof: ['#f4ebd4', '#2f6a48'],
+      sign: 'PIZZA',
+      sbg: '#b5492f',
+      sfg: '#f4ebd4',
+    });
+    // brick oven against the back wall
+    P(g, 'box', '#a0553d', 0, 0.28, -0.98, 1.0, 0.56, 0.6);
+    P(g, 'sph', '#a0553d', 0, 0.56, -0.98, 0.42, 0.28, 0.32);
+    P(g, 'box', '#2a1a12', 0, 0.3, -0.675, 0.46, 0.24, 0.02, false);
+    for (const [tx, tz] of [
+      [-0.9, 1.05],
+      [0.9, 1.05],
+    ]) {
+      P(g, 'cyl', '#f4efe2', tx, 0.26, tz, 0.2, 0.03);
+      P(g, 'cyl', '#5b3c22', tx, 0.13, tz, 0.02, 0.24);
+    }
+  },
   // 3 × 2: a timber cabin with a porch, a feed shed and a woodpile
   lodge(g) {
     P(g, 'box', '#b9ad92', 0, 0.03, 0, 2.9, 0.06, 1.9, false).receiveShadow = true;
@@ -193,6 +240,7 @@ const BUILDINGS = {
     P(g, 'box', '#2f8f5a', bx + 0.3, 1.0, 0.68, 0.24, 0.07, 0.02, false);
     P(g, 'box', '#2f8f5a', bx + 0.3, 1.0, 0.68, 0.07, 0.2, 0.02, false);
     signBoard(g, 'ANIMAL HOSPITAL', '#ffffff', '#2f8f5a', bx - 0.55, 1.05, 0.93, 0.95);
+    theatreBay(g, bx + 0.65, 1.0);
     // holding pen with a shade roof and hay
     fencePanel(g, 0.95, -1.3, 1.85, -1.3, '#9a7550');
     fencePanel(g, 1.85, -1.3, 1.85, 0.55, '#9a7550');
@@ -356,15 +404,15 @@ const BUILDINGS = {
     signBoard(g, 'RESTAURANT', '#2f6a48', '#f4ebd4', 0, 1.06, -0.08, 1.0);
     // terrace
     P(g, 'box', '#b98b5c', 0, 0.07, 0.75, 2.7, 0.04, 1.3);
+    grillStation(g, -0.85, 0.5);
     for (const [tx, tz, c] of [
-      [-0.85, 0.55, '#e4573d'],
       [0, 0.95, '#f2c94c'],
       [0.85, 0.55, '#2c6fa8'],
     ]) {
       P(g, 'cyl', '#f4efe2', tx, 0.3, tz, 0.2, 0.03);
       P(g, 'cyl', '#5b3c22', tx, 0.18, tz, 0.02, 0.24);
       P(g, 'cyl', '#c9c4b8', tx, 0.5, tz, 0.012, 0.9);
-      P(g, 'cone', c, tx, 0.95, tz, 0.42, 0.18);
+      P(g, 'cone', fadeRoof(c), tx, 0.95, tz, 0.42, 0.18);
       for (const a of [0.5, 2.6, 4.2])
         P(g, 'box', '#7a5230', tx + Math.cos(a) * 0.3, 0.13, tz + Math.sin(a) * 0.3, 0.12, 0.2, 0.12);
     }

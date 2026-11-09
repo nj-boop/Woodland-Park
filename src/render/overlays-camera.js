@@ -238,6 +238,7 @@ function render3D(alpha, dt) {
   syncGuests(alpha, time);
   overlays(alpha);
   syncClinics(time);
+  syncVignettes(time);
   // daylight: a warm evening, then moonlit night (darkness() is 0 by day, 1 at night)
   const dk = darkness(),
     t = S.clock / DAY,

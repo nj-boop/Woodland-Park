@@ -54,6 +54,10 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  get vignettes() {
+    return [...vigs.keys()];
+  },
+  syncVignettes,
   stampBuilding,
   checkEntrance,
   placeEntrance,

@@ -971,6 +971,56 @@ const tests = {
       for (let i = 0; i < 100 && q.mode === 'arrive'; i++) g.tick();
       return (q.mode !== 'arrive' && q.x === g.GATE.x && q.paid) || `stuck ${q.x},${q.y} ${q.mode}`;
     }),
+  'new shops sell through their kind, and scenes play only up close': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      g.S.nightOff = true;
+      for (let x = 2; x < 6; x++) g.setPath(x, 22);
+      const tiles = [20, 21].flatMap((y) => [2, 3].map((x) => y * W + x));
+      g.stampBuilding('burger', { r: 0, x0: 2, y0: 20, fw: 2, fh: 2, tiles });
+      g.tileAt(4, 21).o = 'icecream';
+      g.refresh();
+      const a = 20 * W + 2,
+        path = 22 * W + 3;
+      if (g.F.shopAt[path].restaurant !== a) return 'burger bar does not sell as a restaurant';
+      const q = g.spawnGuest();
+      Object.assign(q, {
+        x: 3,
+        y: 22,
+        fx: 3,
+        fy: 22,
+        p: 1,
+        mode: 'walk',
+        paid: true,
+        hunger: 90,
+        thirst: 10,
+        bath: 0,
+        energy: 90,
+        stay: 1e9,
+      });
+      const money0 = g.S.money;
+      for (let i = 0; i < 30 && q.hunger > 20; i++) {
+        q.x = 3;
+        q.y = 22;
+        q.fx = 3;
+        q.fy = 22;
+        q.p = 1;
+        q.mode = 'walk';
+        g.tick();
+      }
+      if (q.hunger > 20) return 'guest never ate at the burger bar: ' + q.hunger;
+      if (g.S.money <= money0) return 'no sale';
+      if (g.stockOf(a) >= 50) return 'stock not used';
+      g.CAM.tx = 3;
+      g.CAM.tz = 21;
+      g.CAM.dist = 8;
+      g.syncVignettes(performance.now() + 1e6);
+      if (!g.vignettes.includes(a) || !g.vignettes.includes(21 * W + 4)) return 'no scenes up close';
+      g.CAM.dist = 40;
+      g.syncVignettes(performance.now() + 2e6);
+      return g.vignettes.length === 0 || 'scenes still showing from far away';
+    }),
 };
 
 let failed = 0;

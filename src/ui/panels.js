@@ -112,6 +112,17 @@ Object.assign(IT_ICON, {
   cave: '<path d="M3 20c0-9 4-14 9-14s9 5 9 14z"/><path d="M9 20c0-4 1.3-6 3-6s3 2 3 6"/>',
   stable: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6M9 14l6 6M15 14l-6 6"/>',
   lamp: '<path d="M12 21V8M9 21h6"/><circle cx="12" cy="6" r="3"/>',
+  icecream: '<path d="M8 11l4 10 4-10"/><path d="M7 10a5 5 0 0 1 10 0c0 1-1 1.5-2 1H9c-1 .5-2 0-2-1z"/>',
+  popcorn:
+    '<path d="M6 10l1.5 11h9L18 10z"/><path d="M6 10c-1-3 2-5 3.5-3.5C10 3 14 3 14.5 6.500 16.500 5 19 7 18 10"/><path d="M10 10l.5 11M14 10l-.5 11"/>',
+  coffee:
+    '<path d="M5 9h12v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M17 11h2a2 2 0 0 1 0 5h-2"/><path d="M9 3c-1 2 1 2 0 4M13 3c-1 2 1 2 0 4"/>',
+  souvenir:
+    '<circle cx="8" cy="8" r="2"/><circle cx="16" cy="8" r="2"/><circle cx="12" cy="12" r="5"/><path d="M8 20h8"/>',
+  burger: '<path d="M4 10a8 6 0 0 1 16 0z"/><path d="M4 13h16M5 17h14c0 2-1 3-3 3H8c-2 0-3-1-3-3z"/>',
+  cafe: '<path d="M4 9h13v5a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z"/><path d="M17 10h1.500a2.500 2.500 0 0 1 0 5H17"/><path d="M3 21h15"/>',
+  pizzeria:
+    '<path d="M12 21L3 7c5-3 13-3 18 0z"/><circle cx="10" cy="10" r="1.200"/><circle cx="14" cy="12" r="1.200"/><circle cx="12" cy="16" r="1.200"/>',
   lantern: '<path d="M7 21V5c0-2 5-3 7-1v3"/><rect x="11" y="7" width="6" height="8" rx="1"/><path d="M4 21h6"/>',
   bollard: '<path d="M9 21V9h6v12M8 21h8"/><path d="M9 12h6"/><path d="M10 9c0-2 4-2 4 0"/>',
   globes:
@@ -293,13 +304,26 @@ function renderTray() {
   } else if (tool === 'shop') {
     h =
       '<span class="group">Food and rest</span>' +
-      ['food', 'drink', 'restaurant', 'bench', 'picnic', 'bin']
+      [
+        'food',
+        'icecream',
+        'popcorn',
+        'drink',
+        'coffee',
+        'burger',
+        'cafe',
+        'restaurant',
+        'pizzeria',
+        'bench',
+        'picnic',
+        'bin',
+      ]
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )
         .join('') +
       '<span class="group">Guest services</span>' +
-      ['restroom', 'parking', 'gift', 'atm', 'map', 'donation', 'playground', 'stage', 'station']
+      ['restroom', 'parking', 'gift', 'souvenir', 'atm', 'map', 'donation', 'playground', 'stage', 'station']
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )

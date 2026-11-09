@@ -15,6 +15,13 @@ const STOCK = {
   drink: { max: 80, unit: 0.8 },
   gift: { max: 40, unit: 4 },
   restaurant: { max: 60, unit: 3 },
+  icecream: { max: 70, unit: 1.2 },
+  popcorn: { max: 90, unit: 0.9 },
+  coffee: { max: 80, unit: 0.9 },
+  souvenir: { max: 30, unit: 3.5 },
+  burger: { max: 50, unit: 2.2 },
+  cafe: { max: 50, unit: 2 },
+  pizzeria: { max: 70, unit: 3.4 },
 };
 const GOODS_CRATE = 40;
 const supplyRate = () => (researched('logistics') ? 0.8 : 1); // research cuts supply prices

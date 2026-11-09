@@ -391,7 +391,7 @@ function rebuild() {
     if (t.w) base[i] += 0.3;
     if (!o) continue;
     if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
-    if (o in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[o].push(n);
+    if ((ITEMS[o].as || o) in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[ITEMS[o].as || o].push(n);
     if (ITEMS[o].kind === 'plant') base[i] += 1;
     if (!isAnchor(i)) continue; // count each building once, at its anchor tile
     (F.anchors[o] ||= []).push(i);
@@ -463,9 +463,10 @@ function rebuild() {
     let at = null;
     for (const n of nbr4(i)) {
       const o = S.tiles[n].o;
-      if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(o)) {
-        sh.push(o);
-        (at ||= {})[o] = anchorOf(n); // which building of each kind this tile serves
+      const sold = o && (ITEMS[o].as || o); // a burger bar sells as a restaurant, an ice cream cart as a snack
+      if (o && ITEMS[o].kind === 'shop' && !NOT_SOLD.has(o) && !sh.includes(sold)) {
+        sh.push(sold);
+        (at ||= {})[sold] = anchorOf(n); // which building of each kind this tile serves
       }
     }
     F.shopAt[i] = at;

@@ -238,6 +238,7 @@ function arrive(g) {
     const r = S.sold[a] || (S.sold[a] = { m: 0, l: 0 });
     r.m += n;
   };
+  const shopPrice = (s) => (at && at[s] != null ? ITEMS[S.tiles[at[s]].o] : ITEMS[s]).price;
   for (const s of F.shops[i] || []) {
     if (s === 'restroom' && g.bath > 45) {
       g.bath = 0;
@@ -252,7 +253,7 @@ function arrive(g) {
     ) {
       g.hunger = 0;
       g.thirst = Math.max(0, g.thirst - 40);
-      took(s, ITEMS.restaurant.price);
+      took(s, shopPrice(s));
       g.mode = 'rest';
       g.rest = 60;
       g.trash = 0;
@@ -266,7 +267,7 @@ function arrive(g) {
       sell(s)
     ) {
       g.gift = 1;
-      took(s, ITEMS.gift.price);
+      took(s, shopPrice(s));
       continue;
     }
     if (s === 'station' && !g.rode && g.mode === 'walk' && g.t > 120 && Math.random() < 0.3 * atmB) {

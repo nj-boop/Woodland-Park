@@ -27,6 +27,7 @@
   "render/structures.js",
   "render/buildings.js",
   "render/decor.js",
+  "render/vignettes.js",
   "render/traffic.js",
   "render/batching.js",
   "render/animals-sculpted.js",

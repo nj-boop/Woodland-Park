@@ -111,6 +111,10 @@ function makeItem(par, o, x, y) {
     return;
   }
   g.rotation.y = faceDir(x, y);
+  if (STANDS[o]) {
+    makeStand(g, o);
+    return;
+  }
   if (o === 'food') {
     P(g, 'box', '#b5492f', 0, 0.25, 0, 0.72, 0.5, 0.5);
     P(g, 'box', '#f4ebd4', 0, 0.46, 0.27, 0.74, 0.05, 0.12);

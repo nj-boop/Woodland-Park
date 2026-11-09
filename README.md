@@ -88,12 +88,27 @@ Order matters: a file can use anything defined in an earlier file, and functions
 on the south edge), up to 512 × 512. `landPrice()` rises with the zoo's area; new strips arrive as
 woodland. The guest cap (`guestCap()` in `sim/guests.js`) grows with the land, up to 1,500.
 
-### Parking
+### Parking and the front gate
 
-Guests come by car, about 3 to a car (`sim/guests.js`). The roadside holds 15 cars and each parking
-lot (6 × 4 tiles) 30 more. When every space is taken, visitors park off-site and new arrivals drop
-to a quarter (`arrivalChance()`); the Office shows cars parked and visitors turned away. Parked
-cars are drawn into lot bays by `syncParkedCars()` (`render/buildings.js`).
+Guests come by car, about 3 to a car (`sim/guests.js`). Each parking lot (6 × 4 tiles) holds 30 cars,
+and a gate on the south edge also gets 15 roadside spaces. Lots fill first. When every space is
+taken, visitors park off-site and new arrivals drop to a quarter (`arrivalChance()`).
+
+The front gate (`placeEntrance()`, `syncGate()` in `sim/footprints.js`) goes across a footpath anywhere
+outside habitats. `GATE` holds the inside tile (`x, y`), the middle tile (`mx, my`) and the outside
+tile (`ox, oy`, or -1 on the south edge, where it opens onto the highway). A new guest starts in mode
+`arrive` at a lot joined to the gate by footpath (`F.lotWalk`, made by `linkGate()` in `sim/world.js`),
+walks to the outside tile, pays at the gate and becomes a normal guest. Leaving guests go through
+the gate in mode `exit` and walk back to their lot. `F.outside` is the footpaths beyond the gate; guests
+who are exploring never step onto them. With no lot joined, visitors walk in from off-site.
+
+### Shops and scenes
+
+Some shops are variations on a basic kind: `as` in `ITEMS` is what guests treat them as (`burger`,
+`cafe` and `pizzeria` sell as a `restaurant`, `icecream` and `popcorn` as `food`, and so on), each with its
+own stock in `STOCK` and price in `ITEMS`. `render/vignettes.js` has the shop shells and the animated
+scenes (`VIGS`): the few nearest the camera are built once it is close, and roofs on `fadeRoof()`
+materials turn see-through so you can look in. Scenes never touch the simulation.
 
 ### Roads, the highway and the entrance
 
@@ -101,9 +116,7 @@ Paths come in two kinds: footpaths (guests and staff) and roads (`pm === 'servic
 staff). A highway runs along the outside of the south edge; road tiles on the bottom row join it.
 `F.roadLinked` is every road reachable from it. Service buildings (`access: 'road'` in `ITEMS`:
 dock, feed store, recycling yard, vet clinic) open onto a road and need a footpath within 3 tiles;
-parking lots open onto a road and only count when road-linked. The park entrance is a building
-(3 × 1) placed on the south edge (`placeEntrance()` in `sim/footprints.js`); guests arrive on the
-footpath tile inside it (`GATE`). New zoos start with a footpath and road side by side on the east.
+parking lots open onto a road and only count when road-linked. New zoos start with a footpath and road side by side on the east.
 
 ### Deliveries
 
