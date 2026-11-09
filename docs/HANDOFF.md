@@ -9,7 +9,7 @@ Read this first, then `README.md` (architecture), then carry on with "Up next".
 - **Live game:** claude.ai artifact `https://claude.ai/artifact/UpKimj3WzpQBX1vQ1SHfiF`. Always publish
   `dist/index.html` to that URL (pass `url`), never as a new artifact. When new model files are
   added, also publish them with `files` (e.g. `{"models/x.json": "dist/models/x.json"}`).
-- **Version:** 0.39.1 (package.json). 52 tests, all passing.
+- **Version:** 0.39.1 (package.json). All tests passing.
 
 ## How to work on it
 
