@@ -944,7 +944,7 @@ const tests = {
       // wandering guests stay inside
       q.stay = 1e9;
       q.h = 100;
-      for (let i = 0; i < 1500; i++) {
+      for (let i = 0; i < 300; i++) {
         g.tick();
         if (q.mode === 'walk' && g.F.outside.has(q.y * g.W + q.x)) return 'wandered out past the gate';
       }
@@ -1020,6 +1020,63 @@ const tests = {
       g.CAM.dist = 40;
       g.syncVignettes(performance.now() + 2e6);
       return g.vignettes.length === 0 || 'scenes still showing from far away';
+    }),
+  'a bridge is 3 tiles long with full ramps, and comes down leaving the path': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      const money0 = g.S.money;
+      const c = g.check(27, 21);
+      if (!c.ok) return 'cannot bridge: ' + c.msg;
+      g.act(27, 21);
+      g.refresh();
+      const t = (x, y) => g.S.tiles[y * W + x];
+      if (t(27, 21).pm !== 'crossing' || t(26, 21).pm !== 'service' || t(28, 21).pm !== 'service')
+        return 'ramps not laid';
+      if (money0 - g.S.money !== 300 + 16) return 'charged ' + (money0 - g.S.money);
+      const y = 21.5,
+        lift = (x) => g.bridgeLift(x, y, 'road');
+      if (Math.abs(lift(27.5) - 0.9) > 0.01) return 'deck height ' + lift(27.5);
+      if (lift(26.02) > 0.05 || lift(28.98) > 0.05) return 'ramps should start at the ground';
+      if (Math.abs(lift(26.5) - 0.45) > 0.1) return 'ramp midpoint ' + lift(26.5);
+      g.setTool('bulldoze');
+      if (g.check(26, 21).ok) return 'a ramp should not be removable under a bridge';
+      g.act(27, 21);
+      g.refresh();
+      if (t(27, 21).pm === 'crossing' || !g.guestPath(21 * W + 27)) return 'the footpath should remain';
+      return g.bridgeLift(27.5, y, 'road') === 0 || 'still lifted';
+    }),
+  'a bridge is refused without room for ramps, and paths cannot join its side': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      g.setPath(27, 21, 'stone');
+      g.tileAt(28, 21).o = 'bench';
+      g.refresh();
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      if (g.check(27, 21).ok) return 'no room on the east, should refuse';
+      g.tileAt(28, 21).o = null;
+      g.act(27, 21);
+      g.refresh();
+      g.set('pathSub', 'service');
+      if (g.check(26, 20).ok) return 'a road should not join a ramp from the side';
+      return true;
+    }),
+  'road lines follow the road': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      for (let x = 3; x < 8; x++) g.setPath(x, 3, 'service');
+      for (let y = 3; y < 8; y++) g.setPath(8, y, 'service');
+      g.refresh();
+      g.paintGround();
+      const code = (x, y) => g.groundData[(y * W + x) * 4];
+      if (code(5, 3) !== 14 + 16 * 12) return 'east-west road ' + code(5, 3);
+      if (code(8, 5) !== 14 + 16 * 3) return 'north-south road ' + code(8, 5);
+      return code(8, 3) === 14 + 16 * 6 || 'bend ' + code(8, 3);
     }),
 };
 

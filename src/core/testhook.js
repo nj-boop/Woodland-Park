@@ -54,6 +54,10 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  get groundData() {
+    return groundData;
+  },
+  bridgeLift,
   get vignettes() {
     return [...vigs.keys()];
   },

@@ -710,6 +710,17 @@ function chunkSig(cx, cy) {
       h = hashMix(h, b ? (BIOME_CODE[b] ??= strCode(b)) : 0);
       h = hashMix(h, (t.w ? 2 : 0) + (t.t === 'p' ? 1 : 0) + (t.pm === 'crossing' ? (t.br === 'road' ? 8 : 4) : 0));
       h = hashMix(h, Math.round(hC(x, y) * 100) + 1000);
+      const span = F.bridgeAt && F.bridgeAt.get(idx(x, y));
+      if (span)
+        h = hashMix(
+          h,
+          span.a * 97 +
+            span.b * 13 +
+            span.rampA * 8 +
+            span.rampB * 16 +
+            (span.ax ? 1 : 0) +
+            Math.round(span.deckY * 100) * 5
+        );
     }
   return h;
 }
@@ -732,89 +743,88 @@ function fenceSig(e) {
   }
   return h;
 }
-/* Bridges where a road and a footpath meet. The upper path arches over the tile along its own
-   direction; the lower one runs underneath. BRIDGE_H is the deck height at the middle. */
-const BRIDGE_H = 0.9;
-// does the upper path run along x? (by which neighbours carry the same kind of path)
-function bridgeAlongX(x, y) {
-  const top = bridgeTop(idx(x, y));
-  const same = (i, j) =>
-    inB(i, j) && tileAt(i, j).pm !== 'crossing' && (top === 'road' ? isRoad(idx(i, j)) : guestPath(idx(i, j)));
-  return same(x - 1, y) || same(x + 1, y) || !(same(x, y - 1) || same(x, y + 1));
-}
-// deck height along the span: u runs from −0.5 to 1.5 (the ramps reach half a tile onto the paths
-// either side), rising smoothly to a flat top over the lower path
-function archAt(u) {
-  const ramp = (t) => t * t * (3 - 2 * t);
-  if (u <= -0.5 || u >= 1.5) return 0;
-  if (u < 0.12) return BRIDGE_H * ramp((u + 0.5) / 0.62);
-  if (u > 0.88) return BRIDGE_H * ramp((1.5 - u) / 0.62);
-  return BRIDGE_H;
-}
+/* Bridges where a road and a footpath meet (the spans are laid out by linkBridges()). Each tile of a
+   span draws only its own stretch, so a bridge can cross a chunk boundary. */
 // how high something on the upper path rides at (x, z); `top` is 'foot' for walkers, 'road' for vehicles
 function bridgeLift(x, z, top) {
   const tx = Math.floor(x),
     ty = Math.floor(z);
-  // this tile, or the ramp of a bridge on the next tile along
-  for (const [dx, dy] of [
-    [0, 0],
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ]) {
-    const bx = tx + dx,
-      by = ty + dy;
-    if (!inB(bx, by)) continue;
-    const i = idx(bx, by);
-    if (S.tiles[i].pm !== 'crossing' || bridgeTop(i) !== top) continue;
-    const ax = bridgeAlongX(bx, by);
-    if ((ax && dy) || (!ax && dx)) continue;
-    return archAt(ax ? x - bx : z - by);
-  }
-  return 0;
+  if (!F.bridgeAt || !inB(tx, ty)) return 0;
+  const sp = F.bridgeAt.get(idx(tx, ty));
+  if (!sp || sp.top !== top) return 0;
+  return spanLevel(sp, sp.ax ? x : z) * (sp.deckY - heightAt(x, z));
 }
-function bridgeModel(grp, x, y) {
-  const road = bridgeTop(idx(x, y)) === 'road',
-    alongX = bridgeAlongX(x, y),
+function bridgeSegments(grp, x, y, sp) {
+  const road = sp.top === 'road',
+    alongX = sp.ax,
     deck = road ? '#6f7377' : '#a87d52',
     rail = road ? '#c9cccf' : '#7a5a3a',
-    base = heightAt(x + 0.5, y + 0.5),
-    N = 16;
-  const at = (u, v, h) => (alongX ? [x + u, base + h, y + v] : [x + v, base + h, y + u]);
+    fill = road ? '#8b8f93' : '#6a4a30',
+    c0 = alongX ? x : y,
+    i = idx(x, y),
+    overPath = S.tiles[i].pm === 'crossing',
+    N = 8;
+  const groundAt = (u, v) => (alongX ? heightAt(u, sp.line + v) : heightAt(sp.line + v, u));
+  const levelAt = (u) => {
+    const g = groundAt(u, 0.5);
+    return g + spanLevel(sp, u) * (sp.deckY - g);
+  };
+  const pos = (u, v, h) => (alongX ? [u, h, sp.line + v] : [sp.line + v, h, u]);
   for (let k = 0; k < N; k++) {
-    const u0 = -0.5 + (2 * k) / N,
-      u1 = -0.5 + (2 * (k + 1)) / N,
-      h0 = archAt(u0),
-      h1 = archAt(u1),
-      len = Math.hypot(2 / N, h1 - h0),
-      pitch = Math.atan2(h1 - h0, 2 / N);
-    const [px, py, pz] = at((u0 + u1) / 2, 0.5, (h0 + h1) / 2);
-    const m = P(grp, 'box', deck, px, py, pz, alongX ? len : 0.86, 0.07, alongX ? 0.86 : len);
-    if (alongX) m.rotation.z = pitch;
-    else m.rotation.x = -pitch;
+    const u0 = c0 + k / N,
+      u1 = c0 + (k + 1) / N;
+    if (spanLevel(sp, u0) === 0 && spanLevel(sp, u1) === 0) continue; // past the end of a short ramp
+    const h0 = levelAt(u0),
+      h1 = levelAt(u1),
+      um = (u0 + u1) / 2,
+      hm = (h0 + h1) / 2,
+      len = Math.hypot(1 / N, h1 - h0),
+      pitch = Math.atan2(h1 - h0, 1 / N);
+    const tilt = (m) => {
+      if (alongX) m.rotation.z = pitch;
+      else m.rotation.x = -pitch;
+      return m;
+    };
+    const [px, py, pz] = pos(um, 0.5, hm);
+    tilt(P(grp, 'box', deck, px, py, pz, alongX ? len : 0.86, 0.07, alongX ? 0.86 : len));
     for (const v of [0.05, 0.95]) {
-      const [rx, ry, rz] = at((u0 + u1) / 2, v, (h0 + h1) / 2 + 0.22);
-      const r = P(grp, 'box', rail, rx, ry, rz, alongX ? len : 0.04, 0.04, alongX ? 0.04 : len, false);
-      if (alongX) r.rotation.z = pitch;
-      else r.rotation.x = -pitch;
+      const [rx, ry, rz] = pos(um, v, hm + 0.22);
+      tilt(P(grp, 'box', rail, rx, ry, rz, alongX ? len : 0.04, 0.04, alongX ? 0.04 : len, false));
       if (k % 2 === 0) {
-        const [qx, qy, qz] = at(u0 + 1 / N, v, archAt(u0 + 1 / N) + 0.11);
+        const [qx, qy, qz] = pos(um, v, hm + 0.11);
         P(grp, 'box', rail, qx, qy, qz, 0.03, 0.22, 0.03, false);
       }
     }
+    if (overPath) continue;
+    // the approach: a solid embankment for a road, timber trestles for a footbridge
+    const g = groundAt(um, 0.5),
+      rise = hm - g;
+    if (rise < 0.03) continue;
+    if (road) {
+      const [fx, , fz] = pos(um, 0.5, 0);
+      P(grp, 'box', fill, fx, g + rise / 2, fz, alongX ? 1 / N + 0.005 : 0.8, rise, alongX ? 0.8 : 1 / N + 0.005);
+    } else if (k % 2 === 0)
+      for (const v of [0.08, 0.92]) {
+        const [qx, , qz] = pos(um, v, 0);
+        P(grp, 'cyl', fill, qx, g + rise / 2, qz, 0.03, rise);
+      }
   }
-  // piers either side of the lower path, under the deck
-  for (const u of [0.04, 0.96])
+  if (!overPath) return;
+  // piers at the ends of the deck, either side of the lower path
+  const ends = [];
+  if (c0 === sp.a) ends.push(c0 + 0.03);
+  if (c0 === sp.b) ends.push(c0 + 0.97);
+  for (const u of ends)
     for (const v of [0.06, 0.94]) {
-      const hh = archAt(u);
-      const [qx, , qz] = at(u, v, 0);
+      const g = groundAt(u, v),
+        hh = sp.deckY - g,
+        [qx, , qz] = pos(u, v, 0);
       P(
         grp,
         road ? 'box' : 'cyl',
         road ? '#8b8f93' : '#6a4a30',
         qx,
-        base + hh / 2,
+        g + hh / 2,
         qz,
         road ? 0.1 : 0.04,
         hh,
@@ -827,7 +837,8 @@ function buildChunk(grp, cx, cy) {
     for (let y = cy * CHUNK; y < Math.min(H, (cy + 1) * CHUNK); y++)
       for (let x = cx * CHUNK; x < Math.min(W, (cx + 1) * CHUNK); x++) {
         const o = tileAt(x, y).o;
-        if (tileAt(x, y).pm === 'crossing') bridgeModel(grp, x, y);
+        const span = F.bridgeAt && F.bridgeAt.get(idx(x, y));
+        if (span) bridgeSegments(grp, x, y, span);
         if (o && isAnchor(idx(x, y))) {
           seedRand(idx(x, y) * 7 + 3);
           makeItem(grp, o, x, y);

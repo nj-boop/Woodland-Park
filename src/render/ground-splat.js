@@ -5,7 +5,7 @@
    mesh is split into chunks so the camera only draws the parts it can see.
 
    Data texture channels per tile:
-     R  layer (see GROUND_LAYERS)
+     R  layer (see GROUND_LAYERS) + 16 × which sides join another road (1,2,4,8 = N,S,W,E)
      G  edge bits: 1,2,4,8 = path curb on N,S,W,E; 16,32,64,128 = habitat fence on N,S,W,E
      B  litter on paths (0-5 → ×40) or dirt in habitats (0-100 → ×2.55)
      A  how much the grass-blade detail texture shows (0-255) */
@@ -117,15 +117,11 @@ function pathLayer(x, n, m) {
   for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) drawPaving(x, i + 40, j + 40, i * T, j * T, m);
   x.restore();
 }
-// service road: plain asphalt with a dashed yellow centre line every tile
+// service road: plain asphalt (the shader paints the centre line, following each tile's road)
 function serviceLayer(x, n) {
   pathLayer(x, n, 'asphalt');
   x.fillStyle = 'rgba(70,72,76,.35)';
   x.fillRect(0, 0, n, n);
-  x.fillStyle = '#d9b43a';
-  const tile = n / 4;
-  for (let j = 0; j < 4; j++)
-    for (let i = 0; i < 4; i++) x.fillRect(i * tile + tile * 0.47, j * tile + tile * 0.15, tile * 0.06, tile * 0.32);
 }
 // safari track: packed dirt with two worn wheel ruts per tile
 function trackLayer(x, n) {
@@ -253,7 +249,23 @@ vec3 atlasAt(float layer, vec2 wp) {
   // gradients from the unwrapped coordinates, so mip selection doesn't jump at repeat seams
   return textureGrad(atlas, vec2(uv.x, 1.0 - uv.y), dFdx(lu) * sc * vec2(1.0, -1.0), dFdy(lu) * sc * vec2(1.0, -1.0)).rgb;
 }
-float bit(float v, float b) { return mod(floor(v / b), 2.0); }`
+float bit(float v, float b) { return mod(floor(v / b), 2.0); }
+// the dashed yellow line on a road tile: it runs the way the road does, and curves round bends
+float roadBand(float d, float fw) { return 1.0 - smoothstep(-fw, fw, d); }
+float roadLine(vec2 f, float arms, float fw) {
+  bool n = bit(arms, 1.0) > 0.5, s = bit(arms, 2.0) > 0.5, w = bit(arms, 4.0) > 0.5, e = bit(arms, 8.0) > 0.5;
+  float cnt = float(n) + float(s) + float(w) + float(e);
+  if (cnt < 1.0 || cnt > 2.0) return 0.0; // junctions and big paved areas are left plain
+  vec2 p = f - 0.5;
+  float a = 0.0;
+  if (cnt == 2.0 && (n || s) && (w || e)) {
+    vec2 d = p - vec2(e ? 0.5 : -0.5, s ? 0.5 : -0.5);
+    float ang = atan(abs(d.y), abs(d.x));
+    a = roadBand(abs(length(d) - 0.5) - 0.03, fw) * roadBand(abs(ang - 0.7854) - 0.32, fw * 2.0);
+  } else if (n || s) a = roadBand(abs(p.x) - 0.03, fw) * roadBand(abs(p.y) - 0.16, fw);
+  else a = roadBand(abs(p.y) - 0.03, fw) * roadBand(abs(p.x) - 0.16, fw);
+  return a * clamp(0.09 / fw, 0.0, 1.0);
+}`
     )
     .replace(
       '#include <map_fragment>',
@@ -261,9 +273,11 @@ float bit(float v, float b) { return mod(floor(v / b), 2.0); }`
   vec2 wp = vWXZ;
   vec2 tc = clamp(floor(wp), vec2(0.0), mapSize - 1.0);
   vec4 td = texture2D(tileData, (tc + 0.5) / mapSize) * 255.0;
-  float layer = floor(td.r + 0.5), edges = floor(td.g + 0.5), amt = td.b, gmk = td.a / 255.0;
+  float code = floor(td.r + 0.5), layer = mod(code, 16.0), arms = floor(code / 16.0);
+  float edges = floor(td.g + 0.5), amt = td.b, gmk = td.a / 255.0;
   vec3 col = pow(atlasAt(layer, wp), vec3(2.2)); // the atlas is sRGB; light in linear space
   vec2 f = wp - tc;
+  if (layer == 14.0 && arms > 0.0) col = mix(col, vec3(0.70, 0.46, 0.05), roadLine(f, arms, max(length(fwidth(wp)) * 0.7, 0.002)));
   // soft large-scale variation on lawn and floors
   if (layer < 7.0) col *= 0.88 + texture2D(varyMap, wp / 34.0).r * 0.24;
   // curbs on paved paths
@@ -347,7 +361,12 @@ function paintGround() {
         if (other(x - 1, y)) edges |= 64;
         if (other(x + 1, y)) edges |= 128;
       }
-      d[o] = layer;
+      let arms = 0;
+      if (layer === LAYER.service) {
+        const rd = (xx, yy) => inB(xx, yy) && isRoad(idx(xx, yy));
+        arms = (rd(x, y - 1) ? 1 : 0) | (rd(x, y + 1) ? 2 : 0) | (rd(x - 1, y) ? 4 : 0) | (rd(x + 1, y) ? 8 : 0);
+      }
+      d[o] = layer + arms * 16;
       d[o + 1] = edges;
       d[o + 2] = amt;
       d[o + 3] = gm;

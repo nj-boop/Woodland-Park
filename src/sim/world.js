@@ -421,6 +421,7 @@ function rebuild() {
   F.food2 = bfs([...src('food'), ...src('restaurant')]);
   F.gate = bfs([idx(GATE.x, GATE.y)]);
   linkGate();
+  linkBridges();
   // roads connected to the highway along the south edge
   F.roadLinked = new Set();
   const rq = [];

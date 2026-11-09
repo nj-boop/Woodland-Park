@@ -166,7 +166,7 @@ function renderTray() {
       '<span class="note">Drag to move. Pinch or scroll to zoom. Twist two fingers, right-drag, or use ⟲ ⟳ to rotate. Tap an animal, guest, habitat or building to inspect it.</span>';
   else if (tool === 'path')
     h =
-      '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are for trucks and cars (and staff). Service buildings and parking lots open onto a road that runs to the highway on the south edge. Roads and footpaths never meet: lay one over the other to build a bridge ($300).</span>' +
+      '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are for trucks and cars (and staff). Service buildings and parking lots open onto a road that runs to the highway on the south edge. Roads and footpaths never meet: lay one over the other to build a bridge, which needs a straight tile each side for its ramps ($300).</span>' +
       Object.entries(PATHS)
         .map(
           ([k, p]) =>

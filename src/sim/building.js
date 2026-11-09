@@ -6,8 +6,18 @@ function check(x, y) {
     // roads and footpaths never meet at grade: laying one over the other builds a bridge, with
     // whichever is laid second on top (a footbridge over a road, or a road bridge over a footpath)
     if (t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && pathSub !== 'track' && pathSub !== 'tunnel')
-      if ((pathSub === 'service') !== (t.pm === 'service'))
-        return { ok: true, cost: BRIDGE_COST, crossing: true, br: pathSub === 'service' ? 'road' : 'foot' };
+      if ((pathSub === 'service') !== (t.pm === 'service')) {
+        const br = pathSub === 'service' ? 'road' : 'foot',
+          plan = bridgePlan(x, y, br);
+        if (!plan.ok) return { ok: false, msg: plan.msg, loud: true };
+        return {
+          ok: true,
+          cost: BRIDGE_COST * plan.deck.length + PATHS[pathSub].cost * plan.ramps.length,
+          crossing: true,
+          br,
+          bridge: plan,
+        };
+      }
     if (t.t === 'p') return { ok: false, quiet: true };
     if (t.w) return { ok: false, msg: "You can't build a path over water." };
     if (t.e && pathSub === 'track' && F.emap[t.e].biome !== 'pool') {
@@ -24,6 +34,8 @@ function check(x, y) {
       };
     if (!t.e && pathSub === 'tunnel') return { ok: false, msg: 'Glass tunnels only run through aquatic habitats.' };
     if (t.o) return { ok: false, msg: 'Something is in the way. Bulldoze it first.' };
+    if (joinsBridgeSide(x, y, pathSub === 'service'))
+      return { ok: false, msg: 'Paths can only join a bridge at its ends.', loud: true };
     return { ok: true, cost: PATHS[pathSub].cost };
   }
   if (tool === 'animal') {
@@ -89,6 +101,7 @@ function check(x, y) {
     return { ok: true, cost: it.cost };
   }
   if (tool === 'bulldoze') {
+    if (isBridgeRamp(idx(x, y))) return { ok: false, msg: 'That’s a bridge ramp. Remove the bridge first.' };
     if (t.o || (t.t === 'p' && !isGate(x, y)) || t.e) return { ok: true };
     if (isGate(x, y)) return { ok: false, msg: 'The entrance stays.' };
     return { ok: false, quiet: true };
@@ -117,18 +130,20 @@ function rectCheck(r) {
 function act(x, y) {
   const c = check(x, y);
   if (!c.ok) {
-    if (c.msg && tool !== 'path' && !(drag && drag.lineDrag && drag.moved)) toast(c.msg, 'bad');
+    if (c.msg && (tool !== 'path' || c.loud) && !(drag && drag.lineDrag && drag.moved)) toast(c.msg, 'bad');
     return false;
   }
   const t = tileAt(x, y);
   if (tool === 'path') {
-    const c2 = PATHS[pathSub].cost;
-    if (!spend(c2, 'a path')) return false;
-    setPath(x, y, c.crossing ? 'crossing' : pathSub);
+    if (!spend(c.cost, c.crossing ? 'a bridge' : 'a path')) return false;
     if (c.crossing) {
-      t.pm = 'crossing';
-      t.br = c.br;
-    }
+      for (const i of c.bridge.deck) {
+        setPath(i % W, (i / W) | 0, 'crossing');
+        S.tiles[i].pm = 'crossing';
+        S.tiles[i].br = c.br;
+      }
+      for (const i of c.bridge.ramps) setPath(i % W, (i / W) | 0, pathSub);
+    } else setPath(x, y, pathSub);
     dirty = true;
     return true;
   }
@@ -159,6 +174,14 @@ function act(x, y) {
     if (t.o) {
       S.money += Math.round(ITEMS[t.o].cost / 2);
       clearBuilding(idx(x, y));
+      dirty = true;
+      return true;
+    }
+    if (t.pm === 'crossing' && t.t === 'p') {
+      // the bridge comes down; the path it crossed stays
+      t.pm = t.br === 'road' ? 'stone' : 'service';
+      delete t.br;
+      S.money += Math.round(BRIDGE_COST / 2);
       dirty = true;
       return true;
     }

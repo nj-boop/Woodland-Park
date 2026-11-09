@@ -34,6 +34,7 @@ const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i
    vehicles never share the ground. t.br says which is on top: 'foot' (a footbridge over the road,
    the default) or 'road' (a road bridge over the footpath). Both kinds of traffic can use the tile. */
 const BRIDGE_COST = 300;
+const BRIDGE_H = 0.9; // deck height above the ground
 const bridgeTop = (i) => S.tiles[i].br || 'foot';
 const isRoad = (i) => S.tiles[i].t === 'p' && (S.tiles[i].pm === 'service' || S.tiles[i].pm === 'crossing');
 const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
@@ -211,6 +212,178 @@ function houseHabitat(p) {
 }
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';
+
+/* Every bridge is at least 3 tiles long: a deck over the lower path with a full-tile ramp each end.
+   Crossing tiles in a line (over a wide path, or with one tile between them) share one level deck. */
+// does the upper path run along x? Older saves don't record it, so it's read from what's around the tile
+function bridgeAlongX(x, y) {
+  const top = bridgeTop(idx(x, y)),
+    score = (i, j, kind) => {
+      if (!inB(i, j)) return 0;
+      const n = idx(i, j),
+        t = S.tiles[n];
+      if (t.t !== 'p') return 0;
+      if (t.pm === 'crossing') return bridgeTop(n) === top ? 0.5 : 0;
+      return (kind === 'road' ? isRoad(n) : guestPath(n)) ? 1 : 0;
+    },
+    low = top === 'road' ? 'foot' : 'road';
+  const ux = score(x - 1, y, top) + score(x + 1, y, top),
+    uy = score(x, y - 1, top) + score(x, y + 1, top);
+  if (ux !== uy) return ux > uy;
+  const lx = score(x - 1, y, low) + score(x + 1, y, low),
+    ly = score(x, y - 1, low) + score(x, y + 1, low);
+  return lx <= ly;
+}
+// lay out every bridge on the map: F.bridgeAt maps each deck and ramp tile to its span
+function linkBridges() {
+  F.bridgeAt = new Map();
+  const lines = new Map();
+  for (let i = 0; i < S.tiles.length; i++) {
+    if (S.tiles[i].pm !== 'crossing' || S.tiles[i].t !== 'p') continue;
+    const x = i % W,
+      y = (i / W) | 0,
+      ax = bridgeAlongX(x, y),
+      top = bridgeTop(i),
+      key = `${ax ? 'x' : 'y'}${ax ? y : x}${top}`;
+    if (!lines.has(key)) lines.set(key, { ax, line: ax ? y : x, top, at: [] });
+    lines.get(key).at.push(ax ? x : y);
+  }
+  const spans = [];
+  for (const l of lines.values()) {
+    const tileOn = (c) => (l.ax ? idx(c, l.line) : idx(l.line, c)),
+      onMap = (c) => (l.ax ? inB(c, l.line) : inB(l.line, c)),
+      isUpper = (c) => {
+        if (!onMap(c)) return false;
+        const n = tileOn(c);
+        return S.tiles[n].t === 'p' && S.tiles[n].pm !== 'crossing' && (l.top === 'road' ? isRoad(n) : guestPath(n));
+      };
+    l.at.sort((p, q) => p - q);
+    let a = l.at[0],
+      b = a;
+    const close = () => {
+      let deck = -Infinity;
+      for (let c = a; c <= b; c++)
+        deck = Math.max(deck, heightAt((l.ax ? c : l.line) + 0.5, (l.ax ? l.line : c) + 0.5));
+      spans.push({
+        ax: l.ax,
+        line: l.line,
+        top: l.top,
+        a,
+        b,
+        rampA: isUpper(a - 1) ? 1 : 0.5, // older saves can have a bridge with no room for a full ramp
+        rampB: isUpper(b + 1) ? 1 : 0.5,
+        deckY: deck + BRIDGE_H,
+      });
+    };
+    for (let k = 1; k < l.at.length; k++) {
+      const c = l.at[k];
+      if (c - b <= 2 && (c - b === 1 || isUpper(b + 1))) b = c;
+      else {
+        close();
+        a = b = c;
+      }
+    }
+    close();
+  }
+  // decks claim their tiles first, so a ramp can't overwrite another bridge's deck
+  for (const sp of spans)
+    for (let c = sp.a; c <= sp.b; c++) F.bridgeAt.set(sp.ax ? idx(c, sp.line) : idx(sp.line, c), sp);
+  for (const sp of spans)
+    for (const c of [sp.a - 1, sp.b + 1]) {
+      if (!(sp.ax ? inB(c, sp.line) : inB(sp.line, c))) continue;
+      const n = sp.ax ? idx(c, sp.line) : idx(sp.line, c);
+      if (!F.bridgeAt.has(n)) F.bridgeAt.set(n, sp);
+    }
+}
+// 0 on the ground, 1 at deck height, at distance u along a span
+function spanLevel(sp, u) {
+  const ease = (t) => t * t * (3 - 2 * t);
+  if (u < sp.a) return ease(clamp((u - (sp.a - sp.rampA)) / sp.rampA, 0, 1));
+  if (u > sp.b + 1) return ease(clamp((sp.b + 1 + sp.rampB - u) / sp.rampB, 0, 1));
+  return 1;
+}
+// is this path tile a ramp (or the level bit between two crossings) of a bridge?
+function isBridgeRamp(i) {
+  const t = S.tiles[i];
+  return t.t === 'p' && t.pm !== 'crossing' && !!(F.bridgeAt && F.bridgeAt.has(i));
+}
+// would a new path of this type at (x, y) run into the side of a bridge of the same type?
+function joinsBridgeSide(x, y, isRoadType) {
+  if (!F.bridgeAt) return false;
+  for (const [dx, dy] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]) {
+    if (!inB(x + dx, y + dy)) continue;
+    const sp = F.bridgeAt.get(idx(x + dx, y + dy));
+    if (sp && (sp.top === 'road') === isRoadType && (sp.ax ? dy !== 0 : dx !== 0)) return true;
+  }
+  return false;
+}
+// work out a new bridge at (x, y): the tiles it decks over and the ramps it needs
+function bridgePlan(x, y, top) {
+  const fail = (msg) => ({ ok: false, msg });
+  const kindOK = (t) => t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && t.pm !== 'tunnel';
+  const isLower = (i, j) => {
+    if (!inB(i, j)) return false;
+    const t = S.tiles[idx(i, j)];
+    return kindOK(t) && (top === 'road') !== (t.pm === 'service');
+  };
+  const isUpper = (i, j) => {
+    if (!inB(i, j)) return false;
+    const t = S.tiles[idx(i, j)];
+    return kindOK(t) && (top === 'road') === (t.pm === 'service');
+  };
+  // bridges over the same lower path count as more of it
+  const lowerRun = (i, j) =>
+    isLower(i, j) ||
+    (inB(i, j) && S.tiles[idx(i, j)].t === 'p' && S.tiles[idx(i, j)].pm === 'crossing' && bridgeTop(idx(i, j)) === top);
+  const lowX = lowerRun(x - 1, y) || lowerRun(x + 1, y),
+    lowY = lowerRun(x, y - 1) || lowerRun(x, y + 1);
+  if (lowX && lowY) return fail('A bridge needs a straight stretch of path to cross, not a corner or junction.');
+  const alongX = lowY
+    ? true
+    : lowX
+      ? false
+      : isUpper(x - 1, y) || isUpper(x + 1, y) || !(isUpper(x, y - 1) || isUpper(x, y + 1));
+  const dx = alongX ? 1 : 0,
+    dy = alongX ? 0 : 1,
+    deck = [idx(x, y)],
+    ramps = [];
+  const sideClash = (i, j) => isUpper(i + dy, j + dx) || isUpper(i - dy, j - dx);
+  for (const s of [-1, 1]) {
+    for (let n = 1; ; n++) {
+      const cx = x + dx * s * n,
+        cy = y + dy * s * n;
+      if (!inB(cx, cy)) return fail('A bridge needs a tile for its ramp on each side, and that runs off the map.');
+      const i = idx(cx, cy),
+        t = S.tiles[i];
+      if (isLower(cx, cy)) {
+        deck.push(i); // a wide path: the deck carries on across it
+        if (deck.length > 6) return fail('That path is too wide to bridge.');
+        continue;
+      }
+      if (t.t === 'p' && t.pm === 'crossing') {
+        const sp = F.bridgeAt && F.bridgeAt.get(i);
+        if (sp && sp.ax === alongX && sp.top === top) break; // joins the bridge next door
+        return fail('Too close to another bridge: a bridge needs a clear tile on each side for its ramps.');
+      }
+      if (isUpper(cx, cy)) {
+        if (sideClash(cx, cy)) return fail('Bridge ramps need a straight run: move the junction a tile further away.');
+        break;
+      }
+      if (t.t !== 'p' && !t.e && !t.w && (!t.o || clearable(t.o))) {
+        if (sideClash(cx, cy)) return fail('Bridge ramps need a straight run: move the junction a tile further away.');
+        ramps.push(i);
+        break;
+      }
+      return fail('A bridge needs a clear tile on each side for its ramps.');
+    }
+  }
+  return { ok: true, deck, ramps };
+}
 
 /* The park entrance: 3 tiles wide, anywhere outside habitats, usually across a footpath. Guests walk
    from parking to the footpath tile outside its middle, pay, and step through to the tile inside

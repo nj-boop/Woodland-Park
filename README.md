@@ -180,8 +180,9 @@ still work but can't be built), the animals' night quarters (`F.nightIn` = hatch
 the animal ambulance loads (`F.encRoad` = door roads). Guests on footpaths within 2 tiles get a
 look at keepers at work (`keeperAtHouse()`). Roads and footpaths never meet at grade:
 laying one over the other builds a bridge (`pm: 'crossing'`, `t.br` = 'foot' or 'road' for which is
-on top). It counts as both; the ramps reach half a tile either side and `bridgeLift()` raises guests
-or vehicles on the upper path as they cross.
+on top). It counts as both. A bridge is at least 3 tiles long: `bridgePlan()` checks for a straight tile
+each side and lays them as ramps, decks across wide paths, and `linkBridges()` joins crossings in a
+line into one level span (`F.bridgeAt`). `bridgeLift()` raises guests or vehicles on the upper path.
 
 ### Vet care and the animal ambulance
 

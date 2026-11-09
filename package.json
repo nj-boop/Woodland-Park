@@ -1,7 +1,7 @@
 {
   "name": "wildgrove-zoo",
   "private": true,
-  "version": "0.42.0",
+  "version": "0.43.0",
   "description": "Wildgrove Zoo: a 3D zoo-building management game that runs in the browser.",
   "scripts": {
     "build": "node tools/build.mjs",
