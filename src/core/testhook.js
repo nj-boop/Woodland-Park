@@ -54,6 +54,10 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  makeItem,
+  get THREE() {
+    return THREE;
+  },
   planAddRoad,
   planDemoLive,
   planDemoCommit,

@@ -293,7 +293,7 @@ function renderTray() {
       itemChips(['lamp', 'lantern', 'globes', 'bollard', 'torch', 'stringlights']) +
       '<span class="group">Garden fences (drag to lay)</span>' +
       itemChips(['picket', 'hedge', 'railing', 'rope', 'stonewall']) +
-      '<span class="note">Toys, shelters and water holes go inside habitats. Each species has a favourite toy and shelter: tap a habitat to see what is missing. Decorations make paths more pleasant, and lights glow after dark.</span>';
+      '<span class="note">Toys, shelters and water holes go inside habitats. Each species has a favourite toy and shelter: tap a habitat to see what is missing. Decorations make paths more pleasant, and lights glow after dark. Benches, lights and carts can also stand on a wide footpath, as long as guests can get round them.</span>';
   } else if (false) {
     h =
       '<span class="note">New habitats start bare. Plants and water holes make them comfortable, and plants along paths please guests.</span>' +

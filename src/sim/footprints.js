@@ -29,7 +29,7 @@ function frontTiles(x0, y0, fw, fh, r) {
   if (r === 3) for (let j = y0; j < y0 + fh; j++) out.push([x0 - 1, j]);
   return out.filter(([i, j]) => inB(i, j)).map(([i, j]) => idx(i, j));
 }
-const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => S.tiles[i].t === 'p');
+const frontOnPath = (x0, y0, fw, fh, r) => frontTiles(x0, y0, fw, fh, r).some((i) => isPath(i));
 /* A crossing is a bridge where a road and a footpath meet: one passes over the other, so guests and
    vehicles never share the ground. t.br says which is on top: 'foot' (a footbridge over the road,
    the default) or 'road' (a road bridge over the footpath). Both kinds of traffic can use the tile. */
@@ -213,6 +213,61 @@ function houseHabitat(p) {
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';
 
+/* Benches, lights, carts and the like can stand on a wide footpath or plaza, as long as guests can
+   still get round them. */
+function checkOnPath(x, y, it) {
+  const no = (msg) => ({ ok: false, msg }),
+    t = tileAt(x, y),
+    i = idx(x, y);
+  if (!((it.kind === 'decor' && !it.line) || it.kind === 'shop')) return no('Build beside the path, not on it.');
+  if (t.pm === 'service' || t.pm === 'crossing' || t.pm === 'track' || t.pm === 'tunnel' || t.e)
+    return no('That can only go on a footpath, not a road, bridge or track.');
+  if (isGate(x, y) || isBridgeRamp(i)) return no('That spot has to stay clear.');
+  if (t.o) return no('That tile is already taken.');
+  for (const n of nbr4(i)) {
+    const o = S.tiles[n].o;
+    if (!o || !ITEMS[o].size) continue;
+    const p = planOf(anchorOf(n));
+    if (frontTiles(p.x0, p.y0, p.fw, p.fh, p.r).includes(i)) return no('That would block a doorway.');
+  }
+  // would it cut the path? Look at the walkable tiles around this one, going round the ring
+  const open = (dx, dy) => inB(x + dx, y + dy) && guestPath(idx(x + dx, y + dy));
+  const ring = [
+    [0, -1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+    [-1, 1],
+    [-1, 0],
+    [-1, -1],
+  ].map(([dx, dy]) => open(dx, dy));
+  let sides = 0,
+    joined = 0;
+  for (let k = 0; k < 8; k += 2) {
+    if (!ring[k]) continue;
+    sides++;
+    if (ring[(k + 1) % 8] && ring[(k + 2) % 8]) joined++;
+  }
+  const blocked = no('That would block the path. Leave guests a way round it.');
+  if (sides >= 2 && !joined) return blocked; // a path one tile wide
+  if (sides - joined <= 1 || joined === 4) return { ok: true };
+  // cut locally, so see whether the sides still meet the long way round
+  const goals = new Set(nbr4(i).filter(guestPath)),
+    seen = new Set([i]),
+    q = [[...goals][0]];
+  seen.add(q[0]);
+  goals.delete(q[0]);
+  for (let k = 0; k < q.length && goals.size && k < 3000; k++)
+    for (const n of nbr4(q[k]))
+      if (!seen.has(n) && guestPath(n)) {
+        seen.add(n);
+        goals.delete(n);
+        q.push(n);
+      }
+  return goals.size ? blocked : { ok: true };
+}
+
 /* Every bridge is at least 3 tiles long: a deck over the lower path with a full-tile ramp each end.
    Crossing tiles in a line (over a wide path, or with one tile between them) share one level deck. */
 // does the upper path run along x? Older saves don't record it, so it's read from what's around the tile
@@ -325,7 +380,7 @@ function joinsBridgeSide(x, y, isRoadType) {
 // work out a new bridge at (x, y): the tiles it decks over and the ramps it needs
 function bridgePlan(x, y, top) {
   const fail = (msg) => ({ ok: false, msg });
-  const kindOK = (t) => t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && t.pm !== 'tunnel';
+  const kindOK = (t) => t.t === 'p' && !t.o && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && t.pm !== 'tunnel';
   const isLower = (i, j) => {
     if (!inB(i, j)) return false;
     const t = S.tiles[idx(i, j)];

@@ -245,7 +245,7 @@ function staffStep(a, b, dr) {
     if (it && (it.form === 'rock' || it.kind === 'shelter')) return false;
     return true;
   }
-  if (tb.t === 'p') return true;
+  if (tb.t === 'p' && !tb.o) return true;
   if (tb.w) return false;
   if (tb.o) {
     const it = ITEMS[tb.o];
@@ -364,7 +364,7 @@ function serviceTiles(e) {
   const out = new Set(),
     ts = F.etiles[e.id] || [];
   if (e.biome === 'pool') {
-    for (const i of ts) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].t === 'p') out.add(n);
+    for (const i of ts) for (const n of nbr4(i)) if (!S.tiles[n].e && isPath(n)) out.add(n);
     return out;
   }
   for (const i of ts) {
@@ -937,6 +937,6 @@ function neediestShop(s) {
 // the path tiles beside a shop's front
 function shopDoor(a) {
   const out = new Set();
-  for (const i of buildingTiles(a)) for (const n of nbr4(i)) if (S.tiles[n].t === 'p') out.add(n);
+  for (const i of buildingTiles(a)) for (const n of nbr4(i)) if (isPath(n)) out.add(n);
   return out;
 }

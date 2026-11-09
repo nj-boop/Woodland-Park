@@ -1196,6 +1196,64 @@ const tests = {
       g.refresh();
       return g.S.encl.length === encl - 1 || 'habitat still there';
     }),
+  'garden fences beside a north-south path run north-south': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      // x 19 is beside the footpath at x 18
+      for (const y of [22, 23, 24]) g.tileAt(19, y).o = 'hedge';
+      g.refresh();
+      const THREE = g.THREE,
+        root = new THREE.Group();
+      g.makeItem(root, 'hedge', 19, 23);
+      root.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(root),
+        dx = b.max.x - b.min.x,
+        dz = b.max.z - b.min.z;
+      return (dz > 0.9 && dx < 0.45) || `spans x ${dx.toFixed(2)}, z ${dz.toFixed(2)}`;
+    }),
+  'benches and carts can stand on a wide footpath, but never cut it': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      // an asphalt plaza 3 tiles deep, joined to the footpath at x 18
+      for (let x = 19; x <= 24; x++)
+        for (let y = 20; y <= 22; y++) {
+          g.tileAt(x, y).o = null;
+          g.setPath(x, y, 'asphalt');
+        }
+      g.refresh();
+      g.setTool('shop');
+      g.set('sub', 'bench');
+      if (g.check(18, 16).ok) return 'a bench should not cut a one-wide path';
+      if (!g.act(21, 21)) return 'no bench in the plaza: ' + g.check(21, 21).msg;
+      g.refresh();
+      const i = 21 * W + 21;
+      if (g.guestPath(i)) return 'guests should walk round the bench';
+      if (!g.guestPath(21 * W + 20)) return 'the tile next door should stay open';
+      if (g.F.bench[21 * W + 20] < 0) return 'guests should be able to sit there';
+      // a row across the plaza would cut it: two are fine, the third is refused
+      if (!g.act(23, 20)) return 'second bench refused';
+      g.refresh();
+      if (!g.act(23, 21)) return 'third bench refused';
+      g.refresh();
+      if (g.check(23, 22).ok) return 'that bench closes the way round';
+      g.setTool('plant');
+      g.set('sub', 'picket');
+      if (g.check(20, 22).ok) return 'fences stay off paths';
+      g.set('sub', 'lantern');
+      if (!g.act(20, 22)) return 'no lantern on the plaza';
+      g.setPath(30, 3, 'service');
+      g.refresh();
+      if (g.check(30, 3).ok) return 'not on roads';
+      const save = g.serialize();
+      g.load(save);
+      g.refresh();
+      if (g.S.tiles[i].o !== 'bench' || g.S.tiles[i].pm !== 'asphalt') return 'lost after load';
+      g.setTool('bulldoze');
+      g.act(21, 21);
+      g.refresh();
+      return (g.S.tiles[i].t === 'p' && g.S.tiles[i].pm === 'asphalt' && g.guestPath(i)) || 'the path should remain';
+    }),
 };
 
 let failed = 0;

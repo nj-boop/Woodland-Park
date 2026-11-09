@@ -242,9 +242,10 @@ function newZoo(w, h, mode = 'standard', layout = 'bare') {
 }
 
 /* ---------- derived fields ---------- */
-const isPath = (i) => S.tiles[i].t === 'p';
+const isPath = (i) => S.tiles[i].t === 'p' && !S.tiles[i].o; // something placed on a path blocks that tile
 // guests can't use service roads
-const guestPath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
+const guestPath = (i) =>
+  S.tiles[i].t === 'p' && !S.tiles[i].o && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 function nbr4(i) {
   const x = i % W,
     y = (i / W) | 0,
@@ -394,7 +395,7 @@ function rebuild() {
     const t = S.tiles[i],
       o = t.o;
     if (t.t === 'p') {
-      F.paths.push(i);
+      if (!o) F.paths.push(i);
       if (t.l > 0) F.litter.add(i);
       if (t.e && t.pm === 'track') F.trackIn.add(t.e);
     }

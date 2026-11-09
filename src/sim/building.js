@@ -33,6 +33,7 @@ function checkPathTile(x, y) {
   const t = tileAt(x, y);
   // roads and footpaths never meet at grade: laying one over the other builds a bridge, with
   // whichever is laid second on top (a footbridge over a road, or a road bridge over a footpath)
+  if (t.t === 'p' && t.o) return { ok: false, msg: 'Something is in the way. Bulldoze it first.', loud: true };
   if (t.t === 'p' && !t.e && t.pm !== 'crossing' && t.pm !== 'track' && pathSub !== 'track' && pathSub !== 'tunnel')
     if ((pathSub === 'service') !== (t.pm === 'service')) {
       const br = pathSub === 'service' ? 'road' : 'foot',
@@ -98,7 +99,10 @@ function check(x, y) {
   if (tool === 'plant' || tool === 'shop') {
     const it = ITEMS[sub];
     if (it.size) return checkBuilding(sub, x, y);
-    if (t.t === 'p') return { ok: false, msg: 'Build beside the path, not on it.' };
+    if (t.t === 'p') {
+      const c = checkOnPath(x, y, it);
+      if (!c.ok) return c;
+    }
     if (t.w) return { ok: false, msg: 'That spot is under water.' };
     if (t.o) return { ok: false, msg: 'That tile is already taken.' };
     if (it.kind === 'toy' || it.kind === 'shelter') {
@@ -189,6 +193,10 @@ function act(x, y) {
     toast(`${sp.name} added to the ${BIOMES[e.biome].name.toLowerCase()} habitat.`);
     if (sel && sel.type === 'encl' && sel.id === e.id) renderInspector();
     return true;
+  }
+  if ((tool === 'plant' || tool === 'shop') && t.t === 'p' && t.l) {
+    t.l = 0; // the litter gets tidied away under it
+    F.litter.delete(idx(x, y));
   }
   if (tool === 'plant' || tool === 'shop') {
     const it = ITEMS[sub];

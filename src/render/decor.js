@@ -243,10 +243,12 @@ function decorSig(x, y, o) {
 function makeDecor(g, o, x, y) {
   const it = ITEMS[o];
   if (it && it.line) {
+    g.rotation.y = 0; // fence runs are worked out in map directions, not the way the item faces
     makeLineFence(g, o, x, y);
     return true;
   }
   if (o === 'stringlights') {
+    g.rotation.y = 0;
     makeStringLights(g, x, y);
     return true;
   }
