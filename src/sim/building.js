@@ -203,6 +203,14 @@ function act(x, y) {
     if (!spend(it.cost, `a ${it.name.toLowerCase()}`)) return false;
     if (sub === 'entrance') placeEntrance(c.plan);
     else stampBuilding(sub, c.plan || { r: 0, x0: x, y0: y, fw: 1, fh: 1, tiles: [idx(x, y)] });
+    if (c.stubs) {
+      for (const i of c.stubs.road) setPath(i % W, (i / W) | 0, 'service');
+      for (const i of c.stubs.foot) setPath(i % W, (i / W) | 0, 'stone');
+      const need = [c.stubs.road.length && 'road', c.stubs.foot.length && 'footpath'].filter(Boolean).join(' and ');
+      toast(
+        `${it.name} placed. It starts working once its ${need} stub${need.includes(' and ') ? 's are' : ' is'} joined up.`
+      );
+    }
     dirty = true;
     return true;
   }

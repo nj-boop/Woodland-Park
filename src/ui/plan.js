@@ -215,8 +215,56 @@ function planRender() {
   y.onclick = planConfirm;
   $('#planNo').onclick = planCancel;
 }
+// where a building being placed would get its road and footpath stubs
+let stubGhosts = [];
+function previewStubs(list) {
+  if (list.length === stubGhosts.length && list.every((v, k) => v === stubGhosts[k])) return;
+  stubGhosts = list;
+  planGhostDirty = true;
+}
+// a marker over any building that isn't joined up yet
+const offlineRoot = new THREE.Group();
+scene.add(offlineRoot);
+const OFFLINE_MAT = new THREE.SpriteMaterial({
+  map: (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 96;
+    const x = c.getContext('2d');
+    x.fillStyle = '#f2b632';
+    x.beginPath();
+    x.moveTo(48, 6);
+    x.lineTo(92, 88);
+    x.lineTo(4, 88);
+    x.closePath();
+    x.fill();
+    x.fillStyle = '#3a2405';
+    x.font = 'bold 60px sans-serif';
+    x.textAlign = 'center';
+    x.fillText('!', 48, 80);
+    return new THREE.CanvasTexture(c);
+  })(),
+  depthTest: false,
+  transparent: true,
+});
+let offlineFor = null;
+function syncOffline() {
+  if (!F.offline || offlineFor === F.offline) return;
+  offlineFor = F.offline;
+  offlineRoot.clear();
+  for (const a of F.offline.keys()) {
+    if (!S.tiles[a] || !S.tiles[a].o) continue;
+    const p = planOf(a),
+      cx = p.x0 + p.fw / 2,
+      cz = p.y0 + p.fh / 2,
+      m = new THREE.Sprite(OFFLINE_MAT);
+    m.position.set(cx, heightAt(cx, cz) + 1.9, cz);
+    m.scale.set(0.8, 0.8, 1);
+    offlineRoot.add(m);
+  }
+}
 function planFrame() {
   if (plan && plan.s !== S) planCancel(); // a different zoo was loaded
+  syncOffline();
   if (!planGhostDirty) return;
   planGhostDirty = false;
   const o = new THREE.Object3D(),
@@ -243,6 +291,7 @@ function planFrame() {
   } else if (plan) {
     for (const v of demoList(plan)) v.tiles.forEach((i) => put(i, '#e5674f'));
   }
+  if (!plan) for (const i of stubGhosts) put(i, '#f2c94c');
   planMesh.count = n;
   planMesh.instanceMatrix.needsUpdate = true;
   if (planMesh.instanceColor) planMesh.instanceColor.needsUpdate = true;

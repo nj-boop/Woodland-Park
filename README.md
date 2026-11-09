@@ -115,7 +115,7 @@ materials turn see-through so you can look in. Scenes never touch the simulation
 Paths come in two kinds: footpaths (guests and staff) and roads (`pm === 'service'`: trucks, cars and
 staff). A highway runs along the outside of the south edge; road tiles on the bottom row join it.
 `F.roadLinked` is every road reachable from it. Service buildings (`access: 'road'` in `ITEMS`:
-dock, feed store, recycling yard, vet clinic) open onto a road;
+dock, feed store, recycling yard, vet clinic) open onto a road and need a footpath within 3 tiles that is joined to the gate; a building placed without them gets short stubs (`stubPlan()`) and is held out of `F.anchors` until joined up (`linkBuildings()`, `F.offline`);
 parking lots open onto a road and only count when road-linked. New zoos start with a footpath and road side by side on the east.
 
 ### Deliveries

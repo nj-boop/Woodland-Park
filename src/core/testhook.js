@@ -184,7 +184,7 @@ window.__wg = {
     ])
       for (let y = y0; y < y1; y++)
         for (let x = 2; x < W - 2; x++)
-          if (check(x, y).ok) {
+          if (check(x, y).ok && !check(x, y).stubs) {
             act(x, y);
             dirty = true;
             rebuild();

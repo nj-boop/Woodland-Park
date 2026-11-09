@@ -109,6 +109,20 @@ function buildingFacts(a) {
       note = 'Ripe, but there is no hauler to harvest it. Hire one at the loading dock.';
     if (!F.cnt.feedstore) note = 'Harvests are sold at half value until you build a feed store.';
   }
+  const off = F.offline && F.offline.get(a);
+  if (off) {
+    const need = off
+      .map((m) =>
+        m === 'road'
+          ? 'a road to the highway'
+          : m === 'footpath'
+            ? 'a footpath joined to the front gate'
+            : 'a road or footpath'
+      )
+      .join(' and ');
+    note = `Not working yet: it needs ${need}.` + (note ? ' ' + note : '');
+    rows.unshift(['Status', 'Not connected']);
+  }
   return { rows, note };
 }
 

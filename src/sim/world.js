@@ -425,8 +425,6 @@ function rebuild() {
       for (let d = Math.max(0, y - 2); d <= Math.min(H - 1, y + 2); d++) s += row[d * W + x];
       scen[y * W + x] += s;
     }
-  F.gallery = galleryTiles();
-  linkAnimalHouses();
   const src = (type) => SERVICE[type];
   F.restroom = bfs(src('restroom'));
   F.food2 = bfs([...src('food'), ...src('restaurant')]);
@@ -451,6 +449,9 @@ function rebuild() {
         rq.push(n);
       }
   }
+  linkBuildings();
+  F.gallery = galleryTiles();
+  linkAnimalHouses();
   F.food = bfs(src('food'));
   F.drink = bfs(src('drink'));
   F.bench = bfs(src('bench'));

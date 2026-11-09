@@ -110,6 +110,7 @@ function overlays(alpha) {
     info.hidden = false;
   } else {
     info.hidden = true;
+    if (!(hover && tool !== 'look' && !plan && inB(hover.x, hover.y))) previewStubs([]);
     if (hover && tool !== 'look' && !plan && inB(hover.x, hover.y)) {
       const c =
         tool === 'habitat'
@@ -165,6 +166,11 @@ function overlays(alpha) {
         const r = brushR();
         prev.scale.set(r * 2, 0.08, r * 2);
         prev.position.set(hover.wx / T, 0.06 + heightAt(hover.wx / T, hover.wy / T), hover.wy / T);
+      }
+      previewStubs(c.ok && c.stubs ? [...c.stubs.road, ...c.stubs.foot] : []);
+      if (c.ok && c.stubs && ITEMS[sub]) {
+        info.textContent = `${ITEMS[sub].name} · ${money(ITEMS[sub].cost)} · yellow shows where to connect it${pendingBuild ? ' · tap it again to build' : ''}`;
+        info.hidden = false;
       }
       if (c.ok && c.cost && !c.plan) {
         info.textContent = `(${money(c.cost)})`;

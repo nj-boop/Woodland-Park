@@ -39,6 +39,58 @@ const bridgeTop = (i) => S.tiles[i].br || 'foot';
 const isRoad = (i) => S.tiles[i].t === 'p' && (S.tiles[i].pm === 'service' || S.tiles[i].pm === 'crossing');
 const isFootpath = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm !== 'service' && S.tiles[i].pm !== 'track';
 const isTrack = (i) => S.tiles[i].t === 'p' && S.tiles[i].pm === 'track';
+// a footpath within 3 tiles, for staff on foot
+function footpathBeside(p, test = isFootpath) {
+  for (let y = p.y0 - 3; y < p.y0 + p.fh + 3; y++)
+    for (let x = p.x0 - 3; x < p.x0 + p.fw + 3; x++) if (inB(x, y) && test(idx(x, y))) return true;
+  return false;
+}
+// A building doesn't have to be joined up when it's placed. It gets short stubs of road and footpath
+// showing where to connect them, and starts working once they are.
+function stubPlan(kind, p, facing) {
+  const free = (x, y) => {
+    if (!inB(x, y)) return false;
+    const t = S.tiles[idx(x, y)];
+    return t.t !== 'p' && !t.e && !t.w && (!t.o || clearable(t.o)) && !p.tiles.includes(idx(x, y));
+  };
+  const [dx, dy] = GATE_DIR[p.r],
+    road = [],
+    foot = [],
+    it = ITEMS[kind];
+  const front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r),
+    mid = front[front.length >> 1];
+  if (!facing) {
+    if (mid == null) return null;
+    if (it.access === 'road') {
+      // two lanes wide, two tiles out from the door (or just to the highway at the south edge)
+      const lane = front[(front.length >> 1) - 1] != null ? front[(front.length >> 1) - 1] : mid;
+      for (const c of new Set([mid, lane]))
+        for (let k = 0; k < 2; k++) {
+          const x = (c % W) + dx * k,
+            y = ((c / W) | 0) + dy * k;
+          if (k && y >= H) continue;
+          if (!free(x, y)) return null;
+          road.push(idx(x, y));
+        }
+    } else {
+      if (!free(mid % W, (mid / W) | 0)) return null;
+      foot.push(mid);
+    }
+  }
+  if (it.needsFootpath && !footpathBeside(p)) {
+    // on a side of the building, clear of the door
+    const px = p.x0 + (p.fw >> 1),
+      py = p.y0 + (p.fh >> 1);
+    const spots = [
+      [p.x0 - 1, py],
+      [p.x0 + p.fw, py],
+      [px, p.y0 - 1],
+      [px, p.y0 + p.fh],
+    ].filter(([x, y]) => inB(x, y) && !road.includes(idx(x, y)) && !front.includes(idx(x, y)) && free(x, y));
+    if (spots.length) foot.push(idx(spots[0][0], spots[0][1]));
+  }
+  return road.length || foot.length ? { road, foot } : null;
+}
 // does this facing work? Guest and staff buildings open onto a path; a show stadium faces its tank
 function frontOK(kind, p) {
   if (kind === 'stage')
@@ -146,15 +198,24 @@ function planOf(a) {
 // placement check for a building bigger than one tile; returns a check() result with the plan attached
 function checkBuilding(kind, x, y) {
   if (kind === 'entrance') return checkEntrance(x, y);
-  let firstFail = null;
+  let firstFail = null,
+    stubbed = null;
   for (const p of fpPlans(kind, x, y)) {
     const c = checkPlan(kind, p);
-    if (c.ok) {
+    if (c.ok && !c.stubs) {
       lastPlan = { kind, r: p.r };
       return c;
     }
+    if (c.ok) {
+      if (!p.shifted && !stubbed) stubbed = c;
+      continue;
+    }
     // report the most useful problem: from the unshifted plan, preferring one that faced the right way
     if (!p.shifted && (!firstFail || (firstFail.facing === false && c.facing !== false))) firstFail = c;
+  }
+  if (stubbed) {
+    lastPlan = { kind, r: stubbed.plan.r };
+    return stubbed;
   }
   return firstFail;
 }
@@ -174,18 +235,16 @@ function checkPlan(kind, p) {
       );
     if (t.o && !clearable(t.o)) return fail(`Something is in the way. The ${nm} needs ${p.fw}×${p.fh} clear tiles.`);
   }
-  if (!facing)
+  if (!facing && (kind === 'stage' || kind === 'station'))
     return fail(
       kind === 'stage'
         ? 'The stadium seats have to face an aquatic habitat.'
-        : buildRot != null
-          ? `The ${nm}'s door has to open onto a path. Press R (or ⟳ in the menu) to turn it.`
-          : ITEMS[kind].access === 'road'
-            ? `The ${nm}'s door side has to open onto a road (vehicles only), connected to the highway on the south edge.`
-            : it.kind === 'staff'
-              ? `The ${nm}'s door side has to open onto a road or footpath.`
-              : `Move closer to a footpath: the ${nm}'s door side has to open onto one.`
+        : `The ${nm}'s door has to open onto a path.`
     );
+  const canStub = !['stage', 'station'].includes(kind) && it.kind !== 'decor';
+  const stubs = canStub ? stubPlan(kind, p, facing) : null;
+  if (!facing && !stubs)
+    return fail(`There’s no room in front of the ${nm}’s door for its road or path. Try turning it.`);
   if (kind === 'stage' && !p.tiles.some((i) => nbr4(i).some((n) => S.tiles[n].t === 'p')))
     return fail('Guests need a path to reach the stadium.');
   if (kind === 'station' && !p.tiles.some((i) => nbr4(i).some((n) => isTrack(n))))
@@ -193,7 +252,7 @@ function checkPlan(kind, p) {
   if (kind === 'animalhouse' && houseHabitat(p) == null)
     return fail('The animal house’s back wall has to sit against a land habitat’s fence, with its door onto a road.');
   const clears = p.tiles.filter((i) => S.tiles[i].o).length;
-  return { ok: true, cost: it.cost, plan: p, clears };
+  return { ok: true, cost: it.cost, plan: p, clears, stubs };
 }
 // the land habitat behind an animal house (the side opposite its door), or null
 function houseHabitat(p) {
@@ -208,6 +267,34 @@ function houseHabitat(p) {
 }
 // trees, shrubs and rocks outside habitats are cleared to make room for a building
 const clearable = (o) => ITEMS[o] && ITEMS[o].kind === 'plant' && o !== 'pond';
+
+// which staff buildings are joined up. Those that aren't are left out of F.anchors, so they don't count
+// or do anything until they are; F.offline says what each one is missing.
+function linkBuildings() {
+  F.offline = new Map();
+  const reach = (i) => guestPath(i) && (F.gate[i] >= 0 || (F.gateOut && F.gateOut[i] >= 0));
+  for (const o of Object.keys(F.anchors)) {
+    const it = ITEMS[o];
+    if (!it.size || o === 'entrance' || it.kind === 'decor' || it.kind === 'farm') continue;
+    F.anchors[o] = F.anchors[o].filter((a) => {
+      const p = planOf(a),
+        front = frontTiles(p.x0, p.y0, p.fw, p.fh, p.r),
+        roadOK = front.some((i) => F.roadLinked.has(i)),
+        footFront = front.some(reach),
+        missing = [];
+      if (it.access === 'road') {
+        if (!roadOK) missing.push('road');
+        if (it.needsFootpath && !footpathBeside(p, reach)) missing.push('footpath');
+      } else if (it.kind === 'staff') {
+        if (!roadOK && !footFront) missing.push('road or footpath');
+      } else if (!footFront && !['station', 'stage'].includes(o)) missing.push('footpath');
+      if (!missing.length) return true;
+      F.offline.set(a, missing);
+      // guests can't reach a shop until its path joins up anyway; only staff buildings are held back here
+      return it.kind !== 'staff' || o === 'parking';
+    });
+  }
+}
 
 /* Benches, lights, carts and the like can stand on a wide footpath or plaza, as long as guests can
    still get round them. */

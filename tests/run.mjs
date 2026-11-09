@@ -1254,28 +1254,61 @@ const tests = {
       g.refresh();
       return (g.S.tiles[i].t === 'p' && g.S.tiles[i].pm === 'asphalt' && g.guestPath(i)) || 'the path should remain';
     }),
-  'staff buildings can go on a road with no footpath anywhere': async ({ page }) =>
+  'buildings can go anywhere with stubs, and start working once joined up': async ({ page }) =>
     page.evaluate(() => {
-      const g = window.__wg;
+      const g = window.__wg,
+        W = g.W;
       g.newZoo(undefined, undefined, 'standard', 'bare');
       g.S.nightOff = true;
       g.refresh();
-      g.setTool('path');
-      g.set('pathSub', 'service');
-      for (let y = 24; y >= 2; y--) g.planAddRoad(18, y);
-      g.planConfirm();
-      g.refresh();
-      if (g.S.tiles.some((t) => t.t === 'p' && t.pm !== 'service')) return 'there should be no footpath';
+      // out in an empty field, with no road or path anywhere
       g.setTool('shop');
-      const spots = { recycle: [15, 4], lodge: [15, 9], vetclinic: [15, 14], dock: [15, 20], feedstore: [22, 5] };
-      for (const [k, [x, y]] of Object.entries(spots)) {
-        g.set('sub', k);
-        const c = g.check(x, y);
-        if (!c.ok) return `${k}: ${c.msg}`;
-        if (!g.act(x, y)) return `${k} not built`;
-        g.refresh();
-      }
-      return true;
+      g.set('sub', 'recycle');
+      const c = g.check(12, 8);
+      if (!c.ok) return 'refused: ' + c.msg;
+      if (!c.stubs || c.stubs.road.length !== 4 || c.stubs.foot.length !== 1) return 'stubs ' + JSON.stringify(c.stubs);
+      g.act(12, 8);
+      g.refresh();
+      for (const i of c.stubs.road) if (g.S.tiles[i].pm !== 'service') return 'road stub not laid';
+      for (const i of c.stubs.foot)
+        if (g.S.tiles[i].t !== 'p' || g.S.tiles[i].pm === 'service') return 'footpath stub not laid';
+      if (g.F.cnt.recycle !== 0) return 'should not count until joined up';
+      const a = g.S.tiles.findIndex((t, i) => t.o === 'recycle' && g.isAnchor(i));
+      if (JSON.stringify(g.F.offline.get(a)) !== '["road","footpath"]')
+        return 'missing ' + JSON.stringify(g.F.offline.get(a));
+      // join the road to the highway
+      const rx = c.stubs.road[0] % W;
+      const ry = Math.floor(c.stubs.road[c.stubs.road.length - 1] / W);
+      const front = c.plan.r;
+      if (front !== 0 && front !== 2) return 'expected a door facing north or south here, got ' + front;
+      g.tileAt(rx, ry);
+      for (let y = 0; y < g.H; y++)
+        if (y !== c.plan.y0 && (y < c.plan.y0 || y >= c.plan.y0 + c.plan.fh)) g.setPath(rx, y, 'service');
+      g.refresh();
+      if (JSON.stringify(g.F.offline.get(a)) !== '["footpath"]')
+        return 'road did not count ' + JSON.stringify(g.F.offline.get(a));
+      if (g.F.cnt.recycle !== 0) return 'still needs its footpath';
+      // a gate and a footpath from it to the stub
+      const foot = c.stubs.foot[0],
+        fx = foot % W,
+        fy = Math.floor(foot / W);
+      g.set('sub', 'entrance');
+      if (!g.act(fx - 2, 25)) return 'gate not placed: ' + g.check(fx - 2, 25).msg;
+      g.refresh();
+      for (let y = fy; y <= g.GATE.y; y++) if (!g.tileAt(fx - 2, y).o) g.setPath(fx - 2, y, 'stone');
+      for (let x = fx - 2; x <= fx; x++) g.setPath(x, fy, 'stone');
+      g.refresh();
+      if (g.F.offline.has(a)) return 'still offline ' + JSON.stringify(g.F.offline.get(a));
+      return g.F.cnt.recycle === 1 || 'not counted';
+    }),
+  'a keeper lodge places on open ground': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.newZoo(undefined, undefined, 'standard', 'bare');
+      g.refresh();
+      g.setTool('shop');
+      g.set('sub', 'lodge');
+      return g.check(12, 8).ok || 'lodge should place on open ground';
     }),
 };
 

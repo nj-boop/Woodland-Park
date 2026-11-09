@@ -80,6 +80,7 @@ const ITEMS = {
     help: 'Where guests pay and come in. Put it across a footpath anywhere outside habitats (the arrow points into the zoo; R turns it). Visitors park, then walk the footpaths to the outside of the gate. On the south edge it opens straight onto the highway. Placing a new one moves it.',
   },
   dock: {
+    needsFootpath: true,
     access: 'road',
     name: 'Loading dock',
     cost: 2500,
@@ -88,6 +89,7 @@ const ITEMS = {
     help: 'Delivery trucks unload here. With a feed store, animal feed comes in bulk at 60% of the courier price. Room for 3 haulers.',
   },
   feedstore: {
+    needsFootpath: true,
     access: 'road',
     name: 'Feed store',
     cost: 1500,
@@ -191,6 +193,7 @@ const ITEMS = {
     help: 'Houses 4 zookeepers. Needs a recycling yard.',
   },
   recycle: {
+    needsFootpath: true,
     access: 'road',
     name: 'Recycling yard',
     cost: 1500,
@@ -201,6 +204,7 @@ const ITEMS = {
   // stands outside a habitat with its back wall on the fence: the animals' night quarters and the
   // only way staff get in. Its door opens onto a road.
   animalhouse: {
+    needsFootpath: true,
     access: 'road',
     name: 'Animal house',
     cost: 2500,
@@ -209,6 +213,7 @@ const ITEMS = {
     help: 'Back wall against a habitat fence. Animals sleep inside at night, keepers and vets go in through it, and the ambulance loads here. Guests nearby watch the keepers at work.',
   },
   vetclinic: {
+    needsFootpath: true,
     access: 'road',
     name: 'Vet clinic',
     cost: 3000,
