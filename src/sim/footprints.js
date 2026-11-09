@@ -473,6 +473,8 @@ function checkEntrance(x, y) {
   }
   return first;
 }
+// an empty new zoo has no entrance until the player places one (older zoos always have one)
+const hasEntrance = () => !S.bare || !!(F.cnt && F.cnt.entrance);
 // work out GATE from the entrance building on the map
 function syncGate() {
   const a = S.tiles.findIndex((t, i) => t.o === 'entrance' && isAnchor(i));

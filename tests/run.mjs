@@ -1122,6 +1122,80 @@ const tests = {
       if (t(7, 3).t !== 'p' || t(7, 6).t !== 'p') return 'ramps missing';
       return g.F.bridgeAt.get(4 * W + 7) === g.F.bridgeAt.get(5 * W + 7) || 'two separate spans';
     }),
+  'a new zoo is bare, and the test zoo is still there': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.newZoo(undefined, undefined, 'standard', 'bare');
+      g.refresh();
+      const used = g.S.tiles.filter((t) => t.t !== 'g' || t.o || t.e).length;
+      if (used || g.S.encl.length || g.S.animals.length) return `not bare: ${used} tiles, ${g.S.encl.length} habitats`;
+      if (g.hasEntrance()) return 'should have no entrance yet';
+      if (g.spawnGuest()) return 'a guest arrived with no gate';
+      for (let i = 0; i < 600; i++) g.tick();
+      if (g.S.guests.length) return 'guests came with no gate';
+      g.renderTutorial();
+      if (!/front gate/.test(document.querySelector('#tut').textContent)) return 'guide should start with the gate';
+      const reloaded = g.serialize();
+      g.load(reloaded);
+      g.refresh();
+      if (g.S.tiles.some((t) => t.o === 'entrance')) return 'an entrance appeared on load';
+      g.setTool('shop');
+      g.set('sub', 'entrance');
+      if (!g.act(18, 25)) return 'could not place the gate';
+      g.refresh();
+      if (!g.hasEntrance() || g.GATE.y !== 24) return 'gate not picked up: ' + JSON.stringify(g.GATE);
+      g.newZoo(undefined, undefined, 'standard', 'test');
+      g.refresh();
+      return (g.S.encl.length === 1 && g.S.tiles.some((t) => t.o === 'entrance')) || 'test zoo missing';
+    }),
+  'roads are drawn, then built on confirm': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg,
+        W = g.W;
+      for (let x = 2; x <= 9; x++) for (const y of [4, 5]) g.tileAt(x, y).o = null;
+      g.setTool('path');
+      g.set('pathSub', 'service');
+      const money0 = g.S.money;
+      for (let x = 2; x < 8; x++) g.planAddRoad(x, 4);
+      if (g.tileAt(3, 4).t === 'p' || g.S.money !== money0) return 'built before confirming';
+      if (document.querySelector('#planBar').hidden) return 'no confirm bar';
+      if (!/Road: 14 tiles/.test(document.querySelector('#planTxt').textContent))
+        return document.querySelector('#planTxt').textContent;
+      g.planCancel();
+      if (g.plan || !document.querySelector('#planBar').hidden) return 'cancel did not clear it';
+      if (g.tileAt(3, 4).t === 'p') return 'cancel built something';
+      for (let x = 2; x < 8; x++) g.planAddRoad(x, 4);
+      g.planConfirm();
+      g.refresh();
+      for (let x = 2; x <= 8; x++)
+        if (g.tileAt(x, 4).pm !== 'service' || g.tileAt(x, 5).pm !== 'service') return 'not built at ' + x;
+      return money0 - g.S.money === 14 * 8 || 'charged ' + (money0 - g.S.money);
+    }),
+  'demolition is an area you confirm, and never takes a habitat or the gate by accident': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.setTool('bulldoze');
+      // a wide sweep over paths, a habitat and the entrance
+      const r = { x: 8, y: 5, w: 12, h: 21 };
+      const encl = g.S.encl.length,
+        pathBefore = g.tileAt(18, 20).t;
+      g.planDemoLive(r);
+      g.planDemoCommit();
+      if (pathBefore !== 'p' || g.tileAt(18, 20).t !== 'p') return 'removed before confirming';
+      g.planConfirm();
+      g.refresh();
+      if (g.tileAt(18, 20).t === 'p') return 'path not removed';
+      if (g.S.encl.length !== encl) return 'an area sweep took a habitat';
+      if (!g.S.tiles.some((t) => t.o === 'entrance')) return 'the entrance went';
+      // a single tap on a habitat does take it, once confirmed, animals and all
+      const e = g.S.encl[0];
+      g.planDemoLive({ x: e.x + 3, y: e.y + 5, w: 1, h: 1 });
+      g.planDemoCommit();
+      if (!g.plan || !/habitat/.test(document.querySelector('#planTxt').textContent)) return 'no habitat confirm';
+      g.planConfirm();
+      g.refresh();
+      return g.S.encl.length === encl - 1 || 'habitat still there';
+    }),
 };
 
 let failed = 0;

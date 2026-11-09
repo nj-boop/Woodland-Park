@@ -88,6 +88,7 @@ function serialize() {
     mode: S.mode,
     challenge: S.challenge,
     tut: S.tut,
+    bare: S.bare,
     nightOff: S.nightOff,
     res: S.res,
     done: S.done,
@@ -313,7 +314,7 @@ function load(str) {
   if (d.wt) S.tiles.forEach((t, i) => (t.w = d.wt[i] === '1' ? 1 : 0));
   for (const i of d.brs || []) if (S.tiles[i]) S.tiles[i].br = 'road'; // road bridges over footpaths
   restampBuildings(d); // after paths, habitats and water are known
-  if (!S.tiles.some((t) => t.o === 'entrance')) {
+  if (!S.bare && !S.tiles.some((t) => t.o === 'entrance')) {
     // zoos from before the entrance was a building: put one where the gate was
     const ex = GATE.x;
     for (const i of entrancePlan(ex).tiles) if (S.tiles[i].o && S.tiles[i].o !== 'entrance') clearBuilding(i);

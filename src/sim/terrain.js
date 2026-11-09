@@ -53,4 +53,4 @@ function poolNear(x, y) {
   }
   return null;
 }
-const isGate = (x, y) => (x === GATE.x && y === GATE.y) || (x === GATE.ox && y === GATE.oy);
+const isGate = (x, y) => hasEntrance() && ((x === GATE.x && y === GATE.y) || (x === GATE.ox && y === GATE.oy));

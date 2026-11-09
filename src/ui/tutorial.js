@@ -1,7 +1,29 @@
 /* Getting started: a checklist card for new zoos. Each step is checked against the zoo itself, so it
    ticks off however the player gets there; "Show me" opens the right tool. Hidden for good once
    finished or dismissed (S.tut: 'on', 'done' or 'off'; older zoos have none and never see it). */
+const newHabs = () => S.encl.slice(S.bare ? 0 : 1); // the test zoo starts with one of its own
 const TUT_STEPS = [
+  {
+    bare: true,
+    txt: 'Place your front gate. On the south edge it opens onto the highway; anywhere else, link it to parking with a footpath.',
+    ok: () => F.cnt.entrance > 0,
+    show: () => setTool('shop', 'entrance'),
+  },
+  {
+    bare: true,
+    txt: 'Lay a footpath leading into the zoo from the gate.',
+    ok: () => nbr4(idx(GATE.x, GATE.y)).some((n) => n !== idx(GATE.ox, GATE.oy) && guestPath(n)),
+    show: () => setTool('path'),
+  },
+  {
+    bare: true,
+    txt: 'Lay a road in from the highway on the south edge. Drag it out, then confirm. Trucks and staff buildings use it.',
+    ok: () => F.roadLinked.size > 0,
+    show: () => {
+      pathSub = 'service';
+      setTool('path');
+    },
+  },
   {
     txt: 'Build a recycling yard. Janitors work from it, and keepers need it too.',
     ok: () => F.cnt.recycle > 0,
@@ -19,17 +41,17 @@ const TUT_STEPS = [
   },
   {
     txt: 'Build a new habitat: drag out an area beside a path.',
-    ok: () => S.encl.length >= 2,
+    ok: () => newHabs().length >= 1,
     show: () => setTool('habitat'),
   },
   {
     txt: 'Build an animal house with its back on the new habitat’s fence, its door on a road and a footpath nearby. Keepers go in through it, and the animals sleep there.',
-    ok: () => S.encl.slice(1).some((e) => F.houseOf && F.houseOf[e.id]),
+    ok: () => newHabs().some((e) => F.houseOf && F.houseOf[e.id]),
     show: () => setTool('shop', 'animalhouse'),
   },
   {
     txt: 'Put at least two animals of one species into your new habitat.',
-    ok: () => S.encl.slice(1).some((e) => animalsIn(e.id).length >= 2),
+    ok: () => newHabs().some((e) => animalsIn(e.id).length >= 2),
     show: () => setTool('animal'),
   },
   {
@@ -48,6 +70,7 @@ const TUT_STEPS = [
     show: () => setSpeed(3),
   },
 ];
+const tutSteps = () => TUT_STEPS.filter((s) => !s.bare || S.bare);
 let tutHTML = '';
 function renderTutorial() {
   const box = $('#tut');
@@ -56,7 +79,7 @@ function renderTutorial() {
     box.hidden = true;
     return;
   }
-  const done = TUT_STEPS.map((s) => {
+  const done = tutSteps().map((s) => {
     try {
       return !!s.ok();
     } catch (e) {
@@ -71,9 +94,9 @@ function renderTutorial() {
     return;
   }
   const n = done.filter(Boolean).length;
-  const h = `<div class="tutHead"><b>Getting started</b><span>${n} of ${TUT_STEPS.length}</span><button class="x" id="tutX" aria-label="Hide the guide">×</button></div>
-    <div class="tutBar"><i style="width:${(n / TUT_STEPS.length) * 100}%"></i></div>
-    <p>${TUT_STEPS[cur].txt}</p>
+  const h = `<div class="tutHead"><b>Getting started</b><span>${n} of ${tutSteps().length}</span><button class="x" id="tutX" aria-label="Hide the guide">×</button></div>
+    <div class="tutBar"><i style="width:${(n / tutSteps().length) * 100}%"></i></div>
+    <p>${tutSteps()[cur].txt}</p>
     <button class="btn small" id="tutGo">Show me</button>`;
   box.hidden = false;
   if (h === tutHTML) return; // unchanged: keep the buttons under the player's finger
@@ -84,5 +107,5 @@ function renderTutorial() {
     box.hidden = true;
     toast('Guide hidden.');
   };
-  $('#tutGo').onclick = () => TUT_STEPS[cur].show();
+  $('#tutGo').onclick = () => tutSteps()[cur].show();
 }

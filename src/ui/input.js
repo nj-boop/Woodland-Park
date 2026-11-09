@@ -45,13 +45,11 @@ function zoomBy(f) {
   CAM.dist *= f;
   clampCam();
 }
-// the player is about to lay a garden fence, or is bulldozing one
-function lineItemAt(tt) {
-  if (tool === 'plant') return !!(ITEMS[sub] && ITEMS[sub].line);
-  if (tool !== 'bulldoze' || !inB(tt.x, tt.y)) return false;
-  const t = tileAt(tt.x, tt.y);
-  return !!(t.o ? ITEMS[t.o].line : t.t === 'p' && t.pm === 'service'); // drag along a road to take it up
+// the player is about to lay a garden fence
+function lineItemAt() {
+  return tool === 'plant' && !!(ITEMS[sub] && ITEMS[sub].line);
 }
+const roadPlanning = () => tool === 'path' && pathSub === 'service';
 cv.addEventListener('pointerdown', (e) => {
   cv.setPointerCapture(e.pointerId);
   const p = local(e);
@@ -71,9 +69,18 @@ cv.addEventListener('pointerdown', (e) => {
   const orbit = e.button === 2 || (e.button === 0 && e.altKey);
   const pan = !orbit && (tool === 'look' || e.button === 1 || spaceDown);
   drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, moved: false, pan, orbit, start: tt, last: null, rect: null };
-  if (!pan && !orbit && tool === 'path') {
+  if (!pan && !orbit && roadPlanning()) {
+    // roads are drawn first, then confirmed
+    drag.planning = true;
+    planAddRoad(tt.x, tt.y);
+    drag.last = tt;
+  } else if (!pan && !orbit && tool === 'path') {
     doAct(tt.x, tt.y);
     drag.last = tt;
+  }
+  if (!pan && !orbit && tool === 'bulldoze' && inB(tt.x, tt.y)) {
+    drag.demo = rectOf(tt, tt);
+    planDemoLive(drag.demo);
   }
   if (!pan && !orbit && lineItemAt(tt)) {
     // fences are laid (and bulldozed) by dragging, like paths
@@ -142,9 +149,17 @@ cv.addEventListener('pointermove', (e) => {
     while ((cx !== tt.x || cy !== tt.y) && guard++ < 80) {
       if (Math.abs(tt.x - cx) >= Math.abs(tt.y - cy)) cx += Math.sign(tt.x - cx);
       else cy += Math.sign(tt.y - cy);
-      if (tool !== 'bulldoze' || lineItemAt({ x: cx, y: cy })) doAct(cx, cy);
+      if (drag.planning) planAddRoad(cx, cy);
+      else doAct(cx, cy);
     }
     drag.last = tt;
+  }
+  if (drag.demo) {
+    const r = rectOf(drag.start, { x: clamp(tt.x, 0, W - 1), y: clamp(tt.y, 0, H - 1) });
+    if (r.x !== drag.demo.x || r.y !== drag.demo.y || r.w !== drag.demo.w || r.h !== drag.demo.h) {
+      drag.demo = r;
+      planDemoLive(r);
+    }
   }
   if (tool === 'habitat' && drag.rect)
     drag.rect = rectOf(drag.start, { x: clamp(tt.x, 0, W - 1), y: clamp(tt.y, 0, H - 1) });
@@ -184,6 +199,11 @@ function endPtr(e) {
     if (!d.moved && tool === 'look' && !pickAnimal(d.sx, d.sy)) inspectAt(d.start);
     return;
   }
+  if (d.planning) return;
+  if (d.demo) {
+    planDemoCommit();
+    return;
+  }
   if (tool === 'habitat' && d.rect) {
     buildHabitat(d.rect);
     return;
@@ -214,7 +234,7 @@ function endPtr(e) {
     return;
   }
   if (d.lineDrag) return;
-  if (['animal', 'plant', 'shop', 'bulldoze'].includes(tool) && !d.moved) doAct(d.start.x, d.start.y);
+  if (['animal', 'plant', 'shop'].includes(tool) && !d.moved) doAct(d.start.x, d.start.y);
 }
 let pendingBuild = null; // touch placement waiting for its confirming tap
 cv.addEventListener('pointerup', endPtr);
@@ -253,6 +273,14 @@ window.addEventListener('keyup', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
+  if (plan && k === 'escape') {
+    planCancel();
+    return;
+  }
+  if (plan && k === 'enter') {
+    planConfirm();
+    return;
+  }
   const map = { 1: 'look', 2: 'path', 3: 'habitat', 4: 'animal', 5: 'plant', 6: 'shop', 7: 'bulldoze', 8: 'terrain' };
   if (map[k]) {
     setTool(map[k]);

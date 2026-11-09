@@ -53,7 +53,9 @@ async function start(data) {
     });
   if (!loaded)
     toast(
-      'Welcome to Wildgrove. Two zebras are settling in. Build a recycling yard and a keeper lodge so you can hire zookeepers, and check the Office for your next unlocks.',
+      S.bare
+        ? 'Welcome to Wildgrove. This plot is all yours: start with your front gate, and the guide will take it from there.'
+        : 'Welcome to Wildgrove. Two zebras are settling in. Build a recycling yard and a keeper lodge so you can hire zookeepers, and check the Office for your next unlocks.',
       'good'
     );
   else toast(`Welcome back. ${money(S.money)} in the bank.`);

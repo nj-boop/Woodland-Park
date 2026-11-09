@@ -34,6 +34,7 @@
   "render/animals-rigged.js",
   "render/foliage-and-actors.js",
   "render/overlays-camera.js",
+  "ui/plan.js",
   "ui/input.js",
   "ui/panels.js",
   "ui/staff-panel.js",

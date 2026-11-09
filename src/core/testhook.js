@@ -54,6 +54,15 @@ window.__wg = {
   rebuild,
   tick,
   spawnGuest,
+  planAddRoad,
+  planDemoLive,
+  planDemoCommit,
+  planConfirm,
+  planCancel,
+  get plan() {
+    return plan;
+  },
+  hasEntrance,
   get groundData() {
     return groundData;
   },
@@ -98,8 +107,8 @@ window.__wg = {
     staticDirty = true;
     groundDirty = true;
   },
-  newZoo(w, h, mode) {
-    newZoo(w, h, mode);
+  newZoo(w, h, mode, layout = 'test') {
+    newZoo(w, h, mode, layout);
     rebuild();
   },
   resizeMap,

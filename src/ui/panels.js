@@ -22,6 +22,7 @@ function setTool(t, s) {
   tool = t;
   landArm = null;
   pendingBuild = null;
+  planCancel();
   sub = s || (sub && validSub(t, sub) ? sub : DEF[t] || null);
   document
     .querySelectorAll('.tool[data-tool]')
@@ -166,7 +167,7 @@ function renderTray() {
       '<span class="note">Drag to move. Pinch or scroll to zoom. Twist two fingers, right-drag, or use ⟲ ⟳ to rotate. Tap an animal, guest, habitat or building to inspect it.</span>';
   else if (tool === 'path')
     h =
-      '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are two lanes wide, for trucks and cars (and staff). Service buildings and parking lots open onto a road that runs to the highway on the south edge. Roads and footpaths never meet: lay one over the other to build a bridge, which needs a straight tile each side for its ramps ($300).</span>' +
+      '<span class="note">Drag to lay path. Footpaths are for guests and staff; roads are two lanes wide, for trucks and cars (and staff): drag a road out, then confirm it. Service buildings and parking lots open onto a road that runs to the highway on the south edge. Roads and footpaths never meet: lay one over the other to build a bridge, which needs a straight tile each side for its ramps ($300).</span>' +
       Object.entries(PATHS)
         .map(
           ([k, p]) =>
@@ -342,7 +343,8 @@ function renderTray() {
         .join('') +
       `<span class="note">${ITEMS[sub] && ITEMS[sub].help ? ITEMS[sub].help + ' ' : ''}Everything here has to touch a path.</span>`;
   } else if (tool === 'bulldoze')
-    h = '<span class="note">Tap something to remove it. You get half the cost back.</span>';
+    h =
+      '<span class="note">Drag over an area, or tap one thing, then confirm. You get half the cost back. Habitats only go when you tap one on its own.</span>';
   // buildings bigger than a tile: show the size and a rotate button
   if ((tool === 'shop' || tool === 'plant') && ITEMS[sub] && ITEMS[sub].size)
     h +=
@@ -357,8 +359,10 @@ function renderTray() {
     (c) =>
       (c.onclick = () => {
         const d = c.dataset;
-        if (d.path) pathSub = d.path;
-        else if (d.fence) fenceSub = d.fence;
+        if (d.path) {
+          pathSub = d.path;
+          planCancel();
+        } else if (d.fence) fenceSub = d.fence;
         else if (d.hm) habMode = d.hm;
         else if (d.terr) terrSub = d.terr;
         else if (d.land) {
@@ -919,7 +923,9 @@ function newHTML() {
     ? `<h3>Start a new zoo</h3><p class="help">This replaces your current zoo. Save it to a slot above first if you want to keep it.</p>
        <div class="modes">${Object.entries(MODES)
          .map(([k, m]) => `<button class="mode" data-mode="${k}"><b>${m.name}</b><span>${m.blurb}</span></button>`)
-         .join('')}</div>
+         .join(
+           ''
+         )}<button class="mode" data-mode="standard" data-layout="test"><b>Test zoo</b><span>The ready-made layout, with paths, a road and a zebra habitat.</span></button></div>
        <div class="btns"><button class="btn" id="zNo">Keep my zoo</button></div>`
     : `<div class="btns" style="margin-top:0"><button class="btn danger" id="zReset">Start a new zoo</button></div>`;
 }
@@ -936,7 +942,7 @@ function bindNew() {
       const mode = y.dataset.mode;
       confirmNew = false;
       delete $('#zooPanel').dataset.built;
-      newZoo(undefined, undefined, mode);
+      newZoo(undefined, undefined, mode, y.dataset.layout || 'bare');
       rebuild();
       closeInspector();
       centerCam();
@@ -947,7 +953,9 @@ function bindNew() {
           ? 'Challenge accepted: $75,000 and five years to build a world-class zoo. Good luck!'
           : mode === 'sandbox'
             ? 'Sandbox: money is no object, and every animal is available.'
-            : 'A fresh plot of land. Good luck!',
+            : y.dataset.layout
+              ? 'The test zoo, ready to go.'
+              : 'An empty plot of land. Start with your front gate.',
         'good'
       );
       if (tool === 'animal') renderTray();

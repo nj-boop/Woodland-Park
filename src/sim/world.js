@@ -131,41 +131,8 @@ function linkAnimalHouses() {
         if (inB(x, y) && isFootpath(idx(x, y)) && !F.houseView.has(idx(x, y))) F.houseView.set(idx(x, y), a);
   }
 }
-function newZoo(w, h, mode = 'standard') {
-  setMapSize(36, 26);
-  GATE.x = 18;
-  GATE.y = 25;
-  S = {
-    v: 1,
-    hgt: new Float32Array((W + 1) * (H + 1)),
-    mode,
-    tut: 'on', // the getting-started guide
-    tier: mode === 'sandbox' ? TIERS.length : 1,
-    totalVis: 0,
-    money: MODES[mode].money,
-    day: 1,
-    clock: 0,
-    admission: 15,
-    staff: [],
-    cands: [],
-    feed: 0,
-    crates: [],
-    trucks: [],
-    stock: {},
-    sold: {}, // per building anchor: { m: earned this month, l: last month }
-    waste: 0,
-    farms: {},
-    prices: { ...BASE_PRICE },
-    ledger: [],
-    tiles: blankTiles(),
-    encl: [],
-    animals: [],
-    guests: [],
-    rating: 62,
-    exits: [],
-    nextId: 1,
-    today: { inc: 0, run: 0, vis: 0, adm: 0, shop: 0 },
-  };
+// the ready-made test zoo: paths, a road, a habitat with zebras and a few facilities
+function buildTestZoo() {
   for (let y = 14; y < H; y++) setPath(GATE.x, y);
   for (let x = 9; x <= 27; x++) {
     setPath(x, 14);
@@ -227,6 +194,45 @@ function newZoo(w, h, mode = 'standard') {
   }
   stampBuilding('animalhouse', { r: 1, x0: 18, y0: 9, fw: 2, fh: 3, tiles: fpTiles(18, 9, 2, 3) });
   placeEntrance(entrancePlan(18));
+}
+/* A new zoo is an empty plot. `layout: 'test'` builds the ready-made test zoo instead. */
+function newZoo(w, h, mode = 'standard', layout = 'bare') {
+  setMapSize(36, 26);
+  GATE.x = 18;
+  GATE.y = 25;
+  S = {
+    v: 1,
+    hgt: new Float32Array((W + 1) * (H + 1)),
+    mode,
+    tut: 'on', // the getting-started guide
+    bare: layout === 'bare' ? true : undefined, // started as an empty plot (no entrance until one is placed)
+    tier: mode === 'sandbox' ? TIERS.length : 1,
+    totalVis: 0,
+    money: MODES[mode].money,
+    day: 1,
+    clock: 0,
+    admission: 15,
+    staff: [],
+    cands: [],
+    feed: 0,
+    crates: [],
+    trucks: [],
+    stock: {},
+    sold: {}, // per building anchor: { m: earned this month, l: last month }
+    waste: 0,
+    farms: {},
+    prices: { ...BASE_PRICE },
+    ledger: [],
+    tiles: blankTiles(),
+    encl: [],
+    animals: [],
+    guests: [],
+    rating: 62,
+    exits: [],
+    nextId: 1,
+    today: { inc: 0, run: 0, vis: 0, adm: 0, shop: 0 },
+  };
+  if (layout === 'test') buildTestZoo();
   S.mapW = 36;
   S.mapH = 26;
   S.gate = { ...GATE };
@@ -479,7 +485,7 @@ function rebuild() {
     F.shops[i] = sh;
     F.scen[i] = Math.min(8, scen[i]);
   }
-  const cnt = { lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0, dock: 0, feedstore: 0 };
+  const cnt = { entrance: 0, lodge: 0, recycle: 0, vetclinic: 0, stage: 0, parking: 0, dock: 0, feedstore: 0 };
   for (const o of Object.keys(cnt))
     for (const i of F.anchors[o] || []) {
       // a parking lot only counts if cars can reach it by road

@@ -40,6 +40,7 @@ function arrivalSpot() {
   return { x: GATE.ox, y: GATE.oy, fx: GATE.ox, fy: GATE.oy, lot: -1 };
 }
 function spawnGuest() {
+  if (!hasEntrance()) return;
   const gi = idx(GATE.x, GATE.y);
   if (!nbr4(gi).some(guestPath)) return;
   const at = arrivalSpot();

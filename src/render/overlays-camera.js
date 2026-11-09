@@ -110,7 +110,7 @@ function overlays(alpha) {
     info.hidden = false;
   } else {
     info.hidden = true;
-    if (hover && tool !== 'look' && inB(hover.x, hover.y)) {
+    if (hover && tool !== 'look' && !plan && inB(hover.x, hover.y)) {
       const c =
         tool === 'habitat'
           ? { ok: !tileAt(hover.x, hover.y).e && tileAt(hover.x, hover.y).t !== 'p' }
@@ -245,6 +245,7 @@ function render3D(alpha, dt) {
   overlays(alpha);
   syncClinics(time);
   syncVignettes(time);
+  planFrame();
   // daylight: a warm evening, then moonlit night (darkness() is 0 by day, 1 at night)
   const dk = darkness(),
     t = S.clock / DAY,
