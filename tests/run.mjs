@@ -904,7 +904,7 @@ const tests = {
       if (put('picket', 18, 18)) return 'a fence went on the path';
       const save = g.serialize();
       g.tileAt(19, 18).o = null;
-      g.load(typeof save === 'string' ? JSON.parse(save) : save);
+      g.load(save);
       return (g.tileAt(19, 18).o === 'picket' && g.tileAt(24, 16).o === 'stringlights') || 'lost after load';
     }),
 };
