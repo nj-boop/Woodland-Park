@@ -15,6 +15,39 @@ function heightAt(x, z) {
   return (hC(i, j) * (1 - fx) + hC(i + 1, j) * fx) * (1 - fz) + (hC(i, j + 1) * (1 - fx) + hC(i + 1, j + 1) * fx) * fz;
 }
 const WATER_Y = -0.1;
+// Water is a flag on whole tiles, but its banks should not look like a grid. This sets the height
+// of every tile corner that touches water (corners i0..i1, j0..j1) so the shoreline, which is where the
+// ground dips under WATER_Y, wanders: deep in the middle, corners of a big pond left dry so they
+// are cut off, and each bank corner at its own depth, so the edge bulges out here and pulls in there.
+function shapeWater(i0, j0, i1, j1) {
+  const wet = (x, y) => inB(x, y) && tileAt(x, y).w,
+    around = (i, j) => [
+      [i - 1, j - 1],
+      [i, j - 1],
+      [i - 1, j],
+      [i, j],
+    ],
+    count = (i, j) => around(i, j).filter(([x, y]) => wet(x, y)).length,
+    rand = (i, j) => {
+      const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+  for (let j = Math.max(1, j0); j <= Math.min(H - 1, j1); j++)
+    for (let i = Math.max(1, i0); i <= Math.min(W - 1, i1); i++) {
+      const n = count(i, j);
+      if (!n) continue;
+      const k = cIdx(i, j),
+        r = rand(i, j);
+      if (n === 4) S.hgt[k] = Math.min(S.hgt[k], -0.38);
+      else if (n === 3) S.hgt[k] = -0.3;
+      else {
+        // open water behind this bank? (the far corner of a water tile here is surrounded by water)
+        const backed = around(i, j).some(([x, y]) => wet(x, y) && count(2 * x + 1 - i, 2 * y + 1 - j) === 4);
+        if (n === 2) S.hgt[k] = backed ? -0.3 + 0.27 * r : -0.3 + 0.13 * r;
+        else S.hgt[k] = backed ? -0.04 + 0.07 * r : -0.24 + 0.09 * r;
+      }
+    }
+}
 /* ---------- habitat shape helpers (habitats are sets of tiles) ---------- */
 function encTiles(e) {
   return (F.etiles && F.etiles[e.id]) || [];

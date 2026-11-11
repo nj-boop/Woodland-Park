@@ -339,7 +339,8 @@ function paintGround() {
         amt = 0,
         gm = 255;
       const e = t.e && F.emap[t.e];
-      if (t.w) {
+      // the pebbly bed only where the whole tile is under water; banks keep the ground around them
+      if (t.w && Math.max(hC(x, y), hC(x + 1, y), hC(x, y + 1), hC(x + 1, y + 1)) < WATER_Y) {
         layer = LAYER.waterbed;
         gm = 0;
       } else if (t.t === 'p') {

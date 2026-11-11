@@ -312,6 +312,7 @@ function load(str) {
     for (let i = 0; i < S.hgt.length; i++) S.hgt[i] = (+a[i] || 0) / 100;
   }
   if (d.wt) S.tiles.forEach((t, i) => (t.w = d.wt[i] === '1' ? 1 : 0));
+  if (d.wt) shapeWater(1, 1, W - 1, H - 1); // ponds from older saves get natural banks too
   for (const i of d.brs || []) if (S.tiles[i]) S.tiles[i].br = 'road'; // road bridges over footpaths
   restampBuildings(d); // after paths, habitats and water are known
   if (!S.bare && !S.tiles.some((t) => t.o === 'entrance')) {

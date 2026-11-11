@@ -312,6 +312,7 @@ function terraform(wx, wz) {
         }
       }
     if (n) {
+      shapeWater(cx - r - 1, cz - r - 1, cx + r + 2, cz + r + 2);
       dirty = true;
     }
     return;

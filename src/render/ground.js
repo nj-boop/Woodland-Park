@@ -32,6 +32,7 @@ function tuftWriter(tm, fm) {
     if (x >= 0 && x <= W && z >= 0 && z <= H) {
       if (tileAt(Math.floor(clamp(x, 0, W - 0.01)), Math.floor(clamp(z, 0, H - 0.01))).w) return;
       y = heightAt(x, z);
+      if (y < WATER_Y + 0.03) return; // under the edge of a pond
     }
     o.position.set(x, y, z);
     o.rotation.set(rnd(-0.25, 0.25), rnd(0, 6.28), rnd(-0.25, 0.25));

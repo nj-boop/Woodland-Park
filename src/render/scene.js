@@ -114,7 +114,11 @@ function buildWater() {
     ix = [];
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
-      if (!tileAt(x, y).w) continue;
+      // one tile past the water too: the banks slope, so the shoreline is where the ground dips under
+      let near = false;
+      for (let dy = -1; dy <= 1 && !near; dy++)
+        for (let dx = -1; dx <= 1; dx++) if (inB(x + dx, y + dy) && tileAt(x + dx, y + dy).w) near = true;
+      if (!near) continue;
       const b = pos.length / 3;
       pos.push(x, WATER_Y, y, x + 1, WATER_Y, y, x + 1, WATER_Y, y + 1, x, WATER_Y, y + 1);
       ix.push(b, b + 2, b + 1, b, b + 3, b + 2);

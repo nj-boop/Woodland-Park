@@ -23,6 +23,8 @@ window.__wg = {
   act,
   check,
   terraform,
+  shapeWater,
+  heightAt,
   paintHabitat,
   careList,
   evalEncl,
