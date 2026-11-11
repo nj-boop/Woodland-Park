@@ -210,7 +210,7 @@ function newZoo(w, h, mode = 'standard', layout = 'bare') {
     totalVis: 0,
     money: MODES[mode].money,
     day: 1,
-    clock: 0,
+    clock: Math.round(DAY * 0.09), // a new zoo opens in full morning light, not in the dark before dawn
     admission: 15,
     staff: [],
     cands: [],
@@ -375,6 +375,8 @@ function rebuild() {
   F.paths = [];
   F.litter = new Set();
   F.homes = { lodge: new Set(), recycle: new Set(), vetclinic: new Set(), dock: new Set(), feedstore: new Set() };
+  // where each role rests: the tiles around every building that houses it (ITEMS[kind].staff)
+  F.roleHomes = { keeper: new Set(), janitor: new Set(), vet: new Set(), hauler: new Set() };
   F.anchors = {}; // building kind -> anchor tiles, so nothing has to scan the whole map for buildings
   F.trackIn = new Set(); // habitats a safari track runs into
   F.nightIn = {}; // habitat id -> hatch tiles: where animals go into their animal house for the night
@@ -402,6 +404,8 @@ function rebuild() {
     if (t.w) base[i] += 0.3;
     if (!o) continue;
     if (o in F.homes) for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.homes[o].add(n);
+    if (ITEMS[o].staff)
+      for (const n of nbr4(i)) if (!S.tiles[n].e && S.tiles[n].o !== o) F.roleHomes[ITEMS[o].staff[0]].add(n);
     if ((ITEMS[o].as || o) in SERVICE) for (const n of nbr4(i)) if (guestPath(n)) SERVICE[ITEMS[o].as || o].push(n);
     if (ITEMS[o].kind === 'plant') base[i] += 1;
     if (!isAnchor(i)) continue; // count each building once, at its anchor tile
@@ -499,12 +503,11 @@ function rebuild() {
     }
   F.cnt = cnt;
   buildTours();
-  F.cap = {
-    keepers: cnt.recycle ? cnt.lodge * 4 : 0,
-    janitors: cnt.recycle * 3,
-    vets: cnt.vetclinic * 2,
-    haulers: cnt.dock * 3,
-  };
+  // room for staff: every connected building that houses a role adds its places (ITEMS[kind].staff)
+  const beds = { keeper: 0, janitor: 0, vet: 0, hauler: 0 };
+  for (const o of Object.keys(F.anchors))
+    if (ITEMS[o].staff) beds[ITEMS[o].staff[0]] += ITEMS[o].staff[1] * F.anchors[o].length;
+  F.cap = { keepers: cnt.recycle ? beds.keeper : 0, janitors: beds.janitor, vets: beds.vet, haulers: beds.hauler };
   dirty = false;
   groundDirty = true;
   staticDirty = true;

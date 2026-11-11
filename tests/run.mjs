@@ -205,10 +205,153 @@ const tests = {
       const el = g.addAnimal('elephant', e, 22, 10);
       el.happy = 20;
       el.target = 20;
+      g.monthlyUpkeep();
+      if (el.escaped || el.restless) return 'a new arrival should get time to settle in';
+      el.born = -10;
+      g.monthlyUpkeep();
+      if (el.escaped || !el.restless) return 'the first month should only be a warning';
       for (let i = 0; i < 30 && !el.escaped; i++) g.monthlyUpkeep();
       if (!el.escaped) return 'elephant never escaped a log fence';
       g.recapture(el);
       return (!el.escaped && g.S.tiles[Math.floor(el.y) * 36 + Math.floor(el.x)].e === e.id) || 'recapture failed';
+    }),
+
+  'a fence rated for the animal holds, even when it is unhappy or nobody repairs it': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.tier = 4;
+      const e = g.makeEncl(20, 8, 5, 5, 'savanna');
+      e.fence = 'iron';
+      g.refresh();
+      const lion = g.addAnimal('lion', e, 22, 10);
+      lion.born = -10;
+      const money = g.S.money;
+      let mended = 0;
+      for (let i = 0; i < 60; i++) {
+        lion.happy = 5; // miserable the whole time
+        const before = e.cond ?? 100;
+        g.monthlyUpkeep();
+        if (e.cond > before) mended++;
+        if (e.cond < 40) return `fence left to rot at ${e.cond}`;
+      }
+      if (lion.escaped) return 'a lion got out of sound iron bars';
+      if (g.S.animals.some((a) => a.escaped)) return 'a zebra got out of the test habitat';
+      return (mended > 0 && g.S.money < money) || `contractor repairs: ${mended}`;
+    }),
+
+  'happy animals stay put behind a weak fence': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.S.tier = 4;
+      const e = g.makeEncl(20, 8, 5, 5, 'savanna');
+      e.fence = 'wood';
+      g.refresh();
+      const el = g.addAnimal('elephant', e, 22, 10);
+      el.born = -10;
+      for (let i = 0; i < 40; i++) {
+        el.happy = 45;
+        g.monthlyUpkeep();
+      }
+      return !el.escaped || 'a fairly content elephant broke out';
+    }),
+
+  'huts, headquarters, the depot and the vet station add room for staff': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      if (!g.build('recycle')) return 'no room for a recycling yard';
+      const base = { ...g.F.cap };
+      if (!g.build('keeperhut')) return 'no room for a keeper hut';
+      if (g.F.cap.keepers !== base.keepers + 2) return `hut: ${g.F.cap.keepers} keepers`;
+      const k = g.hireRole('keeper');
+      if (!k) return 'could not hire a keeper into the hut';
+      if (!g.build('keeperhq')) return 'no room for keeper headquarters';
+      if (g.F.cap.keepers !== base.keepers + 12) return `hq: ${g.F.cap.keepers} keepers`;
+      if (!g.build('depot')) return 'no room for a depot';
+      if (g.F.cap.janitors !== base.janitors + 6) return `depot: ${g.F.cap.janitors} janitors`;
+      if (!g.build('vetstation')) return 'no room for a vet station';
+      if (g.F.cap.vets !== base.vets + 1) return `vet station: ${g.F.cap.vets} vets`;
+      const v = g.hireRole('vet');
+      return (!!v && g.F.roleHomes.vet.size > 0) || 'the vet has nowhere to rest';
+    }),
+
+  'the grill and the food court are restaurants with their own stock': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      for (const k of ['grill', 'foodcourt']) {
+        const at = g.build(k);
+        if (!at) return `no room for the ${k}`;
+        const a = g.F.anchors[k][0];
+        if (!g.stockedShops().includes(a)) return `${k} is not stocked`;
+        if (g.stockOf(a) < 100) return `${k} stock ${g.stockOf(a)}`;
+      }
+      return true;
+    }),
+
+  'every building model and every fence type builds and draws': async ({ page, errors }) => {
+    const r = await page.evaluate(() => {
+      const g = window.__wg;
+      for (let y = 0; y < g.H; y++)
+        for (let x = 0; x < g.W; x++) {
+          const t = g.tileAt(x, y);
+          t.o = null;
+          t.t = 'g';
+          t.a = undefined;
+          t.e = 0;
+        }
+      g.S.encl.length = 0;
+      g.S.animals.length = 0;
+      g.refresh();
+      g.renderScenery();
+      const empty = g.sceneStats().scenery.tris;
+      const kinds = Object.keys(g.ITEMS).filter(
+        (k) => g.ITEMS[k].size && g.ITEMS[k].kind !== 'farm' && k !== 'entrance'
+      );
+      let x = 1,
+        y = 1,
+        row = 0;
+      for (const k of kinds) {
+        const [w, d] = g.ITEMS[k].size;
+        if (x + w > g.W - 1) {
+          x = 1;
+          y += row + 1;
+          row = 0;
+        }
+        if (y + d > 15) return `ran out of room at ${k}`;
+        g.stampBuilding(k, { r: 0, x0: x, y0: y, fw: w, fh: d, tiles: g.fpTiles(x, y, w, d) });
+        x += w + 1;
+        row = Math.max(row, d);
+      }
+      g.refresh();
+      g.renderScenery();
+      let last = g.sceneStats().scenery.tris;
+      if (last - empty < kinds.length * 300)
+        return `buildings look too plain: ${last - empty} triangles for ${kinds.length}`;
+      // one habitat per fence type along the bottom: each must add real geometry
+      const out = {};
+      ['wood', 'chain', 'iron', 'stone', 'moat'].forEach((f, i) => {
+        const e = g.makeEncl(2 + i * 6, 18, 4, 4, 'savanna');
+        e.fence = f;
+        g.refresh();
+        g.renderScenery();
+        const now = g.sceneStats().scenery.tris;
+        out[f] = now - last;
+        last = now;
+      });
+      const thin = Object.entries(out).filter(([, n]) => n < 16 * 12 * 2);
+      return thin.length ? `fences drawn too thin or not at all: ${JSON.stringify(out)}` : true;
+    });
+    return r === true ? errors.length === 0 || errors.join('; ') : r;
+  },
+
+  'fairly paid staff do not quit over a quiet year': async ({ page }) =>
+    page.evaluate(() => {
+      const g = window.__wg;
+      g.build('recycle');
+      const a = g.hireRole('janitor');
+      a.trait = 'grumpy';
+      a.wage = Math.round(a.wage * 1.1) + 20;
+      for (let i = 0; i < 36; i++) g.staffMonth();
+      return g.S.staff.includes(a) || 'a fairly paid janitor quit with nothing to do';
     }),
 
   'guests use restrooms': async ({ page }) =>

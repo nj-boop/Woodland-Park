@@ -14,7 +14,7 @@ function fadeRoof(col) {
 }
 function setRoofFade() {
   const f = clamp((CAM.dist - VIG_ZOOM * 0.55) / (VIG_ZOOM * 0.45), 0, 1),
-    op = 0.16 + 0.84 * f;
+    op = 0.3 + 0.7 * f;
   for (const m of FADE_ROOFS.values()) {
     m.opacity = op;
     m.depthWrite = op > 0.95;
@@ -82,15 +82,37 @@ function openShop(g, w, d, c) {
     backZ = -d / 2 + 0.1,
     counterZ = 0.3;
   P(g, 'box', '#c9c4b8', 0, 0.03, 0, w - 0.1, 0.06, d - 0.1, false).receiveShadow = true;
-  P(g, 'box', fadeRoof(c.wall), 0, 0.55, backZ, w - 0.16, 1.0, 0.08);
-  for (const s of [-1, 1])
-    P(g, 'box', fadeRoof(c.wall), s * hw, 0.55, (backZ + counterZ) / 2, 0.06, 1.0, counterZ - backZ);
-  P(g, 'box', c.wall, 0, 0.17, counterZ, w - 0.18, 0.26, 0.14);
+  // a solid kitchen: brick base, boarded walls on three sides. Only the roof fades when you zoom in.
+  aBlock(g, 'brick', shadeHex(c.wall, 0.7), 0, 0.06, backZ, w - 0.14, 0.3, 0.1);
+  aBlock(g, 'vplank', c.wall, 0, 0.36, backZ, w - 0.16, 0.72, 0.08);
+  for (const s of [-1, 1]) {
+    aBlock(g, 'brick', shadeHex(c.wall, 0.7), s * hw, 0.06, (backZ + counterZ) / 2, 0.08, 0.3, counterZ - backZ);
+    aBlock(g, 'vplank', c.wall, s * hw, 0.36, (backZ + counterZ) / 2 - 0.12, 0.06, 0.72, counterZ - backZ - 0.24);
+    aWin(g, s * (hw + 0.03), 0.74, (backZ + counterZ) / 2 - 0.12, (s * Math.PI) / 2, 0.3, 0.3, { frame: c.trim });
+  }
+  aDoor(g, w / 2 - 0.5, backZ - 0.04, Math.PI, 0.3, 0.7, shadeHex(c.wall, 0.6), { y: 0.06, frame: c.trim });
+  aAC(g, -w / 2 + 0.5, 0.06, backZ - 0.2);
+  aBlock(g, 'vplank', c.wall, 0, 0.06, counterZ, w - 0.18, 0.24, 0.14);
   P(g, 'box', c.trim, 0, 0.3, counterZ, w - 0.12, 0.03, 0.2);
-  for (const s of [-1, 1]) P(g, 'cyl', '#dcdcdc', s * hw, 0.56, counterZ + 0.14, 0.02, 1.0);
+  for (const s of [-1, 1]) P(g, 'box', c.trim, s * hw, 0.56, counterZ + 0.14, 0.05, 1.0, 0.05);
+  P(g, 'box', c.trim, 0, 1.04, counterZ + 0.14, w - 0.1, 0.06, 0.06);
   const roofD = counterZ + 0.3 - backZ;
-  stripedRoof(g, c.roof, 1.08, (backZ + counterZ + 0.3) / 2, w - 0.02, roofD, Math.round(w * 4));
-  signBoard(g, c.sign, c.sbg, c.sfg, 0, 1.28, backZ + 0.07, Math.min(1.5, w * 0.6));
+  stripedRoof(g, c.roof, 1.1, (backZ + counterZ + 0.3) / 2, w - 0.02, roofD, Math.round(w * 4));
+  for (let k = 0; k < Math.round(w * 4); k++)
+    P(
+      g,
+      'box',
+      c.roof[k % 2],
+      -w / 2 + 0.01 + ((k + 0.5) / Math.round(w * 4)) * (w - 0.02),
+      0.98,
+      counterZ + 0.3,
+      (w - 0.02) / Math.round(w * 4),
+      0.08,
+      0.015,
+      false
+    );
+  aSign(g, c.sign, c.sbg, c.sfg, 0, 1.34, backZ + 0.07, 0, Math.min(1.5, w * 0.6));
+  for (const s of [-1, 1]) P(g, 'box', '#5a5f63', s * Math.min(0.6, w * 0.26), 1.2, backZ + 0.06, 0.03, 0.2, 0.03);
 }
 // the restaurant's open-air grill on its terrace
 function grillStation(g, x, z) {

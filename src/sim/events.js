@@ -1,23 +1,52 @@
 /* Monthly upkeep (fence wear, repairs, escapes), month-end report and births, tier unlocks, shows, and the main tick. */
+// A fence in good repair holds any animal it is rated for. Animals only break out when they are
+// thoroughly miserable AND the fence is either too weak for the species or falling apart.
+const FENCE_BROKEN = 25; // below this a fence no longer holds anything strong
+const ESCAPE_MOOD = 30; // only animals unhappier than this try to get out
+const fenceHolds = (a, e) => {
+  const fs = fenceStrength(e) + (researched('fences') ? 1 : 0);
+  return care(a.sp).str <= ((e.cond ?? 100) >= FENCE_BROKEN ? fs : fs * 0.5);
+};
+// what a contractor charges to mend a fence nobody on staff got to
+const contractorFee = (e) => 150 + 12 * (F.eedges[e.id] || []).length;
 function monthlyUpkeep() {
   const fu = farmUpkeep();
   S.money -= fu;
   S.today.run += fu;
-  // fences wear every month; janitors walk out and repair them (see sim/staff.js)
+  // fences wear a little every month; janitors walk out and repair them (see sim/staff.js). A fence
+  // nobody reached gets mended by an outside contractor before it fails, at a price.
   for (const e of S.encl) {
     if (e.biome === 'pool') continue;
-    e.cond = Math.max(0, (e.cond ?? 100) - rnd(3, 7));
+    e.cond = Math.max(0, (e.cond ?? 100) - rnd(1, 3));
+    if (e.cond < 45) {
+      const fee = contractorFee(e);
+      S.money -= fee;
+      S.today.run += fee;
+      e.cond = 100;
+      toast(
+        `A contractor mended the ${BIOMES[e.biome].name.toLowerCase()} habitat fence for ${money(fee)}. A janitor from a working recycling yard does it for free.`,
+        'bad'
+      );
+    }
   }
+  const tried = new Set(); // at most one break-out per habitat a month
   for (const a of S.animals) {
     if (a.escaped || a.away || a.inside != null) continue;
     const e = F.emap[a.e];
-    if (!e || e.biome === 'pool') continue;
-    const c = care(a.sp),
-      fs = (fenceStrength(e) + (researched('fences') ? 1 : 0)) * ((e.cond ?? 100) >= 40 ? 1 : 0.6);
-    if (c.str > fs && a.happy < 55 && Math.random() < 0.35) {
-      escape(a, e);
-    }
+    if (!e || e.biome === 'pool' || tried.has(e.id)) continue;
+    if (S.day - (a.born ?? 0) < 3) continue; // new arrivals and newborns are still settling in
+    if (fenceHolds(a, e) || a.happy >= ESCAPE_MOOD) continue;
+    tried.add(e.id);
+    if (!a.restless) {
+      // first a warning, so there is a month to put things right
+      a.restless = 1;
+      toast(
+        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is miserable and testing the fence (${a.why.slice(0, 2).join(', ') || 'unhappy'}). Cheer it up or build a stronger fence.`,
+        'bad'
+      );
+    } else if (Math.random() < 0.35) escape(a, e);
   }
+  for (const a of S.animals) if (a.restless && a.happy >= ESCAPE_MOOD + 10) a.restless = 0;
 }
 function escape(a, e) {
   yearRec().escapes++;
@@ -35,7 +64,7 @@ function escape(a, e) {
   a.tx = a.x;
   a.ty = a.y;
   a.wait = 0;
-  e.cond = Math.min(e.cond ?? 100, 20); // nothing on the map changed, so no rebuild is needed
+  a.restless = 0;
   toast(`${a.name} the ${sp.name.toLowerCase()} broke out of the habitat! Tap the animal and choose Recapture.`, 'bad');
 }
 function recapture(a) {
@@ -87,7 +116,7 @@ function endDay() {
       a.sick = true;
       a.serious = a.health < 30 || Math.random() < seriousChance();
       toast(
-        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is ${a.serious ? 'seriously ill and may need surgery at the vet clinic' : 'sick'}.${staffCount('vet') ? ' A vet is on the way.' : ' Hire a vet or treat them yourself.'}`,
+        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is ${a.serious ? 'seriously ill and may need surgery at the veterinary hospital' : 'sick'}.${staffCount('vet') ? ' A vet is on the way.' : ' Hire a vet or treat them yourself.'}`,
         'bad'
       );
     }

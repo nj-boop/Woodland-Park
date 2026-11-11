@@ -69,17 +69,18 @@ function tuftsForTile(w, x, y) {
   if (t.e) {
     const b = F.emap[t.e].biome;
     if (b === 'savanna' || b === 'prairie')
-      for (let k = 0; k < 4; k++)
+      // short and sparse, so the animals' legs and feet stay in view
+      for (let k = 0; k < 2; k++)
         w.put(
           x + rnd(0.15, 0.85),
           y + rnd(0.15, 0.85),
           0,
-          rnd(1.2, 1.8),
+          rnd(0.55, 0.95),
           b === 'savanna' ? pick(['#e8c878', '#d8b464', '#f0d488']) : pick(['#c8d890', '#d8e0a0'])
         );
     else if (b === 'jungle')
-      for (let k = 0; k < 3; k++)
-        w.put(x + rnd(0.15, 0.85), y + rnd(0.15, 0.85), 0, rnd(1.4, 2.2), pick(['#8fb080', '#a0c090']));
+      for (let k = 0; k < 2; k++)
+        w.put(x + rnd(0.15, 0.85), y + rnd(0.15, 0.85), 0, rnd(0.7, 1.15), pick(['#8fb080', '#a0c090']));
     return;
   }
   for (let k = 0; k < 2; k++)

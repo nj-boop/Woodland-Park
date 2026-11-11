@@ -17,7 +17,7 @@ function batchGroup(grp) {
     const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
     const key = [
       o.geometry.uuid,
-      o.material.uuid,
+      Array.isArray(o.material) ? o.material.map((k) => k.uuid).join(',') : o.material.uuid,
       o.castShadow ? 1 : 0,
       o.receiveShadow ? 1 : 0,
       o.customDepthMaterial ? o.customDepthMaterial.uuid : '',

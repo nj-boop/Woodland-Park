@@ -71,8 +71,8 @@ function evalEncl(e) {
       t -= Math.min(25, (sp.fol - dens) * 220);
       why.push('wants more plants');
     }
-    if (a.hunger > 50) {
-      t -= (a.hunger - 50) * 0.9;
+    if (a.hunger > 60) {
+      t -= (a.hunger - 60) * 0.8;
       why.push('hungry');
     }
     const same = list.filter((o) => o.sp === a.sp).length;
@@ -126,7 +126,7 @@ function evalEncl(e) {
       why.push('wants privacy from crowds');
     }
     if ((e.cond ?? 100) < 40) {
-      t -= 6;
+      t -= 4;
       why.push('fence in poor repair');
     }
     a.target = clamp(t, 0, 100);

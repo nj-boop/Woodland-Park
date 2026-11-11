@@ -68,6 +68,13 @@ Object.assign(IT_ICON, {
   lodge: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
   recycle: '<path d="M7 19H4l3-5M17 19h3l-3-5M9 6l3-3 3 3"/><path d="M12 3v6M7 14l2 3M17 14l-2 3M9 17h6"/>',
   vetclinic: '<rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 9v8M8 13h8"/>',
+  vetstation: '<path d="M4 11l8-6 8 6"/><path d="M6 10v10h12V10"/><path d="M12 12v6M9 15h6"/>',
+  keeperhut: '<path d="M5 12l7-6 7 6"/><path d="M7 11v9h10v-9"/><path d="M11 20v-4h2v4"/>',
+  keeperhq:
+    '<path d="M2 12l7-6 7 6"/><path d="M4 11v9h10v-9"/><path d="M14 14h7v6h-7"/><path d="M8 20v-4h2v4M7 13h4"/>',
+  depot: '<path d="M3 20V9l9-4 9 4v11"/><path d="M7 20v-7h10v7M7 15.5h10M7 18h10"/>',
+  grill: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-4a3 3 0 016 0v4"/><path d="M12 13v-2"/>',
+  foodcourt: '<path d="M2 9h20v3H2z"/><path d="M4 12v8M20 12v8M9.5 12v8M14.5 12v8"/><path d="M6 6h12"/>',
 });
 Object.assign(IT_ICON, {
   station:
@@ -315,6 +322,8 @@ function renderTray() {
         'cafe',
         'restaurant',
         'pizzeria',
+        'grill',
+        'foodcourt',
         'bench',
         'picnic',
         'bin',
@@ -330,7 +339,19 @@ function renderTray() {
         )
         .join('') +
       '<span class="group">For staff</span>' +
-      ['entrance', 'animalhouse', 'recycle', 'lodge', 'vetclinic', 'dock', 'feedstore']
+      [
+        'entrance',
+        'animalhouse',
+        'recycle',
+        'depot',
+        'keeperhut',
+        'lodge',
+        'keeperhq',
+        'vetstation',
+        'vetclinic',
+        'dock',
+        'feedstore',
+      ]
         .map((k) =>
           chip(`<span class="nm2">${ITEMS[k].name}</span><small>${money(ITEMS[k].cost)}</small>`, k, iconOf(k))
         )
@@ -876,7 +897,7 @@ function renderResearch() {
 // where an animal is when it isn't simply out in its habitat
 function animalStatus(a) {
   if (a.away === 'clinic')
-    return `<b>In surgery at the vet clinic</b> (${Math.max(0, Math.round((1 - a.surg / SURGERY_TICKS) * 100))}% done). `;
+    return `<b>In surgery at the veterinary hospital</b> (${Math.max(0, Math.round((1 - a.surg / SURGERY_TICKS) * 100))}% done). `;
   if (a.away === 'transit') return '<b>On the animal ambulance.</b> ';
   if (a.transport) return '<b>Waiting for the animal ambulance.</b> ';
   if (a.inside != null) return '<b>Asleep in the night shelter.</b> ';

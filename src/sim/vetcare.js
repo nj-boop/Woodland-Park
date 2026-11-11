@@ -129,7 +129,7 @@ function ambulanceArrive(t) {
       a.clinic = t.clinic;
       a.surg = SURGERY_TICKS;
       toast(
-        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is in surgery at the vet clinic. Guests can watch from the gallery.`
+        `${a.name} the ${SPECIES[a.sp].name.toLowerCase()} is in surgery at the veterinary hospital. Guests can watch from the gallery.`
       );
     }
     t.gone = true;

@@ -193,6 +193,20 @@ has surgery (`tickVetCare()`), and is driven back. Guests on footpaths within 2 
 clinic stop to watch from the viewing gallery (`F.gallery`, guest mode 'watch'). With no clinic or
 no road, the vet patches the animal up on the spot for less benefit.
 
+### Staff buildings and escapes
+
+A building that houses staff says so in `ITEMS` with `staff: [role, places]` (keeper hut 2, lodge 4,
+headquarters 10; recycling yard 3 and maintenance depot 6 janitors; vet station 1 and veterinary
+hospital 2 vets; dock 3 haulers). `rebuild()` adds the places up into `F.cap` and records where each
+role rests in `F.roleHomes`. Only the veterinary hospital (`vetclinic`) does surgery. Detailed
+building models are in `render/buildings-models.js`, built from the shared parts in `render/arch.js`
+(textured walls, windows, doors, roofs, signs).
+
+Escapes (`monthlyUpkeep()` in `sim/events.js`): a fence rated for the species holds it while its
+condition is above `FENCE_BROKEN`. Otherwise an animal unhappier than `ESCAPE_MOOD` first gets a
+warning month (`a.restless`), then may break out, at most one per habitat a month and never in its
+first days. Fences wear slowly, and a contractor mends any that staff never reached, for a fee.
+
 ### Research
 
 `sim/research.js`: projects in `RESEARCH` are paid up front and finish after their months of

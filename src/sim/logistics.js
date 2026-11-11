@@ -22,6 +22,8 @@ const STOCK = {
   burger: { max: 50, unit: 2.2 },
   cafe: { max: 50, unit: 2 },
   pizzeria: { max: 70, unit: 3.4 },
+  grill: { max: 120, unit: 3.8 },
+  foodcourt: { max: 180, unit: 2.5 },
 };
 const GOODS_CRATE = 40;
 const supplyRate = () => (researched('logistics') ? 0.8 : 1); // research cuts supply prices

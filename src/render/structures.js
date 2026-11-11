@@ -357,28 +357,113 @@ function fTex(kind) {
   fenceTex[kind] = t;
   return t;
 }
-function fencePanel(par, kind, cx, cz, len, rot, h) {
-  const base = fTex(kind),
-    t = base.clone();
-  t.needsUpdate = true;
-  t.repeat.set(Math.max(1, Math.round(len * 2)), 1);
-  const solid = kind === 'stone';
-  const mat = new THREE.MeshLambertMaterial({
-    map: t,
-    transparent: !solid,
-    alphaTest: solid ? 0 : 0.5,
-    side: THREE.DoubleSide,
-  });
-  const m = new THREE.Mesh(solid ? new THREE.BoxGeometry(len, h, 0.16) : new THREE.PlaneGeometry(len, h), mat);
-  if (solid) {
-    const mats = [M('#7e796f'), M('#7e796f'), M('#b5b0a5'), M('#7e796f'), mat, mat];
-    m.material = mats;
+/* Habitat fences are built from real geometry (rails, bars, posts), one tile-long run per fence edge,
+   so they read clearly from any distance and batch into a few draws. Only chain link and stone use a
+   texture, on one shared material each. (They used to be alpha-tested panels made by a function
+   whose name clashed with one in buildings.js, so iron, chain and stone fences drew nothing.) */
+const FENCE_H = { iron: 0.78, chain: 0.74, stone: 0.62, wood: 0.6, moat: 0.42 };
+const FENCE_GEO = { plane: new THREE.PlaneGeometry(1, 1), wall: new THREE.BoxGeometry(1, 1, 1) };
+const fenceMats = {};
+function fenceMat(kind) {
+  if (fenceMats[kind]) return fenceMats[kind];
+  const t = fTex(kind);
+  t.repeat.set(2, 1);
+  if (kind === 'stone') {
+    const face = new THREE.MeshLambertMaterial({ map: t }),
+      side = M('#7e796f');
+    return (fenceMats[kind] = [side, side, M('#b5b0a5'), side, face, face]);
   }
-  m.position.set(cx, h / 2, cz);
-  m.rotation.y = rot;
-  m.castShadow = solid;
-  m.receiveShadow = true;
-  par.add(m);
+  // chain link: blended, not alpha-tested, so the mesh fades to a haze far away instead of vanishing
+  return (fenceMats[kind] = new THREE.MeshLambertMaterial({
+    map: t,
+    transparent: true,
+    alphaTest: 0.04,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  }));
+}
+// a box of size (len, h, th) laid along one fence edge
+const fenceBar = (seg, col, cx, y, cz, rot, len, h, th) =>
+  P(seg, 'box', col, cx, y, cz, rot ? th : len, h, rot ? len : th);
+function fenceRun(seg, kind, cx, cz, rot, inX, inZ) {
+  const along = (k) => [rot ? cx : cx + k, rot ? cz + k : cz];
+  if (kind === 'iron') {
+    const H0 = FENCE_H.iron,
+      c = '#1f2226';
+    fenceBar(seg, c, cx, 0.1, cz, rot, 1, 0.04, 0.04);
+    fenceBar(seg, c, cx, H0 - 0.1, cz, rot, 1, 0.04, 0.04);
+    for (let k = 0; k < 6; k++) {
+      const [bx, bz] = along((k + 0.5) / 6 - 0.5);
+      P(seg, 'box', c, bx, H0 / 2, bz, 0.026, H0, 0.026);
+      P(seg, 'cone', c, bx, H0 + 0.035, bz, 0.03, 0.07, 0.03, false);
+    }
+    return;
+  }
+  if (kind === 'chain') {
+    const H0 = FENCE_H.chain,
+      c = '#8a9399';
+    fenceBar(seg, c, cx, H0, cz, rot, 1, 0.035, 0.035);
+    fenceBar(seg, c, cx, 0.05, cz, rot, 1, 0.025, 0.025);
+    const m = new THREE.Mesh(FENCE_GEO.plane, fenceMat('chain'));
+    m.position.set(cx, H0 / 2, cz);
+    m.scale.set(1, H0, 1);
+    m.rotation.y = rot;
+    m.renderOrder = 2;
+    seg.add(m);
+    return;
+  }
+  if (kind === 'stone') {
+    const H0 = FENCE_H.stone;
+    const m = new THREE.Mesh(FENCE_GEO.wall, fenceMat('stone'));
+    m.position.set(cx, H0 / 2, cz);
+    m.scale.set(1, H0, 0.18);
+    m.rotation.y = rot;
+    m.castShadow = m.receiveShadow = true;
+    seg.add(m);
+    fenceBar(seg, '#b5b0a5', cx, H0 + 0.02, cz, rot, 1, 0.05, 0.24);
+    return;
+  }
+  if (kind === 'wood') {
+    for (const y of [0.17, 0.34, 0.51]) fenceBar(seg, '#8a5f38', cx, y, cz, rot, 1, 0.06, 0.045);
+    P(seg, 'box', '#5b3c22', cx, 0.28, cz, 0.06, 0.56, 0.06);
+    return;
+  }
+  // dry moat: a dark trench on the animals' side, a retaining wall, and a guard rail for the guests
+  fenceBar(seg, '#2b241c', cx + inX * 0.3, 0.012, cz + inZ * 0.3, rot, 1, 0.024, 0.5).castShadow = false;
+  fenceBar(seg, '#4a3d2f', cx + inX * 0.56, 0.02, cz + inZ * 0.56, rot, 1, 0.04, 0.06).castShadow = false;
+  fenceBar(seg, '#9a958b', cx, 0.13, cz, rot, 1, 0.26, 0.16);
+  fenceBar(seg, '#b5b0a5', cx, 0.275, cz, rot, 1.02, 0.035, 0.2);
+  fenceBar(seg, '#3a3f44', cx, FENCE_H.moat, cz, rot, 1, 0.03, 0.03);
+  for (const k of [-0.25, 0.25]) {
+    const [bx, bz] = along(k);
+    P(seg, 'box', '#3a3f44', bx, 0.35, bz, 0.025, 0.14, 0.025, false);
+  }
+}
+function fencePost(g, kind, x, z, turn) {
+  if (kind === 'wood') {
+    P(g, 'cyl', '#5b3c22', x, 0.32, z, 0.06, 0.64);
+    P(g, 'cyl', '#6f4a2a', x, 0.65, z, 0.07, 0.03, 0.07, false);
+  } else if (kind === 'chain') {
+    P(g, 'cyl', '#7d868b', x, 0.39, z, 0.035, 0.78);
+    P(g, 'sph', '#7d868b', x, 0.79, z, 0.045, 0.045, 0.045, false);
+  } else if (kind === 'iron') {
+    if (turn || (x + z) % 4 === 0) {
+      P(g, 'box', '#8e8a82', x, 0.44, z, 0.2, 0.88, 0.2);
+      P(g, 'box', '#b5b0a5', x, 0.9, z, 0.26, 0.05, 0.26);
+      P(g, 'sph', '#b5b0a5', x, 0.97, z, 0.07, 0.07, 0.07, false);
+    } else {
+      P(g, 'box', '#1f2226', x, 0.42, z, 0.055, 0.84, 0.055);
+      P(g, 'sph', '#1f2226', x, 0.87, z, 0.045, 0.045, 0.045, false);
+    }
+  } else if (kind === 'stone') {
+    if (turn || (x + z) % 3 === 0) {
+      P(g, 'box', '#8e8a82', x, 0.37, z, 0.26, 0.74, 0.26);
+      P(g, 'box', '#b5b0a5', x, 0.76, z, 0.32, 0.05, 0.32);
+    }
+  } else if (kind === 'moat' && turn) {
+    P(g, 'box', '#9a958b', x, 0.16, z, 0.22, 0.32, 0.22);
+    P(g, 'box', '#3a3f44', x, 0.37, z, 0.03, 0.14, 0.03, false);
+  }
 }
 const GLASSMAT = new THREE.MeshStandardMaterial({
   color: LIN('#cfeef6'),
@@ -526,9 +611,7 @@ function barrierSegs(e) {
 }
 function makeFence(par, e) {
   if (e.biome === 'pool') return makeTank(par, e);
-  const wood = '#7a5230',
-    post = '#5b3c22',
-    kind = e.fence || 'wood';
+  const kind = e.fence || 'wood';
   const edges = F.eedges[e.id] || [],
     corner = {};
   for (const [x, y, dr] of edges)
@@ -590,40 +673,21 @@ function makeFence(par, e) {
       P(seg, 'box', '#5b3c22', cx, 0.58, cz, rot ? 0.05 : 0.86, 0.05, rot ? 0.86 : 0.05);
       continue;
     }
-    if (kind === 'moat') {
-      P(seg, 'box', '#9a958b', cx, 0.1, cz, rot ? 0.12 : 1.02, 0.2, rot ? 1.02 : 0.12);
-      P(seg, 'box', '#b5b0a5', cx, 0.21, cz, rot ? 0.16 : 1.04, 0.03, rot ? 1.04 : 0.16);
-      continue;
-    }
-    if (kind === 'wood') {
-      for (const hh of [0.18, 0.38]) P(seg, 'box', wood, cx, hh, cz, rot ? 0.035 : 1, 0.04, rot ? 1 : 0.035);
-      continue;
-    }
-    const hh = kind === 'stone' ? 0.55 : kind === 'iron' ? 0.62 : 0.58;
-    fencePanel(seg, kind, cx, cz, 1, rot, hh);
+    fenceRun(seg, kind, cx, cz, rot, dr === 2 ? 0.5 : dr === 3 ? -0.5 : 0, dr === 0 ? 0.5 : dr === 1 ? -0.5 : 0);
   }
   for (const k in corner) {
-    const c = corner[k],
-      turn = c.h && c.v,
-      yb = hC(c.x, c.z);
+    const c = corner[k];
     const g = new THREE.Group();
-    g.position.y = yb;
+    g.position.y = hC(c.x, c.z);
     par.add(g);
-    if (kind === 'wood') P(g, 'cyl', post, c.x, 0.24, c.z, 0.04, 0.48);
-    else if (kind === 'chain') P(g, 'cyl', '#7d868b', c.x, 0.32, c.z, 0.035, 0.64);
-    else if (kind === 'moat') {
-    } else if (turn || (c.x + c.z) % 3 === 0) {
-      const hh = kind === 'stone' ? 0.55 : 0.62;
-      P(g, 'box', '#8e8a82', c.x, (hh + 0.12) / 2, c.z, 0.2, hh + 0.12, 0.2);
-      P(g, 'box', '#b5b0a5', c.x, hh + 0.14, c.z, 0.25, 0.05, 0.25);
-    }
+    fencePost(g, kind, c.x, c.z, c.h && c.v);
   }
   if (e.barrier)
     for (const [cx, cz, rot] of barrierSegs(e)) {
       const g = new THREE.Group();
       g.position.y = hAt(cx, cz);
       par.add(g);
-      fencePanel(g, 'iron', cx, cz, 1, rot, 0.6);
+      fenceRun(g, 'iron', cx, cz, rot, 0, 0);
       P(g, 'box', '#8e8a82', cx, 0.35, cz, 0.14, 0.7, 0.14);
     }
 }

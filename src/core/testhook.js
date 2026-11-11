@@ -14,6 +14,8 @@ window.__wg = {
     return staticStats;
   },
   tileAt,
+  ITEMS,
+  fpTiles,
   addAnimal,
   makeEncl,
   setPath,

@@ -200,15 +200,17 @@ function giveRaise(sid) {
 }
 function capHint(role) {
   const n = F.cnt || {};
+  const housed = (r) =>
+    Object.keys(F.anchors || {}).some((o) => ITEMS[o].staff && ITEMS[o].staff[0] === r && F.anchors[o].length);
   if (role === 'keeper')
-    return !n.lodge
-      ? 'Build a keeper lodge (and a recycling yard).'
+    return !housed('keeper')
+      ? 'Build a keeper hut, lodge or headquarters (and a recycling yard).'
       : !n.recycle
-        ? 'The lodge opens once you build a recycling yard.'
-        : 'Build another keeper lodge for 4 more.';
-  if (role === 'vet') return 'Each vet clinic has room for 2.';
+        ? 'Keepers can start once you build a recycling yard.'
+        : 'Build more room: a hut holds 2, a lodge 4, headquarters 10.';
+  if (role === 'vet') return 'A vet station has room for 1, the veterinary hospital for 2.';
   if (role === 'hauler') return 'Each loading dock has room for 3.';
-  return 'Each recycling yard has room for 3.';
+  return 'A recycling yard has room for 3, a maintenance depot for 6.';
 }
 
 /* ---------- getting around ---------- */
@@ -383,7 +385,7 @@ function fenceSideTiles(e) {
   return out;
 }
 function homeTiles(role) {
-  return new Set(F.homes ? F.homes[STAFF_ROLES[role].home] : []);
+  return new Set(F.roleHomes ? F.roleHomes[role] : []);
 }
 // an animal's tile and the tiles around it (it may be standing by a pond or a rock that people cannot stand on)
 // (only tiles on the same side of the fence as the animal count)
@@ -583,8 +585,8 @@ function finishJob(s) {
         S.today.run += TREAT_COST * 2;
         warnOnce(
           F.cnt.vetclinic
-            ? `${s.name} patched up ${nm} in the habitat, but serious cases recover far better after surgery. The ambulance loads at the habitat’s animal house: connect its door to the vet clinic by road.`
-            : `${s.name} patched up ${nm} in the habitat, but serious cases need surgery. Build a vet clinic, with a road to your habitats.`
+            ? `${s.name} patched up ${nm} in the habitat, but serious cases recover far better after surgery. The ambulance loads at the habitat’s animal house: connect its door to the veterinary hospital by road.`
+            : `${s.name} patched up ${nm} in the habitat, but serious cases need surgery. Build a veterinary hospital, with a road to your habitats.`
         );
       } else {
         a.sick = false;
@@ -859,10 +861,12 @@ function staffMonth() {
     wages += s.wage;
     const fair = fairWage(s.role, s.skill),
       pay = clamp((s.wage / fair - 1) * 50, -15, 12),
-      over = s.tired > 200 ? -8 : 0,
-      idle = s.done === 0 ? -3 : 2;
+      over = s.tired > 200 ? -6 : 0,
+      idle = s.done === 0 ? 0 : 2; // a quiet month is no reason to quit
     s.mood = { pay: Math.round(pay), over, idle, trait: STAFF_TRAITS[s.trait].mood };
     s.morale = clamp(s.morale + pay + over + idle + STAFF_TRAITS[s.trait].mood, 0, 100);
+    // fairly paid people who are not run ragged stay, however grumpy
+    if (pay >= -2 && !over) s.morale = Math.max(s.morale, 35);
     s.tired = 0;
     s.done = 0;
     if (s.morale < 20 && Math.random() < 0.5) {
@@ -887,7 +891,7 @@ function staffMoodText(s) {
   return bits.length ? cap(bits.join(', ')) + '.' : 'Content.';
 }
 function staffDoing(s) {
-  if (s.st === 'rest') return 'Resting at the ' + ITEMS[STAFF_ROLES[s.role].home].name.toLowerCase();
+  if (s.st === 'rest') return 'Taking a break at base';
   if (s.going === 'home') return 'Heading off for a break';
   const j = s.job;
   if (!j) return s.energy <= 0 ? 'Exhausted' : 'Waiting for work';

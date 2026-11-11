@@ -53,15 +53,18 @@ function buildingFacts(a) {
         'Ambulance bay',
         h.front.length
           ? ambulanceRoute(new Set(h.front))
-            ? 'Connected to the vet clinic'
-            : 'No road to a vet clinic yet'
+            ? 'Connected to the veterinary hospital'
+            : 'No road to a veterinary hospital yet'
           : 'No road at the door',
       ]);
     }
   }
-  if (o === 'lodge') rows.push(['Keepers', `${staffCount('keeper')} of ${staffRoom('keeper')} places filled`]);
+  if (ITEMS[o].staff && o !== 'recycle' && o !== 'dock') {
+    const [role, beds] = ITEMS[o].staff;
+    rows.push(['Room here', `${beds} ${STAFF_ROLES[role].pl.toLowerCase()}`]);
+    rows.push([STAFF_ROLES[role].pl, `${staffCount(role)} of ${staffRoom(role)} places filled across the zoo`]);
+  }
   if (o === 'vetclinic') {
-    rows.push(['Vets', `${staffCount('vet')} of ${staffRoom('vet')} places filled`]);
     const pts = S.animals.filter((k) => k.away === 'clinic' && k.clinic === a);
     rows.push([
       'In surgery',

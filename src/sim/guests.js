@@ -378,7 +378,7 @@ function guestMood(g) {
   else if (g.show && g.t - g.show < 500) th = 'That show was incredible!';
   else if (g.mode === 'watch') th = 'Watching the vets operate. Fascinating!';
   else if (g.keeper && g.t - g.keeper < 400) th = 'We got to watch a keeper working with the animals!';
-  else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the vet clinic!';
+  else if (g.vet && g.t - g.vet < 500) th = 'I saw a real animal operation at the animal hospital!';
   else if (g.tunnel && g.exc > 8) th = 'Walking under the water was the best part!';
   else if (g.exc > 18 && g.best) th = `The ${g.best.toLowerCase()} were amazing!`;
   else if (g.exc > 0 && g.best) th = `I liked the ${g.best.toLowerCase()}. What else is here?`;
